@@ -1,6 +1,10 @@
 .PHONY: generate
 
 GO111MODULE=on
+
+tools:
+	go generate ./tools
+
 generate:
 	go generate ./protodeps/googleapis/google/api
 	go generate ./protodeps/googleapis/google/rpc
