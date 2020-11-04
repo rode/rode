@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package rode.v1alpha1;
+
+option go_package = "github.com/liatrio/rode-collector-service/proto/v1alpha1";
+
+import "protodeps/grafeas/proto/v1beta1/grafeas.proto";
+
+service RodeCollectorService {
+  rpc BatchCreateOccurrences(grafeas.v1beta1.BatchCreateOccurrencesRequest) returns (grafeas.v1beta1.BatchCreateOccurrencesResponse) {}
+}
+
+message Foo {
+  string bar = 1;
+}
