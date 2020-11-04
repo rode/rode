@@ -1,4 +1,4 @@
-.PHONY: generate
+.PHONY: generate tools
 
 GO111MODULE=on
 
