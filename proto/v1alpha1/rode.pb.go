@@ -8,7 +8,7 @@ package v1alpha1
 
 import (
 	proto "github.com/golang/protobuf/proto"
-	grafeas_go_proto "github.com/grafeas/grafeas/proto/v1beta1/grafeas_go_proto"
+	grafeas_go_proto "github.com/liatrio/rode-api/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
