@@ -10,7 +10,7 @@ import (
 	"github.com/grafeas/grafeas/proto/v1beta1/grafeas_go_proto"
 	"github.com/grafeas/grafeas/proto/v1beta1/package_go_proto"
 	"github.com/grafeas/grafeas/proto/v1beta1/vulnerability_go_proto"
-	pb "github.com/liatrio/rode-collector-service/proto/v1alpha1"
+	pb "github.com/liatrio/rode-api/proto/v1alpha1"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -26,7 +26,7 @@ func main() {
 		log.Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
-	c := pb.NewRodeCollectorServiceClient(conn)
+	c := pb.NewRodeClient(conn)
 
 	// Contact the server and print out its response.
 	// _ := defaultName

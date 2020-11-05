@@ -1,4 +1,4 @@
-module github.com/liatrio/rode-collector-service
+module github.com/liatrio/rode-api
 
 go 1.14
 
