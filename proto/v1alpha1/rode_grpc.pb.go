@@ -14,83 +14,83 @@ import (
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion7
 
-// RodeCollectorServiceClient is the client API for RodeCollectorService service.
+// RodeClient is the client API for Rode service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type RodeCollectorServiceClient interface {
+type RodeClient interface {
 	BatchCreateOccurrences(ctx context.Context, in *grafeas_go_proto.BatchCreateOccurrencesRequest, opts ...grpc.CallOption) (*grafeas_go_proto.BatchCreateOccurrencesResponse, error)
 }
 
-type rodeCollectorServiceClient struct {
+type rodeClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewRodeCollectorServiceClient(cc grpc.ClientConnInterface) RodeCollectorServiceClient {
-	return &rodeCollectorServiceClient{cc}
+func NewRodeClient(cc grpc.ClientConnInterface) RodeClient {
+	return &rodeClient{cc}
 }
 
-func (c *rodeCollectorServiceClient) BatchCreateOccurrences(ctx context.Context, in *grafeas_go_proto.BatchCreateOccurrencesRequest, opts ...grpc.CallOption) (*grafeas_go_proto.BatchCreateOccurrencesResponse, error) {
+func (c *rodeClient) BatchCreateOccurrences(ctx context.Context, in *grafeas_go_proto.BatchCreateOccurrencesRequest, opts ...grpc.CallOption) (*grafeas_go_proto.BatchCreateOccurrencesResponse, error) {
 	out := new(grafeas_go_proto.BatchCreateOccurrencesResponse)
-	err := c.cc.Invoke(ctx, "/rode.v1alpha1.RodeCollectorService/BatchCreateOccurrences", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/BatchCreateOccurrences", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// RodeCollectorServiceServer is the server API for RodeCollectorService service.
-// All implementations must embed UnimplementedRodeCollectorServiceServer
+// RodeServer is the server API for Rode service.
+// All implementations must embed UnimplementedRodeServer
 // for forward compatibility
-type RodeCollectorServiceServer interface {
+type RodeServer interface {
 	BatchCreateOccurrences(context.Context, *grafeas_go_proto.BatchCreateOccurrencesRequest) (*grafeas_go_proto.BatchCreateOccurrencesResponse, error)
-	mustEmbedUnimplementedRodeCollectorServiceServer()
+	mustEmbedUnimplementedRodeServer()
 }
 
-// UnimplementedRodeCollectorServiceServer must be embedded to have forward compatible implementations.
-type UnimplementedRodeCollectorServiceServer struct {
+// UnimplementedRodeServer must be embedded to have forward compatible implementations.
+type UnimplementedRodeServer struct {
 }
 
-func (UnimplementedRodeCollectorServiceServer) BatchCreateOccurrences(context.Context, *grafeas_go_proto.BatchCreateOccurrencesRequest) (*grafeas_go_proto.BatchCreateOccurrencesResponse, error) {
+func (UnimplementedRodeServer) BatchCreateOccurrences(context.Context, *grafeas_go_proto.BatchCreateOccurrencesRequest) (*grafeas_go_proto.BatchCreateOccurrencesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BatchCreateOccurrences not implemented")
 }
-func (UnimplementedRodeCollectorServiceServer) mustEmbedUnimplementedRodeCollectorServiceServer() {}
+func (UnimplementedRodeServer) mustEmbedUnimplementedRodeServer() {}
 
-// UnsafeRodeCollectorServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to RodeCollectorServiceServer will
+// UnsafeRodeServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to RodeServer will
 // result in compilation errors.
-type UnsafeRodeCollectorServiceServer interface {
-	mustEmbedUnimplementedRodeCollectorServiceServer()
+type UnsafeRodeServer interface {
+	mustEmbedUnimplementedRodeServer()
 }
 
-func RegisterRodeCollectorServiceServer(s grpc.ServiceRegistrar, srv RodeCollectorServiceServer) {
-	s.RegisterService(&_RodeCollectorService_serviceDesc, srv)
+func RegisterRodeServer(s grpc.ServiceRegistrar, srv RodeServer) {
+	s.RegisterService(&_Rode_serviceDesc, srv)
 }
 
-func _RodeCollectorService_BatchCreateOccurrences_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Rode_BatchCreateOccurrences_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(grafeas_go_proto.BatchCreateOccurrencesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(RodeCollectorServiceServer).BatchCreateOccurrences(ctx, in)
+		return srv.(RodeServer).BatchCreateOccurrences(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/rode.v1alpha1.RodeCollectorService/BatchCreateOccurrences",
+		FullMethod: "/rode.v1alpha1.Rode/BatchCreateOccurrences",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RodeCollectorServiceServer).BatchCreateOccurrences(ctx, req.(*grafeas_go_proto.BatchCreateOccurrencesRequest))
+		return srv.(RodeServer).BatchCreateOccurrences(ctx, req.(*grafeas_go_proto.BatchCreateOccurrencesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-var _RodeCollectorService_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "rode.v1alpha1.RodeCollectorService",
-	HandlerType: (*RodeCollectorServiceServer)(nil),
+var _Rode_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "rode.v1alpha1.Rode",
+	HandlerType: (*RodeServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "BatchCreateOccurrences",
-			Handler:    _RodeCollectorService_BatchCreateOccurrences_Handler,
+			Handler:    _Rode_BatchCreateOccurrences_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

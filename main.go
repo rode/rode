@@ -8,14 +8,14 @@ import (
 
 	grafeas "github.com/grafeas/grafeas/proto/v1beta1/grafeas_go_proto"
 	project "github.com/grafeas/grafeas/proto/v1beta1/project_go_proto"
-	pb "github.com/liatrio/rode-collector-service/proto/v1alpha1"
+	pb "github.com/liatrio/rode-api/proto/v1alpha1"
 	"google.golang.org/grpc"
 )
 
 var client *grafeasClient
 
 type server struct {
-	pb.UnimplementedRodeCollectorServiceServer
+	pb.UnimplementedRodeServer
 }
 
 type grafeasClient struct {
@@ -75,7 +75,7 @@ func main() {
 		log.Fatalf("failed to talk to grafeas: %v", err)
 	}
 	s := grpc.NewServer()
-	pb.RegisterRodeCollectorServiceServer(s, &server{})
+	pb.RegisterRodeServer(s, &server{})
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
