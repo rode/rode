@@ -20,19 +20,14 @@ const (
 )
 
 func main() {
-	// Set up a connection to the server.
 	conn, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
+
 	c := pb.NewRodeClient(conn)
 
-	// Contact the server and print out its response.
-	// _ := defaultName
-	// if len(os.Args) > 1 {
-	// 	name = os.Args[1]
-	// }
 	occurrence := &grafeas_go_proto.Occurrence{
 		Name: "abc",
 		Resource: &grafeas_go_proto.Resource{
