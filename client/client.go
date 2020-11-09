@@ -6,11 +6,11 @@ import (
 	"log"
 	"time"
 
-	"github.com/grafeas/grafeas/proto/v1beta1/common_go_proto"
-	"github.com/grafeas/grafeas/proto/v1beta1/grafeas_go_proto"
-	"github.com/grafeas/grafeas/proto/v1beta1/package_go_proto"
-	"github.com/grafeas/grafeas/proto/v1beta1/vulnerability_go_proto"
 	pb "github.com/liatrio/rode-api/proto/v1alpha1"
+	"github.com/liatrio/rode-api/protodeps/grafeas/proto/v1beta1/common_go_proto"
+	"github.com/liatrio/rode-api/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
+	"github.com/liatrio/rode-api/protodeps/grafeas/proto/v1beta1/package_go_proto"
+	"github.com/liatrio/rode-api/protodeps/grafeas/proto/v1beta1/vulnerability_go_proto"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )

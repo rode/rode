@@ -4,7 +4,7 @@ package v1alpha1
 
 import (
 	context "context"
-	grafeas_go_proto "github.com/grafeas/grafeas/proto/v1beta1/grafeas_go_proto"
+	grafeas_go_proto "github.com/liatrio/rode-api/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
