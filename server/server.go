@@ -12,17 +12,22 @@ type rodeServer struct {
 	grafeasClient grafeas.GrafeasV1Beta1Client
 }
 
-func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceRequest *grafeas.BatchCreateOccurrencesRequest) (*grafeas.BatchCreateOccurrencesResponse, error) {
+func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceRequest *pb.BatchCreateOccurrencesRequest) (*pb.BatchCreateOccurrencesResponse, error) {
 	fmt.Println("This works!!!!!")
 	fmt.Printf("%#v\n", *occurrenceRequest.Occurrences[0])
 
 	//Forward to grafeas to create occurrence
-	occurrenceResponse, err := r.grafeasClient.BatchCreateOccurrences(ctx, occurrenceRequest)
+	occurrenceResponse, err := r.grafeasClient.BatchCreateOccurrences(ctx, &grafeas.BatchCreateOccurrencesRequest{
+		Parent:      "projects/rode",
+		Occurrences: occurrenceRequest.GetOccurrences(),
+	})
 	if err != nil {
 		fmt.Println("Failed to create occurrence")
 		return nil, err
 	}
-	return occurrenceResponse, nil
+	return &pb.BatchCreateOccurrencesResponse{
+		Occurrences: occurrenceResponse.GetOccurrences(),
+	}, nil
 }
 
 func NewRodeServer(grafeasClient grafeas.GrafeasV1Beta1Client) pb.RodeServer {

@@ -4,7 +4,6 @@ package v1alpha1
 
 import (
 	context "context"
-	grafeas_go_proto "github.com/liatrio/rode-api/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -18,7 +17,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type RodeClient interface {
-	BatchCreateOccurrences(ctx context.Context, in *grafeas_go_proto.BatchCreateOccurrencesRequest, opts ...grpc.CallOption) (*grafeas_go_proto.BatchCreateOccurrencesResponse, error)
+	BatchCreateOccurrences(ctx context.Context, in *BatchCreateOccurrencesRequest, opts ...grpc.CallOption) (*BatchCreateOccurrencesResponse, error)
 }
 
 type rodeClient struct {
@@ -29,8 +28,8 @@ func NewRodeClient(cc grpc.ClientConnInterface) RodeClient {
 	return &rodeClient{cc}
 }
 
-func (c *rodeClient) BatchCreateOccurrences(ctx context.Context, in *grafeas_go_proto.BatchCreateOccurrencesRequest, opts ...grpc.CallOption) (*grafeas_go_proto.BatchCreateOccurrencesResponse, error) {
-	out := new(grafeas_go_proto.BatchCreateOccurrencesResponse)
+func (c *rodeClient) BatchCreateOccurrences(ctx context.Context, in *BatchCreateOccurrencesRequest, opts ...grpc.CallOption) (*BatchCreateOccurrencesResponse, error) {
+	out := new(BatchCreateOccurrencesResponse)
 	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/BatchCreateOccurrences", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -42,7 +41,7 @@ func (c *rodeClient) BatchCreateOccurrences(ctx context.Context, in *grafeas_go_
 // All implementations must embed UnimplementedRodeServer
 // for forward compatibility
 type RodeServer interface {
-	BatchCreateOccurrences(context.Context, *grafeas_go_proto.BatchCreateOccurrencesRequest) (*grafeas_go_proto.BatchCreateOccurrencesResponse, error)
+	BatchCreateOccurrences(context.Context, *BatchCreateOccurrencesRequest) (*BatchCreateOccurrencesResponse, error)
 	mustEmbedUnimplementedRodeServer()
 }
 
@@ -50,7 +49,7 @@ type RodeServer interface {
 type UnimplementedRodeServer struct {
 }
 
-func (UnimplementedRodeServer) BatchCreateOccurrences(context.Context, *grafeas_go_proto.BatchCreateOccurrencesRequest) (*grafeas_go_proto.BatchCreateOccurrencesResponse, error) {
+func (UnimplementedRodeServer) BatchCreateOccurrences(context.Context, *BatchCreateOccurrencesRequest) (*BatchCreateOccurrencesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BatchCreateOccurrences not implemented")
 }
 func (UnimplementedRodeServer) mustEmbedUnimplementedRodeServer() {}
@@ -67,7 +66,7 @@ func RegisterRodeServer(s grpc.ServiceRegistrar, srv RodeServer) {
 }
 
 func _Rode_BatchCreateOccurrences_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(grafeas_go_proto.BatchCreateOccurrencesRequest)
+	in := new(BatchCreateOccurrencesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -79,7 +78,7 @@ func _Rode_BatchCreateOccurrences_Handler(srv interface{}, ctx context.Context, 
 		FullMethod: "/rode.v1alpha1.Rode/BatchCreateOccurrences",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RodeServer).BatchCreateOccurrences(ctx, req.(*grafeas_go_proto.BatchCreateOccurrencesRequest))
+		return srv.(RodeServer).BatchCreateOccurrences(ctx, req.(*BatchCreateOccurrencesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

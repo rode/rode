@@ -80,9 +80,8 @@ func main() {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	response, err := c.BatchCreateOccurrences(ctx, &grafeas_go_proto.BatchCreateOccurrencesRequest{
+	response, err := c.BatchCreateOccurrences(ctx, &pb.BatchCreateOccurrencesRequest{
 		Occurrences: []*grafeas_go_proto.Occurrence{occurrence},
-		Parent:      "projects/test123",
 	})
 	if err != nil {
 		log.Fatalf("could not create occurrence: %v", err)
