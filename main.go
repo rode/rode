@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"github.com/liatrio/rode-api/server"
+	"go.uber.org/zap"
 	"log"
 	"net"
 
@@ -12,21 +13,27 @@ import (
 )
 
 func main() {
-	lis, err := net.Listen("tcp", ":50051")
+	logger, err := zap.NewProduction()
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
-	}
-	grafeasClient, err := createGrafeasClient("localhost:8080")
-	if err != nil {
-		log.Fatalf("failed to connect to grafeas: %v", err)
+		log.Fatalf("failed to create logger: %v", err)
 	}
 
-	rodeServer := server.NewRodeServer(grafeasClient)
+	lis, err := net.Listen("tcp", ":50051")
+	if err != nil {
+		logger.Fatal("failed to listen", zap.NamedError("error", err))
+	}
+
+	grafeasClient, err := createGrafeasClient("localhost:8080")
+	if err != nil {
+		logger.Fatal("failed to connect to grafeas", zap.NamedError("error", err))
+	}
+
+	rodeServer := server.NewRodeServer(logger, grafeasClient)
 	s := grpc.NewServer()
 
 	pb.RegisterRodeServer(s, rodeServer)
 	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+		logger.Fatal("failed to serve", zap.NamedError("error", err))
 	}
 }
 
