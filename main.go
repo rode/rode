@@ -4,14 +4,17 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/liatrio/rode-api/server"
-	"go.uber.org/zap"
-	"log"
-	"net"
-
 	pb "github.com/liatrio/rode-api/proto/v1alpha1"
 	grafeas "github.com/liatrio/rode-api/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
+	"github.com/liatrio/rode-api/server"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health/grpc_health_v1"
+	"log"
+	"net"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 var (
@@ -36,20 +39,37 @@ func main() {
 	if err != nil {
 		logger.Fatal("failed to listen", zap.NamedError("error", err))
 	}
-	logger.Info("listening", zap.String("host", lis.Addr().String()))
 
 	grafeasClient, err := createGrafeasClient(grafeasHost)
 	if err != nil {
 		logger.Fatal("failed to connect to grafeas", zap.String("grafeas host", grafeasHost), zap.NamedError("error", err))
 	}
 
-	rodeServer := server.NewRodeServer(logger, grafeasClient)
+	rodeServer := server.NewRodeServer(logger.Named("rode"), grafeasClient)
+	healthzServer := server.NewHealthzServer(logger.Named("healthz"))
 	s := grpc.NewServer()
 
 	pb.RegisterRodeServer(s, rodeServer)
-	if err := s.Serve(lis); err != nil {
-		logger.Fatal("failed to serve", zap.NamedError("error", err))
-	}
+	grpc_health_v1.RegisterHealthServer(s, healthzServer)
+
+	go func() {
+		if err := s.Serve(lis); err != nil {
+			logger.Fatal("failed to serve", zap.NamedError("error", err))
+		}
+	}()
+
+	logger.Info("listening", zap.String("host", lis.Addr().String()))
+	healthzServer.Ready()
+
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+
+	terminationSignal := <-sig
+
+	logger.Info("shutting down...", zap.String("termination signal", terminationSignal.String()))
+	healthzServer.NotReady()
+
+	s.GracefulStop()
 }
 
 func createGrafeasClient(grafeasEndpoint string) (grafeas.GrafeasV1Beta1Client, error) {
