@@ -8,8 +8,8 @@ on:
     branches: [main]
 
 jobs:
-  build:
-    name: Build
+  test:
+    name: Test
     runs-on: ubuntu-latest
     container: golang:1.15
     steps:
@@ -21,6 +21,7 @@ jobs:
       - name: Test
         run: |
           make test
+          bash <(curl -s https://codecov.io/bash)
 
       - name: Build
         run: go build -v .
