@@ -7,7 +7,19 @@ option go_package = "github.com/liatrio/rode-api/proto/v1alpha1";
 import "protodeps/grafeas/proto/v1beta1/grafeas.proto";
 
 service Rode {
-  rpc BatchCreateOccurrences(grafeas.v1beta1.BatchCreateOccurrencesRequest) returns (grafeas.v1beta1.BatchCreateOccurrencesResponse) {}
+  rpc BatchCreateOccurrences(BatchCreateOccurrencesRequest) returns (BatchCreateOccurrencesResponse) {}
+}
+
+// Request to create occurrences in batch.
+message BatchCreateOccurrencesRequest {
+  // The occurrences to create.
+  repeated grafeas.v1beta1.Occurrence occurrences = 1;
+}
+
+// Response for creating occurrences in batch.
+message BatchCreateOccurrencesResponse {
+  // The occurrences that were created.
+  repeated grafeas.v1beta1.Occurrence occurrences = 1;
 }
 
 message Foo {
