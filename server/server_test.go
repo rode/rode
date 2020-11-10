@@ -19,7 +19,7 @@ var _ = Describe("rode server", func() {
 
 	BeforeEach(func() {
 		grafeasClient = &mockGrafeasClient{}
-		rodeServer = NewRodeServer(logger, grafeasClient)
+		rodeServer = NewRodeServer(logger.Named("rode server test"), grafeasClient)
 	})
 
 	When("occurrences are created", func() {
