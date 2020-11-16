@@ -4,5 +4,25 @@ build:
   local:
     useBuildkit: true
   artifacts:
-    - image: rode-api
+    - image: rode
       context: ./
+deploy:
+  helm:
+    releases:
+      - name: rode
+        chartPath: helm/rode
+        skipBuildDependencies: true
+        wait: true
+        values:
+          image: rode
+        imageStrategy:
+          helm: {}
+profiles:
+  - name: local
+    activation:
+      - kubeContext: docker-for-desktop
+      - kubeContext: docker-desktop
+    patches:
+      - op: add
+        path: /deploy/helm/releases/0/namespace
+        value: default

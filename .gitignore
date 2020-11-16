@@ -1,4 +1,5 @@
 .idea/
 rode
+!helm/rode/
 rode-api
 coverage.txt
