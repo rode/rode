@@ -4,7 +4,7 @@ package rode.v1alpha1;
 
 option go_package = "github.com/liatrio/rode-api/proto/v1alpha1";
 
-import "protodeps/grafeas/proto/v1beta1/grafeas.proto";
+import "proto/v1beta1/grafeas.proto";
 
 service Rode {
   rpc BatchCreateOccurrences(BatchCreateOccurrencesRequest) returns (BatchCreateOccurrencesResponse) {}
