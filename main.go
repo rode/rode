@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/reflection"
 	"log"
 	"net"
 	"os"
@@ -48,6 +49,10 @@ func main() {
 	rodeServer := server.NewRodeServer(logger.Named("rode"), grafeasClient)
 	healthzServer := server.NewHealthzServer(logger.Named("healthz"))
 	s := grpc.NewServer()
+
+	if debug {
+		reflection.Register(s)
+	}
 
 	pb.RegisterRodeServer(s, rodeServer)
 	grpc_health_v1.RegisterHealthServer(s, healthzServer)

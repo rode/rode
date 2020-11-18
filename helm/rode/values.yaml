@@ -14,6 +14,8 @@ grafeas:
 
 grafeasHost: "grafeas-server:8080"
 
+debug: false
+
 image:
   repository: "harbor.toolchain.lead.prod.liatr.io/public/rode"
   tag: ""
