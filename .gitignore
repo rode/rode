@@ -3,3 +3,4 @@ rode
 !helm/rode/
 rode-api
 coverage.txt
+.DS_Store

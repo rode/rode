@@ -33,13 +33,15 @@ grep -rl 'github.com/grafeas/grafeas' ./*.proto | xargs sed -i 's+github.com/gra
 
 # next, generate go code from the grafeas protobuf definitions
 
+cd /rode-api/protodeps/grafeas
+
 function generate {
-    protoc -I . -I ../.. -I ../../../googleapis --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative $1.proto
-    rm -rf "${1}_go_proto"
-    mkdir "${1}_go_proto"
-    mv ${1}.pb.go ${1}_go_proto
-    if test -f "${1}_grpc.pb.go"; then
-        mv ${1}_grpc.pb.go ${1}_go_proto
+    protoc -I . -I ../googleapis --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative proto/v1beta1/$1.proto
+    rm -rf "proto/v1beta1/${1}_go_proto"
+    mkdir "proto/v1beta1/${1}_go_proto"
+    mv "proto/v1beta1/${1}.pb.go" "proto/v1beta1/${1}_go_proto"
+    if test -f "proto/v1beta1/${1}_grpc.pb.go"; then
+        mv "proto/v1beta1/${1}_grpc.pb.go" "proto/v1beta1/${1}_go_proto"
     fi
 }
 

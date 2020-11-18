@@ -638,5 +638,5 @@ var _GrafeasV1Beta1_serviceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "grafeas.proto",
+	Metadata: "proto/v1beta1/grafeas.proto",
 }
