@@ -1,4 +1,4 @@
-apiVersion: skaffold/v2alpha1
+apiVersion: skaffold/v2beta9
 kind: Config
 build:
   local:
@@ -13,7 +13,7 @@ deploy:
         chartPath: helm/rode
         skipBuildDependencies: true
         wait: true
-        values:
+        artifactOverrides:
           image: rode
         imageStrategy:
           helm: {}
@@ -22,7 +22,39 @@ profiles:
     activation:
       - kubeContext: docker-for-desktop
       - kubeContext: docker-desktop
+    portForward:
+    - resourceType: service
+      resourceName: rode
+      namespace: default 
+      port: 50051
+      localPort: 50051
+    - resourceType: service
+      resourceName: grafeas-server
+      namespace: default 
+      port: 8080
+      localPort: 8080
+    - resourceType: service
+      resourceName: grpc-swagger
+      namespace: default 
+      port: 8080
+      localPort: 8081
     patches:
       - op: add
         path: /deploy/helm/releases/0/namespace
         value: default
+      - op: add
+        path: /deploy/helm/releases/0/overrides
+        value: 
+          debug: true
+      - op: add
+        path: /build/artifacts/1
+        value:
+          image: grpc-swagger
+          context: ./tools/grpc-swagger
+      - op: add
+        path: /deploy/helm/releases/1
+        value:
+          name: grpc-swagger
+          chartPath: tools/grpc-swagger/chart
+          artifactOverrides:
+            image.name: grpc-swagger
