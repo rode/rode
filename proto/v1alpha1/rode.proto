@@ -23,7 +23,3 @@ message BatchCreateOccurrencesResponse {
   // The occurrences that were created.
   repeated grafeas.v1beta1.Occurrence occurrences = 1;
 }
-
-message Foo {
-  string bar = 1;
-}
