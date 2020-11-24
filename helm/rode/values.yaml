@@ -14,6 +14,9 @@ grafeas:
 
 grafeasHost: "grafeas-server:8080"
 
+opa:
+  enabled: true
+
 debug: false
 
 image:
