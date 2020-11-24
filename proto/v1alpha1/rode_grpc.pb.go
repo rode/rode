@@ -17,7 +17,9 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type RodeClient interface {
+	// Create occurrences
 	BatchCreateOccurrences(ctx context.Context, in *BatchCreateOccurrencesRequest, opts ...grpc.CallOption) (*BatchCreateOccurrencesResponse, error)
+	// Verify that an artifact satisfies a policy
 	AttestPolicy(ctx context.Context, in *AttestPolicyRequest, opts ...grpc.CallOption) (*AttestPolicyResponse, error)
 }
 
@@ -51,7 +53,9 @@ func (c *rodeClient) AttestPolicy(ctx context.Context, in *AttestPolicyRequest, 
 // All implementations must embed UnimplementedRodeServer
 // for forward compatibility
 type RodeServer interface {
+	// Create occurrences
 	BatchCreateOccurrences(context.Context, *BatchCreateOccurrencesRequest) (*BatchCreateOccurrencesResponse, error)
+	// Verify that an artifact satisfies a policy
 	AttestPolicy(context.Context, *AttestPolicyRequest) (*AttestPolicyResponse, error)
 	mustEmbedUnimplementedRodeServer()
 }

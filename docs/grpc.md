@@ -3,6 +3,12 @@
 
 ## Table of Contents
 
+- [proto/v1alpha1/rode-attest.proto](#proto/v1alpha1/rode-attest.proto)
+    - [AttestPolicyAttestation](#rode.v1alpha1.AttestPolicyAttestation)
+    - [AttestPolicyRequest](#rode.v1alpha1.AttestPolicyRequest)
+    - [AttestPolicyResponse](#rode.v1alpha1.AttestPolicyResponse)
+    - [AttestPolicyViolation](#rode.v1alpha1.AttestPolicyViolation)
+  
 - [proto/v1alpha1/rode.proto](#proto/v1alpha1/rode.proto)
     - [BatchCreateOccurrencesRequest](#rode.v1alpha1.BatchCreateOccurrencesRequest)
     - [BatchCreateOccurrencesResponse](#rode.v1alpha1.BatchCreateOccurrencesResponse)
@@ -10,6 +16,90 @@
     - [Rode](#rode.v1alpha1.Rode)
   
 - [Scalar Value Types](#scalar-value-types)
+
+
+
+<a name="proto/v1alpha1/rode-attest.proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## proto/v1alpha1/rode-attest.proto
+
+
+
+<a name="rode.v1alpha1.AttestPolicyAttestation"></a>
+
+### AttestPolicyAttestation
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| allow | [bool](#bool) |  |  |
+| created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
+| violations | [AttestPolicyViolation](#rode.v1alpha1.AttestPolicyViolation) | repeated |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.AttestPolicyRequest"></a>
+
+### AttestPolicyRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| policy | [string](#string) |  |  |
+| resourceURI | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.AttestPolicyResponse"></a>
+
+### AttestPolicyResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| allow | [bool](#bool) |  |  |
+| changed | [bool](#bool) |  |  |
+| attestations | [AttestPolicyAttestation](#rode.v1alpha1.AttestPolicyAttestation) | repeated |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.AttestPolicyViolation"></a>
+
+### AttestPolicyViolation
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| name | [string](#string) |  |  |
+| description | [string](#string) |  |  |
+| link | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
+
+ 
 
 
 
@@ -63,7 +153,8 @@ Response for creating occurrences in batch.
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
-| BatchCreateOccurrences | [BatchCreateOccurrencesRequest](#rode.v1alpha1.BatchCreateOccurrencesRequest) | [BatchCreateOccurrencesResponse](#rode.v1alpha1.BatchCreateOccurrencesResponse) |  |
+| BatchCreateOccurrences | [BatchCreateOccurrencesRequest](#rode.v1alpha1.BatchCreateOccurrencesRequest) | [BatchCreateOccurrencesResponse](#rode.v1alpha1.BatchCreateOccurrencesResponse) | Create occurrences |
+| AttestPolicy | [AttestPolicyRequest](#rode.v1alpha1.AttestPolicyRequest) | [AttestPolicyResponse](#rode.v1alpha1.AttestPolicyResponse) | Verify that an artifact satisfies a policy |
 
  
 

@@ -6,6 +6,7 @@ import (
 	pb "github.com/rode/rode/proto/v1alpha1"
 	grafeas "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 
+	"github.com/golang/protobuf/proto"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -50,7 +51,7 @@ func (r *rodeServer) AttestPolicy(ctx context.Context, request *pb.AttestPolicyR
 	}
 
 	// json encode occurrences
-	_, err = protojson.Marshal(listOccurrencesResponse)
+	_, err = protojson.Marshal(proto.MessageV2(listOccurrencesResponse))
 	if err != nil {
 		log.Error("failed to encode resource occurrences", zap.NamedError("error", err))
 		return nil, err

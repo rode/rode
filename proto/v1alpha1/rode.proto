@@ -8,7 +8,9 @@ import "proto/v1alpha1/rode-attest.proto";
 import "proto/v1beta1/grafeas.proto";
 
 service Rode {
+  // Create occurrences 
   rpc BatchCreateOccurrences(BatchCreateOccurrencesRequest) returns (BatchCreateOccurrencesResponse) {}
+  // Verify that an artifact satisfies a policy
   rpc AttestPolicy(AttestPolicyRequest) returns (AttestPolicyResponse) {}
 }
 
