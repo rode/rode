@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package rode.v1alpha1;
+
+option go_package = "github.com/liatrio/rode-api/proto/v1alpha1";
+
+import "google/protobuf/timestamp.proto";
+
+message AttestPolicyRequest {
+  string policy = 1;
+  string resourceURI = 2;
+}
+
+message AttestPolicyResponse {
+  bool allow = 1;
+  bool changed = 2;
+  repeated AttestPolicyAttestation attestations = 3;
+}
+
+message AttestPolicyAttestation {
+  bool allow = 1;
+  google.protobuf.Timestamp created = 2;
+  repeated AttestPolicyViolation violations = 3;
+}
+
+message AttestPolicyViolation {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string link = 4;  
+}
