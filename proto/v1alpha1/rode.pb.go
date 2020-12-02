@@ -8,7 +8,6 @@ package v1alpha1
 
 import (
 	proto "github.com/golang/protobuf/proto"
-	v1alpha1 "github.com/liatrio/rode-api/proto/v1alpha1"
 	grafeas_go_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -232,8 +231,8 @@ var file_proto_v1alpha1_rode_proto_goTypes = []interface{}{
 	(*BatchCreateOccurrencesResponse)(nil), // 1: rode.v1alpha1.BatchCreateOccurrencesResponse
 	(*Foo)(nil),                            // 2: rode.v1alpha1.Foo
 	(*grafeas_go_proto.Occurrence)(nil),    // 3: grafeas.v1beta1.Occurrence
-	(*v1alpha1.AttestPolicyRequest)(nil),   // 4: rode.v1alpha1.AttestPolicyRequest
-	(*v1alpha1.AttestPolicyResponse)(nil),  // 5: rode.v1alpha1.AttestPolicyResponse
+	(*AttestPolicyRequest)(nil),            // 4: rode.v1alpha1.AttestPolicyRequest
+	(*AttestPolicyResponse)(nil),           // 5: rode.v1alpha1.AttestPolicyResponse
 }
 var file_proto_v1alpha1_rode_proto_depIdxs = []int32{
 	3, // 0: rode.v1alpha1.BatchCreateOccurrencesRequest.occurrences:type_name -> grafeas.v1beta1.Occurrence
@@ -254,6 +253,7 @@ func file_proto_v1alpha1_rode_proto_init() {
 	if File_proto_v1alpha1_rode_proto != nil {
 		return
 	}
+	file_proto_v1alpha1_rode_attest_proto_init()
 	if !protoimpl.UnsafeEnabled {
 		file_proto_v1alpha1_rode_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*BatchCreateOccurrencesRequest); i {

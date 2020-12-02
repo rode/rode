@@ -23,4 +23,4 @@ test: fmtcheck vet
 	go test ./... -coverprofile=coverage.txt -covermode atomic
 
 mocks:
-	mockgen -package mocks github.com/liatrio/rode-api/protodeps/grafeas/proto/v1beta1/grafeas_go_proto GrafeasV1Beta1Client > mocks/grafeasV1Beta1Client.go
+	mockgen -package mocks github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto GrafeasV1Beta1Client > mocks/grafeasV1Beta1Client.go

@@ -2,10 +2,13 @@ package server
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/brianvoe/gofakeit/v5"
+	gomock "github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/rode/rode/mocks"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	grafeas_common_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/common_go_proto"
 	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
@@ -15,12 +18,18 @@ import (
 var _ = Describe("rode server", func() {
 	var (
 		rodeServer    pb.RodeServer
-		grafeasClient *mockGrafeasClient
+		grafeasClient *mocks.MockGrafeasV1Beta1Client
+		mockCtrl      *gomock.Controller
 	)
 
 	BeforeEach(func() {
-		grafeasClient = &mockGrafeasClient{}
+		mockCtrl = gomock.NewController(GinkgoT())
+		grafeasClient = mocks.NewMockGrafeasV1Beta1Client(mockCtrl)
 		rodeServer = NewRodeServer(logger.Named("rode server test"), grafeasClient)
+	})
+
+	AfterEach(func() {
+		mockCtrl.Finish()
 	})
 
 	When("occurrences are created", func() {
@@ -30,30 +39,91 @@ var _ = Describe("rode server", func() {
 
 		JustBeforeEach(func() {
 			randomOccurrence = createRandomUnspecifiedOccurrence()
-			grafeasClient.preparedBatchCreateOccurrenceResponse = &grafeas_proto.BatchCreateOccurrencesResponse{
+		})
+
+		It("should forward the batch create occurrence request to grafeas", func() {
+			// expected Grafeas BatchCreateOccurrences request
+			grafeasBatchCreateOccurrencesRequest := &grafeas_proto.BatchCreateOccurrencesRequest{
+				Parent: "projects/rode",
 				Occurrences: []*grafeas_proto.Occurrence{
 					randomOccurrence,
 				},
 			}
-		})
-
-		It("should forward the batch create occurrence request to grafeas", func() {
-			response, err := rodeServer.BatchCreateOccurrences(context.Background(), &pb.BatchCreateOccurrencesRequest{
+			// mocked Grafeas BatchCreateOccurrences response
+			grafeasBatchCreateOccurrencesResponse := &grafeas_proto.BatchCreateOccurrencesResponse{
 				Occurrences: []*grafeas_proto.Occurrence{
 					randomOccurrence,
 				},
-			})
+			}
+			// ensure Grafeas BatchCreateOccurrences is called with expected request and inject response
+			grafeasClient.EXPECT().BatchCreateOccurrences(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(grafeasBatchCreateOccurrencesRequest)).Return(grafeasBatchCreateOccurrencesResponse, nil)
+
+			batchCreateOccurrencesRequest := &pb.BatchCreateOccurrencesRequest{
+				Occurrences: []*grafeas_proto.Occurrence{
+					randomOccurrence,
+				},
+			}
+
+			response, err := rodeServer.BatchCreateOccurrences(context.Background(), batchCreateOccurrencesRequest)
 			Expect(err).ToNot(HaveOccurred())
 
-			// ensure occurrences were forwarded to grafeas
-			Expect(grafeasClient.receivedBatchCreateOccurrenceRequest.Occurrences).To(HaveLen(1))
-			Expect(grafeasClient.receivedBatchCreateOccurrenceRequest.Occurrences[0]).To(BeEquivalentTo(randomOccurrence))
-
-			// ensure correct project was set
-			Expect(grafeasClient.receivedBatchCreateOccurrenceRequest.Parent).To(BeEquivalentTo("projects/rode"))
-
 			// check response
-			Expect(response.GetOccurrences()[0]).To(BeEquivalentTo(randomOccurrence))
+			Expect(response.Occurrences).To(BeEquivalentTo(grafeasBatchCreateOccurrencesResponse.Occurrences))
+		})
+	})
+
+	When("policy is evaluated", func() {
+
+		It("should check OPA policy is loaded", func() {
+
+		})
+
+		When("OPA policy is not loaded", func() {
+			It("initializes OPA policies", func() {
+
+			})
+		})
+
+		It("should fetch resource occurrences", func() {
+			resourceURI := gofakeit.URL()
+			policy := gofakeit.Word()
+			listOccurrencesRequest := &grafeas_proto.ListOccurrencesRequest{
+				Filter: fmt.Sprintf("resourceUri:%s", resourceURI),
+			}
+			listOccurrencesResponse := &grafeas_proto.ListOccurrencesResponse{
+				Occurrences: []*grafeas_proto.Occurrence{
+					createRandomUnspecifiedOccurrence(),
+				},
+			}
+			grafeasClient.EXPECT().ListOccurrences(gomock.AssignableToTypeOf(context.Background()), listOccurrencesRequest).Return(listOccurrencesResponse, nil)
+
+			attestPolicyRequest := &pb.AttestPolicyRequest{
+				ResourceURI: resourceURI,
+				Policy:      policy,
+			}
+			_, err := rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
+
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("should evaluate policy with occurrence data", func() {
+
+		})
+
+		When("policy evaluation fails", func() {
+			It("should create failed attestation", func() {
+
+			})
+		})
+
+		When("policy evaluation succeeds", func() {
+			It("should create success attestation", func() {
+
+			})
+		})
+
+		It("should respond with policy attestation response", func() {
+
 		})
 	})
 })
