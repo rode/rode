@@ -6,6 +6,13 @@ import (
 
 	"github.com/brianvoe/gofakeit/v5"
 	gomock "github.com/golang/mock/gomock"
+<<<<<<< HEAD
+=======
+	"github.com/liatrio/rode-api/mocks"
+	pb "github.com/liatrio/rode-api/proto/v1alpha1"
+	grafeas_common_proto "github.com/liatrio/rode-api/protodeps/grafeas/proto/v1beta1/common_go_proto"
+	grafeas_proto "github.com/liatrio/rode-api/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
+>>>>>>> - add attest policy method
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/rode/rode/mocks"
@@ -54,9 +61,12 @@ var _ = Describe("rode server", func() {
 					randomOccurrence,
 				},
 			}
-		})
-
-		It("should forward the batch create occurrence request to grafeas", func() {
+			// mocked Grafeas BatchCreateOccurrences response
+			grafeasBatchCreateOccurrencesResponse := &grafeas_proto.BatchCreateOccurrencesResponse{
+				Occurrences: []*grafeas_proto.Occurrence{
+					randomOccurrence,
+				},
+			}
 			// ensure Grafeas BatchCreateOccurrences is called with expected request and inject response
 			grafeasClient.EXPECT().BatchCreateOccurrences(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(grafeasBatchCreateOccurrencesRequest)).Return(grafeasBatchCreateOccurrencesResponse, nil)
 
