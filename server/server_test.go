@@ -6,13 +6,6 @@ import (
 
 	"github.com/brianvoe/gofakeit/v5"
 	gomock "github.com/golang/mock/gomock"
-<<<<<<< HEAD
-=======
-	"github.com/liatrio/rode-api/mocks"
-	pb "github.com/liatrio/rode-api/proto/v1alpha1"
-	grafeas_common_proto "github.com/liatrio/rode-api/protodeps/grafeas/proto/v1beta1/common_go_proto"
-	grafeas_proto "github.com/liatrio/rode-api/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
->>>>>>> - add attest policy method
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/rode/rode/mocks"
@@ -41,9 +34,9 @@ var _ = Describe("rode server", func() {
 
 	When("occurrences are created", func() {
 		var (
-			randomOccurrence                      *grafeas_proto.Occurrence
-			grafeasBatchCreateOccurrencesRequest  *grafeas_proto.BatchCreateOccurrencesRequest
-			grafeasBatchCreateOccurrencesResponse *grafeas_proto.BatchCreateOccurrencesResponse
+			randomOccurrence                     *grafeas_proto.Occurrence
+			grafeasBatchCreateOccurrencesRequest *grafeas_proto.BatchCreateOccurrencesRequest
+			// grafeasBatchCreateOccurrencesResponse *grafeas_proto.BatchCreateOccurrencesResponse
 		)
 
 		BeforeEach(func() {
@@ -56,11 +49,11 @@ var _ = Describe("rode server", func() {
 				},
 			}
 			// mock Grafeas BatchCreateOccurrences response
-			grafeasBatchCreateOccurrencesResponse = &grafeas_proto.BatchCreateOccurrencesResponse{
-				Occurrences: []*grafeas_proto.Occurrence{
-					randomOccurrence,
-				},
-			}
+			// grafeasBatchCreateOccurrencesResponse = &grafeas_proto.BatchCreateOccurrencesResponse{
+			// 	Occurrences: []*grafeas_proto.Occurrence{
+			// 		randomOccurrence,
+			// 	},
+			// }
 			// mocked Grafeas BatchCreateOccurrences response
 			grafeasBatchCreateOccurrencesResponse := &grafeas_proto.BatchCreateOccurrencesResponse{
 				Occurrences: []*grafeas_proto.Occurrence{
