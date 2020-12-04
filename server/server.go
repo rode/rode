@@ -2,13 +2,12 @@ package server
 
 import (
 	"context"
-
-	"encoding/json"
 	"fmt"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	grafeas "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -44,14 +43,14 @@ func (r *rodeServer) AttestPolicy(ctx context.Context, request *pb.AttestPolicyR
 	// check OPA policy has been loaded
 
 	// fetch occurrences from grafeas
-	listOccurrencesResponse, err := r.grafeasClient.ListOccurrences(ctx, &grafeas.ListOccurrencesRequest{Filter: fmt.Sprintf("resourceUri:%s", request.ResourceURI)})
+	listOccurrencesResponse, err := r.grafeasClient.ListOccurrences(ctx, &grafeas.ListOccurrencesRequest{Filter: fmt.Sprintf("resource.uri = '%s'", request.ResourceURI)})
 	if err != nil {
-		log.Error("failed to list occurrences for resource", zap.NamedError("error", err), zap.String("resource", request.ResourceURI))
+		log.Error("failed to list occurrences for resource", zap.Error(err), zap.String("resource", request.ResourceURI))
 		return nil, err
 	}
 
 	// json encode occurrences
-	_, err = json.Marshal(listOccurrencesResponse)
+	_, err = protojson.Marshal(listOccurrencesResponse)
 	if err != nil {
 		log.Error("failed to encode resource occurrences", zap.NamedError("error", err))
 		return nil, err
