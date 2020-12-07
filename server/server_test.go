@@ -34,27 +34,29 @@ var _ = Describe("rode server", func() {
 
 	When("occurrences are created", func() {
 		var (
-			randomOccurrence *grafeas_proto.Occurrence
+			randomOccurrence                      *grafeas_proto.Occurrence
+			grafeasBatchCreateOccurrencesRequest  *grafeas_proto.BatchCreateOccurrencesRequest
+			grafeasBatchCreateOccurrencesResponse *grafeas_proto.BatchCreateOccurrencesResponse
 		)
 
-		JustBeforeEach(func() {
+		BeforeEach(func() {
 			randomOccurrence = createRandomUnspecifiedOccurrence()
-		})
-
-		It("should forward the batch create occurrence request to grafeas", func() {
 			// expected Grafeas BatchCreateOccurrences request
-			grafeasBatchCreateOccurrencesRequest := &grafeas_proto.BatchCreateOccurrencesRequest{
+			grafeasBatchCreateOccurrencesRequest = &grafeas_proto.BatchCreateOccurrencesRequest{
 				Parent: "projects/rode",
 				Occurrences: []*grafeas_proto.Occurrence{
 					randomOccurrence,
 				},
 			}
-			// mocked Grafeas BatchCreateOccurrences response
-			grafeasBatchCreateOccurrencesResponse := &grafeas_proto.BatchCreateOccurrencesResponse{
+			// mock Grafeas BatchCreateOccurrences response
+			grafeasBatchCreateOccurrencesResponse = &grafeas_proto.BatchCreateOccurrencesResponse{
 				Occurrences: []*grafeas_proto.Occurrence{
 					randomOccurrence,
 				},
 			}
+		})
+
+		It("should forward the batch create occurrence request to grafeas", func() {
 			// ensure Grafeas BatchCreateOccurrences is called with expected request and inject response
 			grafeasClient.EXPECT().BatchCreateOccurrences(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(grafeasBatchCreateOccurrencesRequest)).Return(grafeasBatchCreateOccurrencesResponse, nil)
 
@@ -74,6 +76,26 @@ var _ = Describe("rode server", func() {
 
 	When("policy is evaluated", func() {
 
+		var (
+			resourceURI             string
+			policy                  string
+			listOccurrencesRequest  *grafeas_proto.ListOccurrencesRequest
+			listOccurrencesResponse *grafeas_proto.ListOccurrencesResponse
+		)
+
+		BeforeEach(func() {
+			resourceURI = gofakeit.URL()
+			policy = gofakeit.Word()
+			listOccurrencesRequest = &grafeas_proto.ListOccurrencesRequest{
+				Filter: fmt.Sprintf("resource.uri = '%s'", resourceURI),
+			}
+			listOccurrencesResponse = &grafeas_proto.ListOccurrencesResponse{
+				Occurrences: []*grafeas_proto.Occurrence{
+					createRandomUnspecifiedOccurrence(),
+				},
+			}
+		})
+
 		It("should check OPA policy is loaded", func() {
 
 		})
@@ -85,16 +107,6 @@ var _ = Describe("rode server", func() {
 		})
 
 		It("should fetch resource occurrences", func() {
-			resourceURI := gofakeit.URL()
-			policy := gofakeit.Word()
-			listOccurrencesRequest := &grafeas_proto.ListOccurrencesRequest{
-				Filter: fmt.Sprintf("resourceUri:%s", resourceURI),
-			}
-			listOccurrencesResponse := &grafeas_proto.ListOccurrencesResponse{
-				Occurrences: []*grafeas_proto.Occurrence{
-					createRandomUnspecifiedOccurrence(),
-				},
-			}
 			grafeasClient.EXPECT().ListOccurrences(gomock.AssignableToTypeOf(context.Background()), listOccurrencesRequest).Return(listOccurrencesResponse, nil)
 
 			attestPolicyRequest := &pb.AttestPolicyRequest{
