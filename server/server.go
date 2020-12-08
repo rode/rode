@@ -8,6 +8,8 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -46,16 +48,12 @@ func (r *rodeServer) AttestPolicy(ctx context.Context, request *pb.AttestPolicyR
 	// fetch occurrences from grafeas
 	listOccurrencesResponse, err := r.grafeasClient.ListOccurrences(ctx, &grafeas.ListOccurrencesRequest{Filter: fmt.Sprintf("resource.uri = '%s'", request.ResourceURI)})
 	if err != nil {
-		log.Error("failed to list occurrences for resource", zap.Error(err), zap.String("resource", request.ResourceURI))
-		return nil, err
+		log.Error("list occurrences failed", zap.Error(err), zap.String("resource", request.ResourceURI))
+		return nil, status.Error(codes.Internal, "list occurrences failed")
 	}
 
-	// json encode occurrences
-	_, err = protojson.Marshal(proto.MessageV2(listOccurrencesResponse))
-	if err != nil {
-		log.Error("failed to encode resource occurrences", zap.NamedError("error", err))
-		return nil, err
-	}
+	// json encode occurrences. list occurrences response should not generate error
+	_, _ = protojson.Marshal(proto.MessageV2(listOccurrencesResponse))
 
 	// evalute OPA policy
 

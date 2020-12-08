@@ -118,6 +118,21 @@ var _ = Describe("rode server", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
+		When("Grafeas list occurrences fails", func() {
+			It("returns an error", func() {
+				grafeasClient.EXPECT().ListOccurrences(gomock.AssignableToTypeOf(context.Background()), listOccurrencesRequest).Return(listOccurrencesResponse, fmt.Errorf("Grafeas error"))
+
+				attestPolicyRequest := &pb.AttestPolicyRequest{
+					ResourceURI: resourceURI,
+					Policy:      policy,
+				}
+				_, err := rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
+
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("list occurrences failed"))
+			})
+		})
+
 		It("should evaluate policy with occurrence data", func() {
 
 		})
