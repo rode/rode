@@ -40,7 +40,7 @@ var _ = Describe("rode server", func() {
 		)
 
 		BeforeEach(func() {
-			randomOccurrence = createRandomUnspecifiedOccurrence()
+			randomOccurrence = createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED)
 			// expected Grafeas BatchCreateOccurrences request
 			grafeasBatchCreateOccurrencesRequest = &grafeas_proto.BatchCreateOccurrencesRequest{
 				Parent: "projects/rode",
@@ -75,12 +75,11 @@ var _ = Describe("rode server", func() {
 	})
 
 	When("policy is evaluated", func() {
-
 		var (
-			resourceURI             string
-			policy                  string
-			listOccurrencesRequest  *grafeas_proto.ListOccurrencesRequest
-			listOccurrencesResponse *grafeas_proto.ListOccurrencesResponse
+			resourceURI            string
+			policy                 string
+			listOccurrencesRequest *grafeas_proto.ListOccurrencesRequest
+			attestPolicyRequest    *pb.AttestPolicyRequest
 		)
 
 		BeforeEach(func() {
@@ -89,80 +88,140 @@ var _ = Describe("rode server", func() {
 			listOccurrencesRequest = &grafeas_proto.ListOccurrencesRequest{
 				Filter: fmt.Sprintf("resource.uri = '%s'", resourceURI),
 			}
-			listOccurrencesResponse = &grafeas_proto.ListOccurrencesResponse{
-				Occurrences: []*grafeas_proto.Occurrence{
-					createRandomUnspecifiedOccurrence(),
-				},
-			}
-		})
-
-		It("should check OPA policy is loaded", func() {
-
-		})
-
-		When("OPA policy is not loaded", func() {
-			It("initializes OPA policies", func() {
-
-			})
-		})
-
-		It("should fetch resource occurrences", func() {
-			grafeasClient.EXPECT().ListOccurrences(gomock.AssignableToTypeOf(context.Background()), listOccurrencesRequest).Return(listOccurrencesResponse, nil)
-
-			attestPolicyRequest := &pb.AttestPolicyRequest{
+			attestPolicyRequest = &pb.AttestPolicyRequest{
 				ResourceURI: resourceURI,
 				Policy:      policy,
 			}
-			_, err := rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
-
-			Expect(err).ToNot(HaveOccurred())
 		})
 
-		When("Grafeas list occurrences fails", func() {
-			It("returns an error", func() {
-				grafeasClient.EXPECT().ListOccurrences(gomock.AssignableToTypeOf(context.Background()), listOccurrencesRequest).Return(listOccurrencesResponse, fmt.Errorf("Grafeas error"))
+		It("should initialize OPA policy", func() {
+			// ignore Grafeas list occurrences call
+			grafeasClient.EXPECT().ListOccurrences(gomock.Any(), gomock.Any()).AnyTimes()
 
-				attestPolicyRequest := &pb.AttestPolicyRequest{
-					ResourceURI: resourceURI,
-					Policy:      policy,
-				}
-				_, err := rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
+			// expect OPA initPolicy call
 
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("list occurrences failed"))
+			_, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
+		})
+
+		When("OPA policy initializes", func() {
+
+			It("should list Grafeas occurrences", func() {
+				// expect Grafeas list occurrences call
+				grafeasClient.EXPECT().ListOccurrences(gomock.AssignableToTypeOf(context.Background()), listOccurrencesRequest)
+
+				_, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
+			})
+
+			When("Grafeas list occurrences response is ok", func() {
+
+				It("should evaluate OPA policy", func() {
+					// mock Grafeas list occurrences response
+					listOccurrencesResponse := &grafeas_proto.ListOccurrencesResponse{
+						Occurrences: []*grafeas_proto.Occurrence{
+							createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED),
+						},
+					}
+					grafeasClient.EXPECT().ListOccurrences(gomock.Any(), gomock.Any()).Return(listOccurrencesResponse, nil)
+
+					// expect evalute OPA policy call
+
+					_, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
+				})
+
+				When("resource does not have previous attestation occurrence", func() {
+					BeforeEach(func() {
+						// mock Grafeas list occurrences response
+						// mock OPA evalute policy response
+					})
+					It("should create new attestation occurrence", func() {
+						// expect Grafeas create occurrence call
+						// _, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
+					})
+					It("should respond with new attestation occurrence", func() {
+						// expect response state to match OPA policy evaluation
+						// expect response to include new attestation
+						// _, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
+					})
+				})
+
+				When("resource has previous attestation occurrence", func() {
+					BeforeEach(func() {
+						// mock Grafeas list occurrences response
+					})
+					When("OPA policy evaluation is same as previous attestation occurrence", func() {
+						BeforeEach(func() {
+							// mock OPA evalute policy response
+						})
+						It("should not create new attestation occurrence", func() {
+							// expect Grafeas create occurrence to not be called
+							// _, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
+						})
+						It("should respond with previous the previous attestation occurrence", func() {
+							// expect response state to match OPA policy evaluation
+							// expect response to include previous attestation
+							// _, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
+						})
+					})
+
+					When("OPA policy evaluation is different than previous attestation occurrence", func() {
+						BeforeEach(func() {
+							listOccurrencesResponse := &grafeas_proto.ListOccurrencesResponse{
+								Occurrences: []*grafeas_proto.Occurrence{
+									createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED),
+									createRandomOccurrence(grafeas_common_proto.NoteKind_ATTESTATION),
+								},
+							}
+
+							grafeasClient.EXPECT().ListOccurrences(gomock.Any(), gomock.Any()).Return(listOccurrencesResponse, nil)
+							// mock OPA evalute policy response
+						})
+						It("should create new attestation occurrence", func() {
+							// mock Grafeas list occurrences response
+							// expect Grafeas create occurrence call
+							_, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
+						})
+						It("should respond with new attestation occurrence", func() {
+
+							// expect response state to match OPA policy evaluation
+							// expect response to include new attestation
+							attestPolicyResponse, attestPolicyError := rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
+
+							Expect(attestPolicyResponse).To(Equal(&pb.AttestPolicyResponse{}))
+							Expect(attestPolicyError).ToNot(HaveOccurred())
+						})
+					})
+				})
+
+				When("evalute OPA policy returns error", func() {
+					It("should return error", func() {
+						// _, attestPolicyError := rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
+						// Expect(attestPolicyError).To(HaveOccurred())
+					})
+				})
+			})
+
+			When("Grafeas list occurrences response is error", func() {
+				It("should return an error", func() {
+					// mock Grafeas list occurrences error response
+					grafeasClient.EXPECT().ListOccurrences(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("elasticsearch error"))
+
+					_, attestPolicyError := rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
+					Expect(attestPolicyError).To(HaveOccurred())
+				})
 			})
 		})
 
-		It("should evaluate policy with occurrence data", func() {
-
-		})
-
-		When("policy evaluation fails", func() {
-			It("should create failed attestation", func() {
-
-			})
-		})
-
-		When("policy evaluation succeeds", func() {
-			It("should create success attestation", func() {
-
-			})
-		})
-
-		It("should respond with policy attestation response", func() {
-
-		})
 	})
 })
 
-func createRandomUnspecifiedOccurrence() *grafeas_proto.Occurrence {
+func createRandomOccurrence(kind grafeas_common_proto.NoteKind) *grafeas_proto.Occurrence {
 	return &grafeas_proto.Occurrence{
 		Name: gofakeit.LetterN(10),
 		Resource: &grafeas_proto.Resource{
-			Uri: gofakeit.LetterN(10),
+			Uri: gofakeit.URL(),
 		},
 		NoteName:    gofakeit.LetterN(10),
-		Kind:        grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED,
+		Kind:        kind,
 		Remediation: gofakeit.LetterN(10),
 		CreateTime:  timestamppb.New(gofakeit.Date()),
 		UpdateTime:  timestamppb.New(gofakeit.Date()),

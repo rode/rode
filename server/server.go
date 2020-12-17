@@ -11,7 +11,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type rodeServer struct {
@@ -59,17 +58,7 @@ func (r *rodeServer) AttestPolicy(ctx context.Context, request *pb.AttestPolicyR
 
 	// create attestation
 
-	return &pb.AttestPolicyResponse{
-		Allow:   false,
-		Changed: false,
-		Attestations: []*pb.AttestPolicyAttestation{
-			{
-				Allow:      false,
-				Created:    timestamppb.Now(),
-				Violations: []*pb.AttestPolicyViolation{},
-			},
-		},
-	}, nil
+	return &pb.AttestPolicyResponse{}, nil
 }
 
 func NewRodeServer(logger *zap.Logger, grafeasClient grafeas.GrafeasV1Beta1Client) pb.RodeServer {
