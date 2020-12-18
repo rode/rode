@@ -2,12 +2,13 @@ package server
 
 import (
 	"context"
+
 	"github.com/brianvoe/gofakeit/v5"
-	pb "github.com/liatrio/rode-api/proto/v1alpha1"
-	grafeas_common_proto "github.com/liatrio/rode-api/protodeps/grafeas/proto/v1beta1/common_go_proto"
-	grafeas_proto "github.com/liatrio/rode-api/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	pb "github.com/rode/rode/proto/v1alpha1"
+	grafeas_common_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/common_go_proto"
+	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 

@@ -1,6 +1,6 @@
 .idea/
 rode
 !helm/rode/
-rode-api
+rode
 coverage.txt
 .DS_Store

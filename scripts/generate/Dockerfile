@@ -15,6 +15,6 @@ RUN apk update && apk add \
 RUN go get google.golang.org/protobuf/cmd/protoc-gen-go@${PROTOC_GEN_GO_VERSION}
 RUN go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@${PROTOC_GEN_GO_GRPC_VERSION}
 
-WORKDIR /rode-api
+WORKDIR /rode
 
-ENTRYPOINT ["/rode-api/scripts/generate/entrypoint.sh"]
+ENTRYPOINT ["/rode/scripts/generate/entrypoint.sh"]
