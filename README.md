@@ -20,6 +20,10 @@ This repository hosts the `rode api` Golang service
 
 
 ## rode High-Level Architecture
-(TODO)
+![rode high-level architecture](docs/img/rode-hl-architecture.png)
 
+## rode API Architcture
+### TODO
+
+## Development in rode
 * [Development](docs/development.md)
