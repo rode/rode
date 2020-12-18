@@ -1,4 +1,4 @@
-module github.com/liatrio/rode-api
+module github.com/rode/rode
 
 go 1.15
 

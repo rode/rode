@@ -7,8 +7,8 @@ tools:
 	go generate ./tools
 
 generate:
-	docker build ./scripts/generate -t ghcr.io/liatrio/rode-api-generate:latest
-	docker run -it --rm -v $$(pwd):/rode-api ghcr.io/liatrio/rode-api-generate:latest
+	docker build ./scripts/generate -t ghcr.io/rode/rode-generate:latest
+	docker run -it --rm -v $$(pwd):/rode ghcr.io/rode/rode-generate:latest
 
 fmtcheck:
 	lineCount=$(shell gofmt -l -s $(GOFMT_FILES) | wc -l | tr -d ' ') && exit $$lineCount

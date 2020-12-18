@@ -4,18 +4,19 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	pb "github.com/liatrio/rode-api/proto/v1alpha1"
-	grafeas "github.com/liatrio/rode-api/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
-	"github.com/liatrio/rode-api/server"
-	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/health/grpc_health_v1"
-	"google.golang.org/grpc/reflection"
 	"log"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
+
+	pb "github.com/rode/rode/proto/v1alpha1"
+	grafeas "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
+	"github.com/rode/rode/server"
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/reflection"
 )
 
 var (

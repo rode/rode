@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package rode.v1alpha1;
 
-option go_package = "github.com/liatrio/rode-api/proto/v1alpha1";
+option go_package = "github.com/rode/rode/proto/v1alpha1";
 
 import "proto/v1beta1/grafeas.proto";
 

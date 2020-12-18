@@ -1,4 +1,4 @@
-# rode-api
+# rode
 
 ## Documentation
 

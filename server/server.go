@@ -2,8 +2,9 @@ package server
 
 import (
 	"context"
-	pb "github.com/liatrio/rode-api/proto/v1alpha1"
-	grafeas "github.com/liatrio/rode-api/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
+
+	pb "github.com/rode/rode/proto/v1alpha1"
+	grafeas "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	"go.uber.org/zap"
 )
 
