@@ -4,10 +4,14 @@ package rode.v1alpha1;
 
 option go_package = "github.com/rode/rode/proto/v1alpha1";
 
+import "proto/v1alpha1/rode-attest.proto";
 import "proto/v1beta1/grafeas.proto";
 
 service Rode {
+  // Create occurrences 
   rpc BatchCreateOccurrences(BatchCreateOccurrencesRequest) returns (BatchCreateOccurrencesResponse) {}
+  // Verify that an artifact satisfies a policy
+  rpc AttestPolicy(AttestPolicyRequest) returns (AttestPolicyResponse) {}
 }
 
 // Request to create occurrences in batch.
@@ -20,8 +24,4 @@ message BatchCreateOccurrencesRequest {
 message BatchCreateOccurrencesResponse {
   // The occurrences that were created.
   repeated grafeas.v1beta1.Occurrence occurrences = 1;
-}
-
-message Foo {
-  string bar = 1;
 }

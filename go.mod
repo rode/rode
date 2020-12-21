@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	github.com/brianvoe/gofakeit/v5 v5.10.1
+	github.com/golang/mock v1.4.4
 	github.com/golang/protobuf v1.4.3
 	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.3
