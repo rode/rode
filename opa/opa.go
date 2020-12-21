@@ -20,18 +20,18 @@ type OpaEvalutePolicyRequest struct {
 }
 
 type OpaEvaluatePolicyResponse struct {
-	Result *OpaEvaluatePolicyResult `json:result`
+	Result *OpaEvaluatePolicyResult `json:"result"`
 }
 type OpaEvaluatePolicyResult struct {
-	Pass       bool `json:pass`
+	Pass       bool `json:"pass"`
 	Violations []*OpaEvaluatePolicyViolation
 }
 
 type OpaEvaluatePolicyViolation struct {
-	Message string `json:message`
+	Message string `json:"message"`
 }
 
-func NewOPA(logger *zap.Logger, host string) *OpaClient {
+func NewOPAClient(logger *zap.Logger, host string) *OpaClient {
 	client := &OpaClient{
 		logger: logger,
 		Host:   host,
@@ -50,20 +50,20 @@ func (opa *OpaClient) EvaluatePolicy(policy string, input string) (*OpaEvaluateP
 		log.Error("failed to encode OPA input", zap.Error(err), zap.String("input", input))
 		return nil, fmt.Errorf("failed to encode OPA input: %s", err)
 	}
-	response, err := http.Post(opa.getURL(fmt.Sprintf("v1/data/%s", policy)), "application/json", bytes.NewReader(request))
+	httpResponse, err := http.Post(opa.getURL(fmt.Sprintf("v1/data/%s", policy)), "application/json", bytes.NewReader(request))
 	if err != nil {
 		log.Error("http request to OPA failed", zap.Error(err))
 		return nil, fmt.Errorf("http request to OPA failed: %s", err)
 	}
 
-	res := &OpaEvaluatePolicyResponse{}
-	err = json.NewDecoder(response.Body).Decode(&res)
+	response := &OpaEvaluatePolicyResponse{}
+	err = json.NewDecoder(httpResponse.Body).Decode(&response)
 	if err != nil {
 		log.Error("failed to decode OPA result", zap.Error(err))
 		return nil, fmt.Errorf("failed to decode OPA result: %s", err)
 	}
 
-	return res.Result, nil
+	return response.Result, nil
 }
 
 func (opa *OpaClient) getURL(path string) string {
