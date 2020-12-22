@@ -43,6 +43,12 @@ func (opa *OpaClient) InitializePolicy(policy string) error {
 	return nil
 }
 
+func (opa *OpaClient) PolicyExists(policy string) (bool, error) {
+	// log := opa.logger.Named("Policy Exists")
+	// httpResponse, err := http.Get(opa.getURL(fmt.Sprintf("v1/policies/%s", policy)))
+	return true, nil
+}
+
 func (opa *OpaClient) EvaluatePolicy(policy string, input string) (*OpaEvaluatePolicyResult, error) {
 	log := opa.logger.Named("Evalute Policy")
 	request, err := json.Marshal(&OpaEvalutePolicyRequest{Input: json.RawMessage(input)})
@@ -54,6 +60,10 @@ func (opa *OpaClient) EvaluatePolicy(policy string, input string) (*OpaEvaluateP
 	if err != nil {
 		log.Error("http request to OPA failed", zap.Error(err))
 		return nil, fmt.Errorf("http request to OPA failed: %s", err)
+	}
+	if httpResponse.StatusCode != http.StatusOK {
+		log.Error("http response status from OPA no OK", zap.Any("status", httpResponse.Status))
+		return nil, fmt.Errorf("http response status not OK: %s", err)
 	}
 
 	response := &OpaEvaluatePolicyResponse{}

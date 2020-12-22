@@ -33,7 +33,7 @@ var _ = Describe("opa client", func() {
 		})
 	})
 
-	Context("a new OPA policy is intialized", func() {
+	Context("an OPA policy is intialized", func() {
 		It("should fetch policy from OPA", func() {
 
 		})
@@ -109,12 +109,12 @@ var _ = Describe("opa client", func() {
 				httpmock.RegisterResponder("POST", fmt.Sprintf("%s/v1/data/%s", Opa.Host, opaPolicy),
 					func(req *http.Request) (*http.Response, error) {
 						return httpmock.NewStringResponse(500, "OPA error"), nil
-						// return nil, fmt.Errorf("HTTP error")
 					},
 				)
 			})
-			It("should return an error", func() {
+			It("should return a http status error", func() {
 				Expect(expectedErr).To(HaveOccurred())
+				Expect(expectedErr.Error()).To(ContainSubstring("http response status not OK"))
 				Expect(opaResult).To(BeNil())
 			})
 		})
@@ -130,6 +130,23 @@ var _ = Describe("opa client", func() {
 
 			It("should return an error", func() {
 				Expect(expectedErr).To(HaveOccurred())
+				Expect(expectedErr.Error()).To(ContainSubstring("http request to OPA failed"))
+				Expect(opaResult).To(BeNil())
+			})
+		})
+
+		When("response from OPA fails to decode", func() {
+			BeforeEach(func() {
+				httpmock.RegisterResponder("POST", fmt.Sprintf("%s/v1/data/%s", Opa.Host, opaPolicy),
+					func(req *http.Request) (*http.Response, error) {
+						return httpmock.NewStringResponse(200, `{"result":{"pass":"foo"}}`), nil
+					},
+				)
+			})
+
+			It("should return a response decode error", func() {
+				Expect(expectedErr).To(HaveOccurred())
+				Expect(expectedErr.Error()).To(ContainSubstring("failed to decode OPA result"))
 				Expect(opaResult).To(BeNil())
 			})
 		})
@@ -142,6 +159,7 @@ var _ = Describe("opa client", func() {
 
 			It("should return an error", func() {
 				Expect(httpmock.GetTotalCallCount()).To(Equal(0))
+				Expect(expectedErr.Error()).To(ContainSubstring("failed to encode OPA input"))
 				Expect(expectedErr).To(HaveOccurred())
 			})
 		})
