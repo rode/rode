@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 
 	"go.uber.org/zap"
@@ -31,6 +32,17 @@ type OpaEvaluatePolicyViolation struct {
 	Message string `json:"message"`
 }
 
+type OpaPolicyViolation struct {
+	Conditions []byte
+}
+
+func (v *OpaPolicyViolation) Write(w io.Writer) {
+	w.Write([]byte("violation[] {\n"))
+	w.Write(v.Conditions)
+	w.Write([]byte("\n}\n\n"))
+}
+
+// NewOPAClient OpaClient constructor
 func NewOPAClient(logger *zap.Logger, host string) *OpaClient {
 	client := &OpaClient{
 		logger: logger,
@@ -39,14 +51,64 @@ func NewOPAClient(logger *zap.Logger, host string) *OpaClient {
 	return client
 }
 
-func (opa *OpaClient) InitializePolicy(policy string) error {
+// InitializePolicy initializes OPA policy if it does not already exist
+func (opa *OpaClient) InitializePolicy(policy string) OpaClientError {
+	_ = opa.logger.Named("Initialize Policy")
+	exists, err := opa.policyExists(policy)
+	if err != nil {
+		return opaClientError{"error checking if policy exists", OpaClientErrorTypePolicyExits, err}
+	}
+	if !exists {
+		// fetch violations from ES
+		violations := []OpaPolicyViolation{}
+		err = opa.publishPolicy(policy, violations)
+		if err != nil {
+			return opaClientError{"error publishing policy", OpaClientErrorTypePublishPolicy, err}
+		}
+	}
 	return nil
 }
 
-func (opa *OpaClient) PolicyExists(policy string) (bool, error) {
-	// log := opa.logger.Named("Policy Exists")
-	// httpResponse, err := http.Get(opa.getURL(fmt.Sprintf("v1/policies/%s", policy)))
-	return true, nil
+func (opa *OpaClient) policyExists(policy string) (bool, error) {
+	log := opa.logger.Named("Policy Exists")
+	response, err := http.Get(opa.getURL(fmt.Sprintf("v1/policies/%s", policy)))
+	if err != nil {
+		log.Error("error sending get policy request to OPA", zap.Error(err))
+		return false, opaClientError{"error sending get policy request to OPA", OpaClientErrorTypeHTTP, err}
+	}
+	switch response.StatusCode {
+	case http.StatusOK:
+		return true, nil
+	case http.StatusNotFound:
+		return false, nil
+	default:
+		log.Error("unhandled get policy response from OPA", zap.Any("status", response.Status))
+		return false, opaClientError{fmt.Sprintf("unhandled get policy response from OPA: %s", response.Status), OpaClientErrorTypeBadResponse, nil}
+	}
+}
+
+func (opa *OpaClient) publishPolicy(policy string, violations []OpaPolicyViolation) error {
+	log := opa.logger.Named("Publish Policy")
+	buf := new(bytes.Buffer)
+	buf.WriteString(fmt.Sprintf("package %s\n\n", policy))
+	buf.WriteString("pass = true { count(violation) == 0 }\n\n")
+	for _, violation := range violations {
+		violation.Write(buf)
+	}
+	request, err := http.NewRequest(http.MethodPut, opa.getURL(fmt.Sprintf("v1/policies/%s", policy)), buf)
+	if err != nil {
+		log.Error("error creating create policy request", zap.Error(err))
+	}
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		log.Error("error sending create policy request", zap.Error(err))
+		return opaClientError{"error sending create policy request", OpaClientErrorTypeHTTP, err}
+	}
+	if response.StatusCode != http.StatusOK {
+		log.Error("unhandled create policy response status", zap.Any("status", response.Status))
+		return opaClientError{"unhandled create policy resposne status", OpaClientErrorTypeBadResponse, nil}
+	}
+	return nil
 }
 
 func (opa *OpaClient) EvaluatePolicy(policy string, input string) (*OpaEvaluatePolicyResult, error) {

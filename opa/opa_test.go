@@ -2,6 +2,7 @@ package opa
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"net/http"
@@ -14,7 +15,8 @@ import (
 
 var _ = Describe("opa client", func() {
 	var (
-		Opa OpaClient
+		Opa       OpaClient
+		opaPolicy string
 	)
 
 	BeforeEach(func() {
@@ -22,6 +24,7 @@ var _ = Describe("opa client", func() {
 			logger: logger,
 			Host:   fmt.Sprintf("http://%s", gofakeit.DomainName()),
 		}
+		opaPolicy = gofakeit.Word()
 	})
 
 	When("a new OPA client is created", func() {
@@ -34,18 +37,127 @@ var _ = Describe("opa client", func() {
 	})
 
 	Context("an OPA policy is intialized", func() {
-		It("should fetch policy from OPA", func() {
+		var (
+			initializePolicyError OpaClientError
+			getPolicyResponse     *http.Response
+			getPolicyError        error
+		)
 
+		BeforeEach(func() {
+			getPolicyResponse = httpmock.NewStringResponse(200, "{}")
+			getPolicyError = nil
+
+			httpmock.RegisterResponder("GET", fmt.Sprintf("%s/v1/policies/%s", Opa.Host, opaPolicy),
+				func(req *http.Request) (*http.Response, error) {
+					return getPolicyResponse, getPolicyError
+				},
+			)
+		})
+
+		JustBeforeEach(func() {
+			initializePolicyError = Opa.InitializePolicy(opaPolicy)
+		})
+
+		It("should check if policy exists in OPA", func() {
+			Expect(httpmock.GetTotalCallCount()).To(Equal(1))
+		})
+
+		When("fetch policy request returns error", func() {
+			BeforeEach(func() {
+				getPolicyResponse = nil
+				getPolicyError = errors.New("error connecting to host")
+			})
+
+			It("should return an http request error", func() {
+				Expect(initializePolicyError).To(HaveOccurred())
+				Expect(initializePolicyError.Type()).To(Equal(OpaClientErrorTypePolicyExits))
+				Expect(initializePolicyError.CausedBy()).To(HaveOccurred())
+				Expect(initializePolicyError.CausedBy()).To(BeAssignableToTypeOf(opaClientError{}))
+				Expect(initializePolicyError.CausedBy().(opaClientError).Type()).To(Equal(OpaClientErrorTypeHTTP))
+			})
+		})
+
+		When("fetch policy response status is not OK", func() {
+			BeforeEach(func() {
+				getPolicyResponse = httpmock.NewStringResponse(http.StatusInternalServerError, "OPA Error")
+			})
+
+			It("should return an bad response error", func() {
+				Expect(initializePolicyError).To(HaveOccurred())
+				Expect(initializePolicyError.Type()).To(Equal(OpaClientErrorTypePolicyExits))
+				Expect(initializePolicyError.CausedBy()).To(HaveOccurred())
+				Expect(initializePolicyError.CausedBy()).To(BeAssignableToTypeOf(opaClientError{}))
+				Expect(initializePolicyError.CausedBy().(opaClientError).Type()).To(Equal(OpaClientErrorTypeBadResponse))
+			})
 		})
 
 		When("policy exists", func() {
 			It("should do nothing", func() {
-
+				Expect(initializePolicyError).NotTo(HaveOccurred())
 			})
 		})
 
 		When("policy does not exist", func() {
-			It("should fetch rules from Elasticsearch", func() {
+			BeforeEach(func() {
+				getPolicyResponse = httpmock.NewStringResponse(404, "{}")
+			})
+
+			It("should fetch policy violations from Elasticsearch", func() {
+			})
+
+			When("policy violations are returned from elasticsearch", func() {
+				var (
+					createPolicyResponse *http.Response
+					createPolicyError    error
+				)
+
+				BeforeEach(func() {
+					createPolicyResponse = httpmock.NewStringResponse(200, "{}")
+					createPolicyError = nil
+
+					httpmock.RegisterResponder(http.MethodPut, fmt.Sprintf("%s/v1/policies/%s", Opa.Host, opaPolicy),
+						func(req *http.Request) (*http.Response, error) {
+							// todo assert http put body contains policy package
+							return createPolicyResponse, createPolicyError
+						},
+					)
+				})
+
+				JustBeforeEach(func() {
+				})
+
+				It("publishes policy to OPA", func() {
+					Expect(httpmock.GetTotalCallCount()).To(Equal(2))
+				})
+
+				When("publish OPA policy request returns error", func() {
+					BeforeEach(func() {
+						createPolicyResponse = nil
+						createPolicyError = errors.New("error connecting to host")
+					})
+
+					It("should return a publish policy http error", func() {
+						Expect(initializePolicyError).To(HaveOccurred())
+						Expect(initializePolicyError.Type()).To(Equal(OpaClientErrorTypePublishPolicy))
+						Expect(initializePolicyError.CausedBy()).To(HaveOccurred())
+						Expect(initializePolicyError.CausedBy()).To(BeAssignableToTypeOf(opaClientError{}))
+						Expect(initializePolicyError.CausedBy().(opaClientError).Type()).To(Equal(OpaClientErrorTypeHTTP))
+					})
+				})
+
+				When("publish OPA policy status response is not OK", func() {
+					BeforeEach(func() {
+						createPolicyResponse = httpmock.NewStringResponse(http.StatusInternalServerError, "OPA error")
+					})
+
+					It("should return a publish policy bad response error", func() {
+						Expect(initializePolicyError).To(HaveOccurred())
+						Expect(initializePolicyError.Type()).To(Equal(OpaClientErrorTypePublishPolicy))
+						Expect(initializePolicyError.CausedBy()).To(HaveOccurred())
+						Expect(initializePolicyError.CausedBy()).To(BeAssignableToTypeOf(opaClientError{}))
+						Expect(initializePolicyError.CausedBy().(opaClientError).Type()).To(Equal(OpaClientErrorTypeBadResponse))
+					})
+				})
 
 			})
 		})
@@ -53,7 +165,6 @@ var _ = Describe("opa client", func() {
 
 	Context("an OPA policy is evaluated", func() {
 		var (
-			opaPolicy          string
 			input              string
 			opaResponse        *OpaEvaluatePolicyResponse
 			expectedOpaRequest *OpaEvalutePolicyRequest
@@ -94,6 +205,7 @@ var _ = Describe("opa client", func() {
 				)
 
 			})
+
 			It("should call OPA data endpoint", func() {
 				Expect(httpmock.GetTotalCallCount()).To(Equal(1))
 			})
@@ -112,6 +224,7 @@ var _ = Describe("opa client", func() {
 					},
 				)
 			})
+
 			It("should return a http status error", func() {
 				Expect(expectedErr).To(HaveOccurred())
 				Expect(expectedErr.Error()).To(ContainSubstring("http response status not OK"))
