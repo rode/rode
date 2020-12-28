@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -86,10 +85,11 @@ func createGrafeasClient(grafeasEndpoint string) (grafeas.GrafeasV1Beta1Client, 
 
 	client := grafeas.NewGrafeasV1Beta1Client(connection)
 
-	// test grafeas connection
+	/* Temporary removal of this test as we do not currently instantiate Grafeas with projects
+	test grafeas connection
 	_, err = client.ListOccurrences(context.Background(), &grafeas.ListOccurrencesRequest{
 		Parent: "projects/rode",
-	})
+	})*/
 	return client, err
 }
 
