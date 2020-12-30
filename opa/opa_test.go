@@ -70,7 +70,7 @@ var _ = Describe("opa client", func() {
 
 			It("should return an http request error", func() {
 				Expect(initializePolicyError).To(HaveOccurred())
-				Expect(initializePolicyError.Type()).To(Equal(OpaClientErrorTypePolicyExits))
+				Expect(initializePolicyError.Type()).To(Equal(OpaClientErrorTypePolicyExists))
 				Expect(initializePolicyError.CausedBy()).To(HaveOccurred())
 				Expect(initializePolicyError.CausedBy()).To(BeAssignableToTypeOf(clientError{}))
 				Expect(initializePolicyError.CausedBy().(clientError).Type()).To(Equal(OpaClientErrorTypeHTTP))
@@ -84,7 +84,7 @@ var _ = Describe("opa client", func() {
 
 			It("should return an bad response error", func() {
 				Expect(initializePolicyError).To(HaveOccurred())
-				Expect(initializePolicyError.Type()).To(Equal(OpaClientErrorTypePolicyExits))
+				Expect(initializePolicyError.Type()).To(Equal(OpaClientErrorTypePolicyExists))
 				Expect(initializePolicyError.CausedBy()).To(HaveOccurred())
 				Expect(initializePolicyError.CausedBy()).To(BeAssignableToTypeOf(clientError{}))
 				Expect(initializePolicyError.CausedBy().(clientError).Type()).To(Equal(OpaClientErrorTypeBadResponse))

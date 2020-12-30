@@ -64,7 +64,7 @@ func (opa *Client) InitializePolicy(policy string) ClientError {
 	_ = opa.logger.Named("Initialize Policy")
 	exists, err := opa.policyExists(policy)
 	if err != nil {
-		return clientError{"error checking if policy exists", OpaClientErrorTypePolicyExits, err}
+		return clientError{"error checking if policy exists", OpaClientErrorTypePolicyExists, err}
 	}
 	if !exists {
 		// fetch violations from ES

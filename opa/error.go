@@ -20,7 +20,7 @@ type ClientErrorType string
 
 // OpaClientErrorType constants
 const (
-	OpaClientErrorTypePolicyExits   ClientErrorType = "Policy Exists"
+	OpaClientErrorTypePolicyExists  ClientErrorType = "Policy Exists"
 	OpaClientErrorTypePublishPolicy ClientErrorType = "Publish Policy"
 	OpaClientErrorTypeHTTP          ClientErrorType = "HTTP Error"
 	OpaClientErrorTypeBadResponse   ClientErrorType = "Bad Response"
