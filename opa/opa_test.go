@@ -15,12 +15,12 @@ import (
 
 var _ = Describe("opa client", func() {
 	var (
-		Opa       OpaClient
+		Opa       Client
 		opaPolicy string
 	)
 
 	BeforeEach(func() {
-		Opa = OpaClient{
+		Opa = Client{
 			logger: logger,
 			Host:   fmt.Sprintf("http://%s", gofakeit.DomainName()),
 		}
@@ -30,15 +30,15 @@ var _ = Describe("opa client", func() {
 	When("a new OPA client is created", func() {
 		It("returns OpaClient", func() {
 			host := fmt.Sprintf("http://%s", gofakeit.DomainName())
-			opa := NewOPAClient(logger, host)
-			Expect(opa).To(BeAssignableToTypeOf(&OpaClient{}))
+			opa := NewClient(logger, host)
+			Expect(opa).To(BeAssignableToTypeOf(&Client{}))
 			Expect(opa.Host).To((Equal(host)))
 		})
 	})
 
 	Context("an OPA policy is intialized", func() {
 		var (
-			initializePolicyError OpaClientError
+			initializePolicyError ClientError
 			getPolicyResponse     *http.Response
 			getPolicyError        error
 		)
@@ -72,8 +72,8 @@ var _ = Describe("opa client", func() {
 				Expect(initializePolicyError).To(HaveOccurred())
 				Expect(initializePolicyError.Type()).To(Equal(OpaClientErrorTypePolicyExits))
 				Expect(initializePolicyError.CausedBy()).To(HaveOccurred())
-				Expect(initializePolicyError.CausedBy()).To(BeAssignableToTypeOf(opaClientError{}))
-				Expect(initializePolicyError.CausedBy().(opaClientError).Type()).To(Equal(OpaClientErrorTypeHTTP))
+				Expect(initializePolicyError.CausedBy()).To(BeAssignableToTypeOf(clientError{}))
+				Expect(initializePolicyError.CausedBy().(clientError).Type()).To(Equal(OpaClientErrorTypeHTTP))
 			})
 		})
 
@@ -86,8 +86,8 @@ var _ = Describe("opa client", func() {
 				Expect(initializePolicyError).To(HaveOccurred())
 				Expect(initializePolicyError.Type()).To(Equal(OpaClientErrorTypePolicyExits))
 				Expect(initializePolicyError.CausedBy()).To(HaveOccurred())
-				Expect(initializePolicyError.CausedBy()).To(BeAssignableToTypeOf(opaClientError{}))
-				Expect(initializePolicyError.CausedBy().(opaClientError).Type()).To(Equal(OpaClientErrorTypeBadResponse))
+				Expect(initializePolicyError.CausedBy()).To(BeAssignableToTypeOf(clientError{}))
+				Expect(initializePolicyError.CausedBy().(clientError).Type()).To(Equal(OpaClientErrorTypeBadResponse))
 			})
 		})
 
@@ -140,8 +140,8 @@ var _ = Describe("opa client", func() {
 						Expect(initializePolicyError).To(HaveOccurred())
 						Expect(initializePolicyError.Type()).To(Equal(OpaClientErrorTypePublishPolicy))
 						Expect(initializePolicyError.CausedBy()).To(HaveOccurred())
-						Expect(initializePolicyError.CausedBy()).To(BeAssignableToTypeOf(opaClientError{}))
-						Expect(initializePolicyError.CausedBy().(opaClientError).Type()).To(Equal(OpaClientErrorTypeHTTP))
+						Expect(initializePolicyError.CausedBy()).To(BeAssignableToTypeOf(clientError{}))
+						Expect(initializePolicyError.CausedBy().(clientError).Type()).To(Equal(OpaClientErrorTypeHTTP))
 					})
 				})
 
@@ -154,8 +154,8 @@ var _ = Describe("opa client", func() {
 						Expect(initializePolicyError).To(HaveOccurred())
 						Expect(initializePolicyError.Type()).To(Equal(OpaClientErrorTypePublishPolicy))
 						Expect(initializePolicyError.CausedBy()).To(HaveOccurred())
-						Expect(initializePolicyError.CausedBy()).To(BeAssignableToTypeOf(opaClientError{}))
-						Expect(initializePolicyError.CausedBy().(opaClientError).Type()).To(Equal(OpaClientErrorTypeBadResponse))
+						Expect(initializePolicyError.CausedBy()).To(BeAssignableToTypeOf(clientError{}))
+						Expect(initializePolicyError.CausedBy().(clientError).Type()).To(Equal(OpaClientErrorTypeBadResponse))
 					})
 				})
 
@@ -166,9 +166,9 @@ var _ = Describe("opa client", func() {
 	Context("an OPA policy is evaluated", func() {
 		var (
 			input              string
-			opaResponse        *OpaEvaluatePolicyResponse
-			expectedOpaRequest *OpaEvalutePolicyRequest
-			opaResult          *OpaEvaluatePolicyResult
+			opaResponse        *EvaluatePolicyResponse
+			expectedOpaRequest *EvalutePolicyRequest
+			opaResult          *EvaluatePolicyResult
 			expectedErr        error
 		)
 
@@ -183,10 +183,10 @@ var _ = Describe("opa client", func() {
 		When("OPA returns a valid response", func() {
 			BeforeEach(func() {
 				input = fmt.Sprintf(`{"%s":"%s"}`, gofakeit.Word(), gofakeit.Word())
-				opaResponse = &OpaEvaluatePolicyResponse{
-					Result: &OpaEvaluatePolicyResult{
+				opaResponse = &EvaluatePolicyResponse{
+					Result: &EvaluatePolicyResult{
 						Pass: gofakeit.Bool(),
-						Violations: []*OpaEvaluatePolicyViolation{
+						Violations: []*EvaluatePolicyViolation{
 							{
 								Message: gofakeit.Paragraph(1, 1, 10, "."),
 							},

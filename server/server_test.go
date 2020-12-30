@@ -12,208 +12,271 @@ import (
 	pb "github.com/rode/rode/proto/v1alpha1"
 	grafeas_common_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/common_go_proto"
 	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
+	grafeas_project_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/project_go_proto"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var _ = Describe("rode server", func() {
 	var (
-		rodeServer    pb.RodeServer
-		grafeasClient *mocks.MockGrafeasV1Beta1Client
-		mockCtrl      *gomock.Controller
+		rodeServer            pb.RodeServer
+		grafeasClient         *mocks.MockGrafeasV1Beta1Client
+		grafeasProjectsClient *mocks.MockProjectsClient
+		mockCtrl              *gomock.Controller
+		getProjectRequest     = &grafeas_project_proto.GetProjectRequest{Name: "projects/rode"}
 	)
 
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		grafeasClient = mocks.NewMockGrafeasV1Beta1Client(mockCtrl)
-		rodeServer = NewRodeServer(logger.Named("rode server test"), grafeasClient)
+		grafeasProjectsClient = mocks.NewMockProjectsClient(mockCtrl)
 	})
 
 	AfterEach(func() {
 		mockCtrl.Finish()
 	})
 
-	When("occurrences are created", func() {
-		var (
-			randomOccurrence                     *grafeas_proto.Occurrence
-			grafeasBatchCreateOccurrencesRequest *grafeas_proto.BatchCreateOccurrencesRequest
-			// grafeasBatchCreateOccurrencesResponse *grafeas_proto.BatchCreateOccurrencesResponse
-		)
+	When("server is initialized", func() {
+		It("checks if rode project exists", func() {
+			grafeasProjectsClient.
+				EXPECT().
+				GetProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(getProjectRequest))
 
-		BeforeEach(func() {
-			randomOccurrence = createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED)
-			// expected Grafeas BatchCreateOccurrences request
-			grafeasBatchCreateOccurrencesRequest = &grafeas_proto.BatchCreateOccurrencesRequest{
-				Parent: "projects/rode",
-				Occurrences: []*grafeas_proto.Occurrence{
-					randomOccurrence,
-				},
-			}
-			// mock Grafeas BatchCreateOccurrences response
-			// grafeasBatchCreateOccurrencesResponse = &grafeas_proto.BatchCreateOccurrencesResponse{
-			// 	Occurrences: []*grafeas_proto.Occurrence{
-			// 		randomOccurrence,
-			// 	},
-			// }
-			// mocked Grafeas BatchCreateOccurrences response
-			grafeasBatchCreateOccurrencesResponse := &grafeas_proto.BatchCreateOccurrencesResponse{
-				Occurrences: []*grafeas_proto.Occurrence{
-					randomOccurrence,
-				},
-			}
-			// ensure Grafeas BatchCreateOccurrences is called with expected request and inject response
-			grafeasClient.EXPECT().BatchCreateOccurrences(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(grafeasBatchCreateOccurrencesRequest)).Return(grafeasBatchCreateOccurrencesResponse, nil)
+			rodeServer = NewRodeServer(logger.Named("rode server test"), GrafeasClients{grafeasClient, grafeasProjectsClient})
+		})
 
-			batchCreateOccurrencesRequest := &pb.BatchCreateOccurrencesRequest{
-				Occurrences: []*grafeas_proto.Occurrence{
-					randomOccurrence,
-				},
-			}
+		When("rode project does not exists", func() {
+			var (
+				createProjectRequest = &grafeas_project_proto.CreateProjectRequest{
+					Project: &grafeas_project_proto.Project{Name: "projects/rode"},
+				}
+			)
+			BeforeEach(func() {
+				grafeasProjectsClient.
+					EXPECT().
+					GetProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(getProjectRequest)).
+					Return(nil, status.Error(codes.NotFound, "Not found"))
+			})
 
-			response, err := rodeServer.BatchCreateOccurrences(context.Background(), batchCreateOccurrencesRequest)
-			Expect(err).ToNot(HaveOccurred())
+			It("creates rode project", func() {
+				grafeasProjectsClient.
+					EXPECT().
+					CreateProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(createProjectRequest))
 
-			// check response
-			Expect(response.Occurrences).To(BeEquivalentTo(grafeasBatchCreateOccurrencesResponse.Occurrences))
+				rodeServer = NewRodeServer(logger.Named("rode server test"), GrafeasClients{grafeasClient, grafeasProjectsClient})
+			})
+		})
+
+		When("rode project exists", func() {
+			BeforeEach(func() {
+				grafeasProjectsClient.
+					EXPECT().
+					GetProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(getProjectRequest)).
+					Return(&grafeas_project_proto.Project{}, nil)
+			})
+
+			It("does not create project", func() {
+				grafeasProjectsClient.
+					EXPECT().
+					CreateProject(gomock.Any(), gomock.Any()).MaxTimes(0)
+
+				rodeServer = NewRodeServer(logger.Named("rode server test"), GrafeasClients{grafeasClient, grafeasProjectsClient})
+			})
 		})
 	})
 
-	When("policy is evaluated", func() {
-		var (
-			resourceURI            string
-			policy                 string
-			listOccurrencesRequest *grafeas_proto.ListOccurrencesRequest
-			attestPolicyRequest    *pb.AttestPolicyRequest
-		)
-
+	Context("server has been initialized", func() {
 		BeforeEach(func() {
-			resourceURI = gofakeit.URL()
-			policy = gofakeit.Word()
-			listOccurrencesRequest = &grafeas_proto.ListOccurrencesRequest{
-				Filter: fmt.Sprintf("resource.uri = '%s'", resourceURI),
-			}
-			attestPolicyRequest = &pb.AttestPolicyRequest{
-				ResourceURI: resourceURI,
-				Policy:      policy,
-			}
+			grafeasProjectsClient.
+				EXPECT().
+				GetProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(getProjectRequest)).
+				Return(&grafeas_project_proto.Project{}, nil)
+
+			rodeServer = NewRodeServer(logger.Named("rode server test"), GrafeasClients{grafeasClient, grafeasProjectsClient})
 		})
 
-		It("should initialize OPA policy", func() {
-			// ignore Grafeas list occurrences call
-			grafeasClient.EXPECT().ListOccurrences(gomock.Any(), gomock.Any()).AnyTimes()
+		When("occurrences are created", func() {
+			var (
+				randomOccurrence                      *grafeas_proto.Occurrence
+				grafeasBatchCreateOccurrencesRequest  *grafeas_proto.BatchCreateOccurrencesRequest
+				grafeasBatchCreateOccurrencesResponse *grafeas_proto.BatchCreateOccurrencesResponse
+			)
 
-			// expect OPA initPolicy call
+			BeforeEach(func() {
+				randomOccurrence = createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED)
 
-			_, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
+				// expected Grafeas BatchCreateOccurrences request
+				grafeasBatchCreateOccurrencesRequest = &grafeas_proto.BatchCreateOccurrencesRequest{
+					Parent: "projects/rode",
+					Occurrences: []*grafeas_proto.Occurrence{
+						randomOccurrence,
+					},
+				}
+
+				// mocked Grafeas BatchCreateOccurrences response
+				grafeasBatchCreateOccurrencesResponse = &grafeas_proto.BatchCreateOccurrencesResponse{
+					Occurrences: []*grafeas_proto.Occurrence{
+						randomOccurrence,
+					},
+				}
+
+			})
+
+			It("sends occurrences to Grafeas", func() {
+				// ensure Grafeas BatchCreateOccurrences is called with expected request and inject response
+				grafeasClient.EXPECT().BatchCreateOccurrences(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(grafeasBatchCreateOccurrencesRequest)).Return(grafeasBatchCreateOccurrencesResponse, nil)
+
+				batchCreateOccurrencesRequest := &pb.BatchCreateOccurrencesRequest{
+					Occurrences: []*grafeas_proto.Occurrence{
+						randomOccurrence,
+					},
+				}
+				response, err := rodeServer.BatchCreateOccurrences(context.Background(), batchCreateOccurrencesRequest)
+				Expect(err).ToNot(HaveOccurred())
+
+				// check response
+				Expect(response.Occurrences).To(BeEquivalentTo(grafeasBatchCreateOccurrencesResponse.Occurrences))
+			})
 		})
 
-		When("OPA policy initializes", func() {
+		When("policy is evaluated", func() {
+			var (
+				resourceURI            string
+				policy                 string
+				listOccurrencesRequest *grafeas_proto.ListOccurrencesRequest
+				attestPolicyRequest    *pb.AttestPolicyRequest
+			)
 
-			It("should list Grafeas occurrences", func() {
-				// expect Grafeas list occurrences call
-				grafeasClient.EXPECT().ListOccurrences(gomock.AssignableToTypeOf(context.Background()), listOccurrencesRequest)
+			BeforeEach(func() {
+				resourceURI = gofakeit.URL()
+				policy = gofakeit.Word()
+				listOccurrencesRequest = &grafeas_proto.ListOccurrencesRequest{
+					Filter: fmt.Sprintf("resource.uri = '%s'", resourceURI),
+				}
+				attestPolicyRequest = &pb.AttestPolicyRequest{
+					ResourceURI: resourceURI,
+					Policy:      policy,
+				}
+			})
+
+			It("should initialize OPA policy", func() {
+				// ignore Grafeas list occurrences call
+				grafeasClient.EXPECT().ListOccurrences(gomock.Any(), gomock.Any()).AnyTimes()
+
+				// expect OPA initPolicy call
 
 				_, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
 			})
 
-			When("Grafeas list occurrences response is ok", func() {
+			When("OPA policy initializes", func() {
 
-				It("should evaluate OPA policy", func() {
-					// mock Grafeas list occurrences response
-					listOccurrencesResponse := &grafeas_proto.ListOccurrencesResponse{
-						Occurrences: []*grafeas_proto.Occurrence{
-							createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED),
-						},
-					}
-					grafeasClient.EXPECT().ListOccurrences(gomock.Any(), gomock.Any()).Return(listOccurrencesResponse, nil)
-
-					// expect evalute OPA policy call
+				It("should list Grafeas occurrences", func() {
+					// expect Grafeas list occurrences call
+					grafeasClient.EXPECT().ListOccurrences(gomock.AssignableToTypeOf(context.Background()), listOccurrencesRequest)
 
 					_, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
 				})
 
-				When("resource does not have previous attestation occurrence", func() {
-					BeforeEach(func() {
+				When("Grafeas list occurrences response is ok", func() {
+
+					It("should evaluate OPA policy", func() {
 						// mock Grafeas list occurrences response
-						// mock OPA evalute policy response
-					})
-					It("should create new attestation occurrence", func() {
-						// expect Grafeas create occurrence call
-						// _, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
-					})
-					It("should respond with new attestation occurrence", func() {
-						// expect response state to match OPA policy evaluation
-						// expect response to include new attestation
-						// _, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
-					})
-				})
+						listOccurrencesResponse := &grafeas_proto.ListOccurrencesResponse{
+							Occurrences: []*grafeas_proto.Occurrence{
+								createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED),
+							},
+						}
+						grafeasClient.EXPECT().ListOccurrences(gomock.Any(), gomock.Any()).Return(listOccurrencesResponse, nil)
 
-				When("resource has previous attestation occurrence", func() {
-					BeforeEach(func() {
-						// mock Grafeas list occurrences response
+						// expect evalute OPA policy call
+
+						_, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
 					})
-					When("OPA policy evaluation is same as previous attestation occurrence", func() {
+
+					When("resource does not have previous attestation occurrence", func() {
 						BeforeEach(func() {
-							// mock OPA evalute policy response
-						})
-						It("should not create new attestation occurrence", func() {
-							// expect Grafeas create occurrence to not be called
-							// _, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
-						})
-						It("should respond with previous the previous attestation occurrence", func() {
-							// expect response state to match OPA policy evaluation
-							// expect response to include previous attestation
-							// _, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
-						})
-					})
-
-					When("OPA policy evaluation is different than previous attestation occurrence", func() {
-						BeforeEach(func() {
-							listOccurrencesResponse := &grafeas_proto.ListOccurrencesResponse{
-								Occurrences: []*grafeas_proto.Occurrence{
-									createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED),
-									createRandomOccurrence(grafeas_common_proto.NoteKind_ATTESTATION),
-								},
-							}
-
-							grafeasClient.EXPECT().ListOccurrences(gomock.Any(), gomock.Any()).Return(listOccurrencesResponse, nil)
+							// mock Grafeas list occurrences response
 							// mock OPA evalute policy response
 						})
 						It("should create new attestation occurrence", func() {
-							// mock Grafeas list occurrences response
 							// expect Grafeas create occurrence call
-							_, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
+							// _, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
 						})
 						It("should respond with new attestation occurrence", func() {
-
 							// expect response state to match OPA policy evaluation
 							// expect response to include new attestation
-							attestPolicyResponse, attestPolicyError := rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
+							// _, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
+						})
+					})
 
-							Expect(attestPolicyResponse).To(Equal(&pb.AttestPolicyResponse{}))
-							Expect(attestPolicyError).ToNot(HaveOccurred())
+					When("resource has previous attestation occurrence", func() {
+						BeforeEach(func() {
+							// mock Grafeas list occurrences response
+						})
+						When("OPA policy evaluation is same as previous attestation occurrence", func() {
+							BeforeEach(func() {
+								// mock OPA evalute policy response
+							})
+							It("should not create new attestation occurrence", func() {
+								// expect Grafeas create occurrence to not be called
+								// _, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
+							})
+							It("should respond with previous the previous attestation occurrence", func() {
+								// expect response state to match OPA policy evaluation
+								// expect response to include previous attestation
+								// _, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
+							})
+						})
+
+						When("OPA policy evaluation is different than previous attestation occurrence", func() {
+							BeforeEach(func() {
+								listOccurrencesResponse := &grafeas_proto.ListOccurrencesResponse{
+									Occurrences: []*grafeas_proto.Occurrence{
+										createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED),
+										createRandomOccurrence(grafeas_common_proto.NoteKind_ATTESTATION),
+									},
+								}
+
+								grafeasClient.EXPECT().ListOccurrences(gomock.Any(), gomock.Any()).Return(listOccurrencesResponse, nil)
+								// mock OPA evalute policy response
+							})
+							It("should create new attestation occurrence", func() {
+								// mock Grafeas list occurrences response
+								// expect Grafeas create occurrence call
+								_, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
+							})
+							It("should respond with new attestation occurrence", func() {
+
+								// expect response state to match OPA policy evaluation
+								// expect response to include new attestation
+								attestPolicyResponse, attestPolicyError := rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
+
+								Expect(attestPolicyResponse).To(Equal(&pb.AttestPolicyResponse{}))
+								Expect(attestPolicyError).ToNot(HaveOccurred())
+							})
+						})
+					})
+
+					When("evalute OPA policy returns error", func() {
+						It("should return error", func() {
+							// _, attestPolicyError := rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
+							// Expect(attestPolicyError).To(HaveOccurred())
 						})
 					})
 				})
 
-				When("evalute OPA policy returns error", func() {
-					It("should return error", func() {
-						// _, attestPolicyError := rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
-						// Expect(attestPolicyError).To(HaveOccurred())
+				When("Grafeas list occurrences response is error", func() {
+					It("should return an error", func() {
+						// mock Grafeas list occurrences error response
+						grafeasClient.EXPECT().ListOccurrences(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("elasticsearch error"))
+
+						_, attestPolicyError := rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
+						Expect(attestPolicyError).To(HaveOccurred())
 					})
-				})
-			})
-
-			When("Grafeas list occurrences response is error", func() {
-				It("should return an error", func() {
-					// mock Grafeas list occurrences error response
-					grafeasClient.EXPECT().ListOccurrences(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("elasticsearch error"))
-
-					_, attestPolicyError := rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
-					Expect(attestPolicyError).To(HaveOccurred())
 				})
 			})
 		})
-
 	})
 })
 

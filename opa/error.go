@@ -2,42 +2,44 @@ package opa
 
 import "fmt"
 
-// OpaClientError interface for errors created by client
-type OpaClientError interface {
+// ClientError interface for errors created by client
+type ClientError interface {
 	error
-	Type() OpaClientErrorType
+	Type() ClientErrorType
 	CausedBy() error
 }
 
-type opaClientError struct {
+type clientError struct {
 	message   string
-	errorType OpaClientErrorType
+	errorType ClientErrorType
 	causedBy  error
 }
 
-// OpaClientErrorType defines error types
-type OpaClientErrorType string
+// ClientErrorType defines error types
+type ClientErrorType string
 
 // OpaClientErrorType constants
 const (
-	OpaClientErrorTypePolicyExits   OpaClientErrorType = "Policy Exists"
-	OpaClientErrorTypePublishPolicy OpaClientErrorType = "Publish Policy"
-	OpaClientErrorTypeHTTP          OpaClientErrorType = "HTTP Error"
-	OpaClientErrorTypeBadResponse   OpaClientErrorType = "Bad Response"
+	OpaClientErrorTypePolicyExits   ClientErrorType = "Policy Exists"
+	OpaClientErrorTypePublishPolicy ClientErrorType = "Publish Policy"
+	OpaClientErrorTypeHTTP          ClientErrorType = "HTTP Error"
+	OpaClientErrorTypeBadResponse   ClientErrorType = "Bad Response"
 )
 
-func (err opaClientError) Error() string {
+// Error returns formatted error message
+func (err clientError) Error() string {
 	if err.causedBy == nil {
 		return err.message
 	}
 	return fmt.Sprintf("%s: %s", err.message, err.causedBy.Error())
 }
 
-func (err opaClientError) Type() OpaClientErrorType {
+// Type gets error type
+func (err clientError) Type() ClientErrorType {
 	return err.errorType
 }
 
-// Is tests if error is of given type
-func (err opaClientError) CausedBy() error {
+// CausedBy gets error that caused this error if one exists
+func (err clientError) CausedBy() error {
 	return err.causedBy
 }
