@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/rode/rode/auth"
 	"github.com/rode/rode/config"
 	"log"
 	"net"
@@ -10,6 +11,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	grafeas "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	"github.com/rode/rode/server"
@@ -40,13 +42,22 @@ func main() {
 		logger.Fatal("failed to connect to grafeas", zap.String("grafeas host", c.Grafeas.Host), zap.NamedError("error", err))
 	}
 
-	rodeServer := server.NewRodeServer(logger.Named("rode"), grafeasClient)
-	healthzServer := server.NewHealthzServer(logger.Named("healthz"))
-	s := grpc.NewServer()
+	authenticator := auth.NewAuthenticator(c.Auth)
+	s := grpc.NewServer(
+		grpc.StreamInterceptor(
+			grpc_auth.StreamServerInterceptor(authenticator.Authenticate),
+		),
+		grpc.UnaryInterceptor(
+			grpc_auth.UnaryServerInterceptor(authenticator.Authenticate),
+		),
+	)
 
 	if c.Debug {
 		reflection.Register(s)
 	}
+
+	rodeServer := server.NewRodeServer(logger.Named("rode"), grafeasClient)
+	healthzServer := server.NewHealthzServer(logger.Named("healthz"))
 
 	pb.RegisterRodeServer(s, rodeServer)
 	grpc_health_v1.RegisterHealthServer(s, healthzServer)
