@@ -8,7 +8,9 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/util/metautils"
 	. "github.com/onsi/gomega"
 	"github.com/rode/rode/config"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"testing"
 )
 
@@ -37,17 +39,17 @@ func TestAuth(t *testing.T) {
 
 		t.Run("should fail when using incorrect credentials", func(t *testing.T) {
 			_, err := a.Authenticate(createCtxWithBasicAuth(ctx, gofakeit.LetterN(10), gofakeit.LetterN(10)))
-			Expect(err).To(HaveOccurred())
+			expectUnauthenticatedErrorToHaveOccurred(t, err)
 		})
 
 		t.Run("should fail when providing no credentials", func(t *testing.T) {
 			_, err := a.Authenticate(ctx)
-			Expect(err).To(HaveOccurred())
+			expectUnauthenticatedErrorToHaveOccurred(t, err)
 		})
 
 		t.Run("should fail when using incorrect format for basic auth", func(t *testing.T) {
 			_, err := a.Authenticate(createCtxWithBasicAuth(ctx, fmt.Sprintf("%s:%s", gofakeit.LetterN(10), gofakeit.LetterN(10)), gofakeit.LetterN(10)))
-			Expect(err).To(HaveOccurred())
+			expectUnauthenticatedErrorToHaveOccurred(t, err)
 		})
 
 		t.Run("should fail when base64 decoding fails", func(t *testing.T) {
@@ -56,9 +58,18 @@ func TestAuth(t *testing.T) {
 			}))
 
 			_, err := a.Authenticate(meta.ToIncoming(ctx))
-			Expect(err).To(HaveOccurred())
+			expectUnauthenticatedErrorToHaveOccurred(t, err)
 		})
 	})
+}
+
+func expectUnauthenticatedErrorToHaveOccurred(t *testing.T, err error) {
+	Expect := NewGomegaWithT(t).Expect
+	Expect(err).To(HaveOccurred())
+	s, ok := status.FromError(err)
+
+	Expect(ok).To(BeTrue(), "expected error to have been produced from the grpc/status package")
+	Expect(s.Code()).To(Equal(codes.Unauthenticated))
 }
 
 func createCtxWithBasicAuth(ctx context.Context, username, password string) context.Context {
