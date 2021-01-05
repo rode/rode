@@ -1,4 +1,4 @@
-package main
+package util
 
 import (
 	"context"
@@ -11,23 +11,10 @@ import (
 	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/package_go_proto"
 	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/vulnerability_go_proto"
-	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-const (
-	address = "localhost:50051"
-)
-
-func main() {
-	conn, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock())
-	if err != nil {
-		log.Fatalf("did not connect: %v", err)
-	}
-	defer conn.Close()
-
-	c := pb.NewRodeClient(conn)
-
+func CreateOccurrences(c pb.RodeClient) {
 	occurrence := &grafeas_go_proto.Occurrence{
 		Name: "abc",
 		Resource: &grafeas_go_proto.Resource{
