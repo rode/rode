@@ -3,15 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	"github.com/rode/rode/auth"
 	"github.com/rode/rode/config"
-	"log"
-	"net"
-	"os"
-	"os/signal"
-	"syscall"
-
-	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	grafeas "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	"github.com/rode/rode/server"
@@ -19,6 +13,12 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
+	"log"
+	"net"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 func main() {
@@ -83,18 +83,13 @@ func main() {
 }
 
 func createGrafeasClient(grafeasEndpoint string) (grafeas.GrafeasV1Beta1Client, error) {
-	connection, err := grpc.Dial(grafeasEndpoint, grpc.WithInsecure())
+	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
+	connection, err := grpc.DialContext(ctx, grafeasEndpoint, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		return nil, err
 	}
 
-	client := grafeas.NewGrafeasV1Beta1Client(connection)
-
-	// test grafeas connection
-	_, err = client.ListOccurrences(context.Background(), &grafeas.ListOccurrencesRequest{
-		Parent: "projects/rode",
-	})
-	return client, err
+	return grafeas.NewGrafeasV1Beta1Client(connection), err
 }
 
 func createLogger(debug bool) (*zap.Logger, error) {
