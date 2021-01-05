@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
+	"github.com/rode/rode/config"
 	"log"
 	"net"
 	"os"
@@ -19,39 +19,32 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-var (
-	debug       bool
-	port        int
-	grafeasHost string
-)
-
 func main() {
-	flag.IntVar(&port, "port", 50051, "the port that the rode API server should listen on")
-	flag.BoolVar(&debug, "debug", false, "when set, debug mode will be enabled")
-	flag.StringVar(&grafeasHost, "grafeas-host", "localhost:8080", "the host to use to connect to grafeas")
+	c, err := config.Build(os.Args[0], os.Args[1:])
+	if err != nil {
+		log.Fatalf("failed to build config: %v", err)
+	}
 
-	flag.Parse()
-
-	logger, err := createLogger(debug)
+	logger, err := createLogger(c.Debug)
 	if err != nil {
 		log.Fatalf("failed to create logger: %v", err)
 	}
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", c.Port))
 	if err != nil {
 		logger.Fatal("failed to listen", zap.NamedError("error", err))
 	}
 
-	grafeasClient, err := createGrafeasClient(grafeasHost)
+	grafeasClient, err := createGrafeasClient(c.Grafeas.Host)
 	if err != nil {
-		logger.Fatal("failed to connect to grafeas", zap.String("grafeas host", grafeasHost), zap.NamedError("error", err))
+		logger.Fatal("failed to connect to grafeas", zap.String("grafeas host", c.Grafeas.Host), zap.NamedError("error", err))
 	}
 
 	rodeServer := server.NewRodeServer(logger.Named("rode"), grafeasClient)
 	healthzServer := server.NewHealthzServer(logger.Named("healthz"))
 	s := grpc.NewServer()
 
-	if debug {
+	if c.Debug {
 		reflection.Register(s)
 	}
 
