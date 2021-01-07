@@ -1,9 +1,13 @@
 package main
 
 import (
-	"context"
-	"flag"
 	"fmt"
+	"log"
+	"net"
+	"os"
+	"os/signal"
+	"syscall"
+
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	"github.com/rode/rode/auth"
 	"github.com/rode/rode/config"
@@ -13,12 +17,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
-	"log"
-	"net"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
 )
 
 func main() {
@@ -37,20 +35,25 @@ func main() {
 		logger.Fatal("failed to listen", zap.NamedError("error", err))
 	}
 
-	grafeasClients, err := server.NewGrafeasClients(grafeasHost)
+	grafeasClients, err := server.NewGrafeasClients(c.Grafeas.Host)
 	if err != nil {
 		logger.Fatal("failed to connect to grafeas", zap.String("grafeas host", c.Grafeas.Host), zap.NamedError("error", err))
 	}
 
-	rodeServer := server.NewRodeServer(logger.Named("rode"), *grafeasClients)
-	healthzServer := server.NewHealthzServer(logger.Named("healthz"))
-	s := grpc.NewServer()
-
-	if debug {
+	authenticator := auth.NewAuthenticator(c.Auth)
+	s := grpc.NewServer(
+		grpc.StreamInterceptor(
+			grpc_auth.StreamServerInterceptor(authenticator.Authenticate),
+		),
+		grpc.UnaryInterceptor(
+			grpc_auth.UnaryServerInterceptor(authenticator.Authenticate),
+		),
+	)
+	if c.Debug {
 		reflection.Register(s)
 	}
 
-	rodeServer := server.NewRodeServer(logger.Named("rode"), grafeasClient)
+	rodeServer := server.NewRodeServer(logger.Named("rode"), *grafeasClients)
 	healthzServer := server.NewHealthzServer(logger.Named("healthz"))
 
 	pb.RegisterRodeServer(s, rodeServer)
