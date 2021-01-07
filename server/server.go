@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"time"
 
 	pb "github.com/rode/rode/proto/v1alpha1"
 	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
@@ -18,7 +19,10 @@ import (
 
 // NewGrafeasClients construct for GrafeasClients
 func NewGrafeasClients(grafeasEndpoint string) (*GrafeasClients, error) {
-	connection, err := grpc.Dial(grafeasEndpoint, grpc.WithInsecure())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	connection, err := grpc.DialContext(ctx, grafeasEndpoint, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		return nil, err
 	}
@@ -26,7 +30,7 @@ func NewGrafeasClients(grafeasEndpoint string) (*GrafeasClients, error) {
 	grafeasClient := grafeas_proto.NewGrafeasV1Beta1Client(connection)
 	projectsClient := grafeas_project_proto.NewProjectsClient(connection)
 
-	return &GrafeasClients{grafeasClient, projectsClient}, err
+	return &GrafeasClients{grafeasClient, projectsClient}, nil
 }
 
 // NewRodeServer constructor for rodeServer
