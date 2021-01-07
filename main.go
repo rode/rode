@@ -35,7 +35,7 @@ func main() {
 		logger.Fatal("failed to listen", zap.Error(err))
 	}
 
-	grafeasClients, err := server.NewGrafeasClients(c.Grafeas.Host)
+	grafeasClientCommon, grafeasClientProjects, err := server.NewGrafeasClients(c.Grafeas.Host)
 	if err != nil {
 		logger.Fatal("failed to connect to grafeas", zap.String("grafeas host", c.Grafeas.Host), zap.Error(err))
 	}
@@ -53,7 +53,7 @@ func main() {
 		reflection.Register(s)
 	}
 
-	rodeServer, err := server.NewRodeServer(logger.Named("rode"), *grafeasClients)
+	rodeServer, err := server.NewRodeServer(logger.Named("rode"), grafeasClientCommon, grafeasClientProjects)
 	if err != nil {
 		logger.Fatal("failed to create Rode server", zap.Error(err))
 	}
