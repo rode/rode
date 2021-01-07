@@ -25,8 +25,12 @@ func NewAuthenticator(authConfig *config.AuthConfig) Authenticator {
 }
 
 func (a *authenticator) Authenticate(ctx context.Context) (context.Context, error) {
-	if a.authConfig.BasicAuthUsername != "" && a.authConfig.BasicAuthPassword != "" {
+	if a.authConfig.Basic.Username != "" && a.authConfig.Basic.Password != "" {
 		return a.basic(ctx)
+	}
+
+	if a.authConfig.JWT.Issuer != "" {
+		return a.jwt(ctx)
 	}
 
 	return ctx, nil
@@ -48,9 +52,23 @@ func (a *authenticator) basic(ctx context.Context) (context.Context, error) {
 		return nil, status.Errorf(codes.Unauthenticated, "expected auth token to follow format ${username}:${password}")
 	}
 
-	if a.authConfig.BasicAuthUsername == parts[0] && a.authConfig.BasicAuthPassword == parts[1] {
+	if a.authConfig.Basic.Username == parts[0] && a.authConfig.Basic.Password == parts[1] {
 		return ctx, nil
 	}
 
 	return nil, status.Error(codes.Unauthenticated, "invalid username or password")
+}
+
+func (a *authenticator) jwt(ctx context.Context) (context.Context, error) {
+	token, err := grpc_auth.AuthFromMD(ctx, "bearer")
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = a.authConfig.JWT.Verifier.Verify(ctx, token)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "error validating jwt: %v", err)
+	}
+
+	return ctx, nil
 }

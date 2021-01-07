@@ -14,6 +14,10 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+const (
+	Address = "localhost:50051"
+)
+
 func CreateOccurrences(c pb.RodeClient) {
 	occurrence := &grafeas_go_proto.Occurrence{
 		Name: "abc",

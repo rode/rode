@@ -19,7 +19,10 @@ func TestAuth(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("no authentication", func(t *testing.T) {
-		a := NewAuthenticator(&config.AuthConfig{})
+		a := NewAuthenticator(&config.AuthConfig{
+			Basic: &config.BasicAuthConfig{},
+			JWT:   &config.JWTAuthConfig{},
+		})
 
 		_, err := a.Authenticate(ctx)
 		Expect(err).ToNot(HaveOccurred())
@@ -27,13 +30,15 @@ func TestAuth(t *testing.T) {
 
 	t.Run("basic authentication", func(t *testing.T) {
 		c := &config.AuthConfig{
-			BasicAuthUsername: gofakeit.LetterN(10),
-			BasicAuthPassword: gofakeit.LetterN(10),
+			Basic: &config.BasicAuthConfig{
+				Username: gofakeit.LetterN(10),
+				Password: gofakeit.LetterN(10),
+			},
 		}
 		a := NewAuthenticator(c)
 
 		t.Run("should be successful when using the correct credentials", func(t *testing.T) {
-			_, err := a.Authenticate(createCtxWithBasicAuth(ctx, c.BasicAuthUsername, c.BasicAuthPassword))
+			_, err := a.Authenticate(createCtxWithBasicAuth(ctx, c.Basic.Username, c.Basic.Password))
 			Expect(err).ToNot(HaveOccurred())
 		})
 

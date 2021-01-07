@@ -27,12 +27,8 @@ func (basicAuth) RequireTransportSecurity() bool {
 	return false // no transport security required for testing locally. don't do this in production
 }
 
-const (
-	address = "localhost:50051"
-)
-
 func main() {
-	conn, err := grpc.Dial(address,
+	conn, err := grpc.Dial(util.Address,
 		grpc.WithInsecure(),
 		grpc.WithBlock(),
 		grpc.WithPerRPCCredentials(&basicAuth{

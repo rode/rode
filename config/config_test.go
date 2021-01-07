@@ -18,7 +18,10 @@ func TestConfig(t *testing.T) {
 			name:  "defaults",
 			flags: []string{},
 			expected: &Config{
-				Auth: &AuthConfig{},
+				Auth: &AuthConfig{
+					Basic: &BasicAuthConfig{},
+					JWT:   &JWTAuthConfig{},
+				},
 				Grafeas: &GrafeasConfig{
 					Host: "localhost:8080",
 				},
@@ -41,8 +44,11 @@ func TestConfig(t *testing.T) {
 			flags: []string{"--basic-auth-username=foo", "--basic-auth-password=bar"},
 			expected: &Config{
 				Auth: &AuthConfig{
-					BasicAuthUsername: "foo",
-					BasicAuthPassword: "bar",
+					Basic: &BasicAuthConfig{
+						Username: "foo",
+						Password: "bar",
+					},
+					JWT: &JWTAuthConfig{},
 				},
 				Grafeas: &GrafeasConfig{
 					Host: "localhost:8080",
