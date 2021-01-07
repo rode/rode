@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"time"
 
 	pb "github.com/rode/rode/proto/v1alpha1"
 	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
@@ -11,27 +10,10 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"go.uber.org/zap"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 )
-
-// NewGrafeasClients construct for GrafeasClients
-func NewGrafeasClients(grafeasEndpoint string) (grafeas_proto.GrafeasV1Beta1Client, grafeas_project_proto.ProjectsClient, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
-	connection, err := grpc.DialContext(ctx, grafeasEndpoint, grpc.WithInsecure(), grpc.WithBlock())
-	if err != nil {
-		return nil, nil, err
-	}
-
-	grafeasClient := grafeas_proto.NewGrafeasV1Beta1Client(connection)
-	projectsClient := grafeas_project_proto.NewProjectsClient(connection)
-
-	return grafeasClient, projectsClient, nil
-}
 
 // NewRodeServer constructor for rodeServer
 func NewRodeServer(logger *zap.Logger, grafeasCommon grafeas_proto.GrafeasV1Beta1Client, grafeasProjects grafeas_project_proto.ProjectsClient) (pb.RodeServer, error) {
@@ -46,7 +28,7 @@ func NewRodeServer(logger *zap.Logger, grafeasCommon grafeas_proto.GrafeasV1Beta
 	return rodeServer, nil
 }
 
-`type rodeServer struct {
+type rodeServer struct {
 	pb.UnimplementedRodeServer
 	logger          *zap.Logger
 	grafeasCommon   grafeas_proto.GrafeasV1Beta1Client
