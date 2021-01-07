@@ -30,15 +30,15 @@ func NewGrafeasClients(grafeasEndpoint string) (*GrafeasClients, error) {
 }
 
 // NewRodeServer constructor for rodeServer
-func NewRodeServer(logger *zap.Logger, grafeasClients GrafeasClients) pb.RodeServer {
+func NewRodeServer(logger *zap.Logger, grafeasClients GrafeasClients) (pb.RodeServer, error) {
 	rodeServer := &rodeServer{
 		logger:         logger,
 		GrafeasClients: grafeasClients,
 	}
 	if err := rodeServer.initialize(context.Background()); err != nil {
-		logger.Fatal("failed initializing rode server", zap.Error(err))
+		return nil, fmt.Errorf("failed to initialize rode server: %s", err)
 	}
-	return rodeServer
+	return rodeServer, nil
 }
 
 // GrafeasClients container for Grafeas protobuf clients

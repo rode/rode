@@ -32,12 +32,12 @@ func main() {
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", c.Port))
 	if err != nil {
-		logger.Fatal("failed to listen", zap.NamedError("error", err))
+		logger.Fatal("failed to listen", zap.Error(err))
 	}
 
 	grafeasClients, err := server.NewGrafeasClients(c.Grafeas.Host)
 	if err != nil {
-		logger.Fatal("failed to connect to grafeas", zap.String("grafeas host", c.Grafeas.Host), zap.NamedError("error", err))
+		logger.Fatal("failed to connect to grafeas", zap.String("grafeas host", c.Grafeas.Host), zap.Error(err))
 	}
 
 	authenticator := auth.NewAuthenticator(c.Auth)
@@ -53,7 +53,10 @@ func main() {
 		reflection.Register(s)
 	}
 
-	rodeServer := server.NewRodeServer(logger.Named("rode"), *grafeasClients)
+	rodeServer, err := server.NewRodeServer(logger.Named("rode"), *grafeasClients)
+	if err != nil {
+		logger.Fatal("failed to create Rode server", zap.Error(err))
+	}
 	healthzServer := server.NewHealthzServer(logger.Named("healthz"))
 
 	pb.RegisterRodeServer(s, rodeServer)
@@ -61,7 +64,7 @@ func main() {
 
 	go func() {
 		if err := s.Serve(lis); err != nil {
-			logger.Fatal("failed to serve", zap.NamedError("error", err))
+			logger.Fatal("failed to serve", zap.Error(err))
 		}
 	}()
 
