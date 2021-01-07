@@ -19,6 +19,11 @@ import (
 )
 
 var _ = Describe("rode server", func() {
+	const (
+		createProjectError = "CREATE_PROJECT_ERROR"
+		getProjectError    = "GET_PROJECT_ERROR"
+	)
+
 	var (
 		rodeServer            pb.RodeServer
 		rodeServerError       error
@@ -39,7 +44,7 @@ var _ = Describe("rode server", func() {
 	})
 
 	When("server is initialized", func() {
-		It("checks if rode project exists", func() {
+		It("should check if the rode project exists", func() {
 			grafeasProjectsClient.
 				EXPECT().
 				GetProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(getProjectRequest))
@@ -47,7 +52,7 @@ var _ = Describe("rode server", func() {
 			rodeServer, rodeServerError = NewRodeServer(logger.Named("rode server test"), GrafeasClients{grafeasClient, grafeasProjectsClient})
 		})
 
-		When("rode project does not exists", func() {
+		When("the rode project does not exist", func() {
 			var (
 				createProjectRequest = &grafeas_project_proto.CreateProjectRequest{
 					Project: &grafeas_project_proto.Project{Name: "projects/rode"},
@@ -60,7 +65,7 @@ var _ = Describe("rode server", func() {
 					Return(nil, status.Error(codes.NotFound, "Not found"))
 			})
 
-			It("creates rode project", func() {
+			It("should create the rode project", func() {
 				grafeasProjectsClient.
 					EXPECT().
 					CreateProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(createProjectRequest))
@@ -72,14 +77,14 @@ var _ = Describe("rode server", func() {
 				BeforeEach(func() {
 					grafeasProjectsClient.
 						EXPECT().
-						CreateProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(createProjectRequest)).Return(nil, status.Error(codes.Internal, "CREATE_PROJECT_ERROR"))
+						CreateProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(createProjectRequest)).Return(nil, status.Error(codes.Internal, createProjectError))
 				})
 
-				It("returns error", func() {
+				It("should returns error", func() {
 					rodeServer, rodeServerError = NewRodeServer(logger.Named("rode server test"), GrafeasClients{grafeasClient, grafeasProjectsClient})
 
 					Expect(rodeServerError).To(HaveOccurred())
-					Expect(rodeServerError.Error()).To(ContainSubstring("CREATE_PROJECT_ERROR"))
+					Expect(rodeServerError.Error()).To(ContainSubstring(createProjectError))
 				})
 			})
 
@@ -90,11 +95,11 @@ var _ = Describe("rode server", func() {
 						CreateProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(createProjectRequest)).Return(&grafeas_project_proto.Project{}, nil)
 				})
 
-				It("returns Rode server", func() {
+				It("should return the Rode server", func() {
 					rodeServer, rodeServerError = NewRodeServer(logger.Named("rode server test"), GrafeasClients{grafeasClient, grafeasProjectsClient})
 
 					Expect(rodeServer).ToNot(BeNil())
-					Expect(rodeServerError).To(BeNil())
+					Expect(rodeServerError).ToNot(HaveOccurred())
 				})
 			})
 		})
@@ -107,7 +112,7 @@ var _ = Describe("rode server", func() {
 					Return(&grafeas_project_proto.Project{}, nil)
 			})
 
-			It("does not create project", func() {
+			It("should not attempt to create the project", func() {
 				grafeasProjectsClient.
 					EXPECT().
 					CreateProject(gomock.Any(), gomock.Any()).MaxTimes(0)
@@ -115,7 +120,7 @@ var _ = Describe("rode server", func() {
 				rodeServer, rodeServerError = NewRodeServer(logger.Named("rode server test"), GrafeasClients{grafeasClient, grafeasProjectsClient})
 			})
 
-			It("returns Rode server", func() {
+			It("should return the Rode server", func() {
 				rodeServer, rodeServerError = NewRodeServer(logger.Named("rode server test"), GrafeasClients{grafeasClient, grafeasProjectsClient})
 
 				Expect(rodeServer).ToNot(BeNil())
@@ -123,19 +128,19 @@ var _ = Describe("rode server", func() {
 			})
 		})
 
-		When("get rode project returns error", func() {
+		When("fetching the rode project it returns an error", func() {
 			BeforeEach(func() {
 				grafeasProjectsClient.
 					EXPECT().
 					GetProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(getProjectRequest)).
-					Return(nil, status.Error(codes.Internal, "GET_PROJECT_ERROR"))
+					Return(nil, status.Error(codes.Internal, getProjectError))
 			})
 
-			It("returns and error", func() {
+			It("should return an error", func() {
 				rodeServer, rodeServerError = NewRodeServer(logger.Named("rode server test"), GrafeasClients{grafeasClient, grafeasProjectsClient})
 
 				Expect(rodeServerError).To(HaveOccurred())
-				Expect(rodeServerError.Error()).To(ContainSubstring("GET_PROJECT_ERROR"))
+				Expect(rodeServerError.Error()).To(ContainSubstring(getProjectError))
 			})
 		})
 	})
@@ -177,7 +182,7 @@ var _ = Describe("rode server", func() {
 
 			})
 
-			It("sends occurrences to Grafeas", func() {
+			It("should send occurrences to Grafeas", func() {
 				// ensure Grafeas BatchCreateOccurrences is called with expected request and inject response
 				grafeasClient.EXPECT().BatchCreateOccurrences(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(grafeasBatchCreateOccurrencesRequest)).Return(grafeasBatchCreateOccurrencesResponse, nil)
 
