@@ -2,16 +2,23 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"github.com/brianvoe/gofakeit/v5"
+	"github.com/coreos/go-oidc"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/grpc-ecosystem/go-grpc-middleware/util/metautils"
 	. "github.com/onsi/gomega"
 	"github.com/rode/rode/config"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"strings"
 	"testing"
+	"time"
 )
 
 func TestAuth(t *testing.T) {
@@ -66,6 +73,65 @@ func TestAuth(t *testing.T) {
 			expectUnauthenticatedErrorToHaveOccurred(t, err)
 		})
 	})
+
+	t.Run("jwt authentication", func(t *testing.T) {
+		issuer := gofakeit.LetterN(10)
+		keySet := &fakeKeySet{}
+		clientId := gofakeit.LetterN(10)
+		verifier := oidc.NewVerifier(issuer, keySet, &oidc.Config{
+			ClientID: clientId,
+		})
+
+		c := &config.AuthConfig{
+			Basic: &config.BasicAuthConfig{},
+			JWT: &config.JWTAuthConfig{
+				Issuer:   issuer,
+				Verifier: verifier,
+			},
+		}
+		a := NewAuthenticator(c)
+
+		t.Run("should be successful when jwt validation is successful", func(t *testing.T) {
+			ctx, payload := createCtxWithJWT(ctx, issuer, clientId, time.Now().Add(time.Minute*1).Unix())
+			keySet.jwtPayload = payload
+			keySet.shouldVerify = true
+
+			_, err := a.Authenticate(ctx)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		t.Run("should fail when jwt validation fails", func(t *testing.T) {
+			ctx, payload := createCtxWithJWT(ctx, issuer, clientId, time.Now().Add(time.Minute*1).Unix())
+			keySet.jwtPayload = payload
+			keySet.shouldVerify = false
+
+			_, err := a.Authenticate(ctx)
+			expectUnauthenticatedErrorToHaveOccurred(t, err)
+		})
+
+		t.Run("should fail when a bearer token is not specified", func(t *testing.T) {
+			// a basic auth attempt would fail here
+			meta := metautils.NiceMD(metadata.New(map[string]string{
+				"authorization": fmt.Sprintf("Basic %s", gofakeit.LetterN(10)),
+			}))
+
+			_, err := a.Authenticate(meta.ToIncoming(ctx))
+			expectUnauthenticatedErrorToHaveOccurred(t, err)
+		})
+	})
+}
+
+type fakeKeySet struct {
+	shouldVerify bool
+	jwtPayload   []byte
+}
+
+func (f *fakeKeySet) VerifySignature(context.Context, string) ([]byte, error) {
+	if f.shouldVerify {
+		return f.jwtPayload, nil
+	}
+
+	return nil, errors.New(gofakeit.LetterN(10))
 }
 
 func expectUnauthenticatedErrorToHaveOccurred(t *testing.T, err error) {
@@ -86,4 +152,22 @@ func createCtxWithBasicAuth(ctx context.Context, username, password string) cont
 	})
 
 	return metautils.NiceMD(meta).ToIncoming(ctx)
+}
+
+func createCtxWithJWT(ctx context.Context, issuer, audience string, expires int64) (context.Context, []byte) {
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, jwt.StandardClaims{
+		Issuer:    issuer,
+		Audience:  audience,
+		ExpiresAt: expires,
+	})
+	key, _ := rsa.GenerateKey(rand.Reader, 2048)
+	signedString, _ := token.SignedString(key)
+
+	meta := metadata.New(map[string]string{
+		"authorization": fmt.Sprintf("Bearer %s", signedString),
+	})
+
+	payload, _ := jwt.DecodeSegment(strings.Split(signedString, ".")[1])
+
+	return metautils.NiceMD(meta).ToIncoming(ctx), payload
 }
