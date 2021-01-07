@@ -62,10 +62,12 @@ func NewClient(logger *zap.Logger, host string) *Client {
 // InitializePolicy initializes OPA policy if it does not already exist
 func (opa *Client) InitializePolicy(policy string) ClientError {
 	_ = opa.logger.Named("Initialize Policy")
+
 	exists, err := opa.policyExists(policy)
 	if err != nil {
 		return clientError{"error checking if policy exists", OpaClientErrorTypePolicyExists, err}
 	}
+
 	if !exists {
 		// fetch violations from ES
 		violations := []PolicyViolation{}
@@ -74,6 +76,7 @@ func (opa *Client) InitializePolicy(policy string) ClientError {
 			return clientError{"error publishing policy", OpaClientErrorTypePublishPolicy, err}
 		}
 	}
+
 	return nil
 }
 

@@ -100,8 +100,9 @@ func (r *rodeServer) AttestPolicy(ctx context.Context, request *pb.AttestPolicyR
 }
 
 func (r *rodeServer) initialize(ctx context.Context) error {
-	_, err := r.grafeasProjects.GetProject(ctx, &grafeas_project_proto.GetProjectRequest{Name: "projects/rode"})
 	log := r.logger.Named("initialize")
+
+	_, err := r.grafeasProjects.GetProject(ctx, &grafeas_project_proto.GetProjectRequest{Name: "projects/rode"})
 	if err != nil {
 		if status.Code(err) == codes.NotFound {
 			_, err := r.grafeasProjects.CreateProject(ctx, &grafeas_project_proto.CreateProjectRequest{Project: &grafeas_project_proto.Project{Name: "projects/rode"}})
@@ -115,5 +116,6 @@ func (r *rodeServer) initialize(ctx context.Context) error {
 			return err
 		}
 	}
+
 	return nil
 }
