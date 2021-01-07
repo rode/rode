@@ -123,9 +123,6 @@ var _ = Describe("opa client", func() {
 					)
 				})
 
-				JustBeforeEach(func() {
-				})
-
 				It("publishes policy to OPA", func() {
 					Expect(httpmock.GetTotalCallCount()).To(Equal(2))
 				})
