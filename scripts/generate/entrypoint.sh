@@ -19,7 +19,7 @@ for api in ${GOOGLE_API_RPC_PROTOS[@]} ; do
 done
 
 GRAFEAS_PROTOS_DIR="/rode/protodeps/grafeas/proto/v1beta1"
-GRAFEAS_PROTOS=("grafeas" "vulnerability" "build" "image" "package" "deployment" "attestation" "intoto" "common" "provenance" "source" "discovery" "cvss")
+GRAFEAS_PROTOS=("grafeas" "vulnerability" "build" "image" "package" "deployment" "attestation" "intoto" "common" "provenance" "source" "discovery" "cvss" "project")
 mkdir -p ${GRAFEAS_PROTOS_DIR}
 cd ${GRAFEAS_PROTOS_DIR}
 for api in ${GRAFEAS_PROTOS[@]} ; do

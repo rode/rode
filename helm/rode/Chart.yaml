@@ -8,6 +8,5 @@ dependencies:
     version: 0.1.0
     condition: grafeas.enabled
   - name: opa
-    repository: 
-    version: 1.14.4
+    version: 0.1.0
     condition: opa.enabled
