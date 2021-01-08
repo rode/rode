@@ -67,6 +67,11 @@ func TestConfig(t *testing.T) {
 			flags:       []string{"--basic-auth-username=foo"},
 			expectError: true,
 		},
+		{
+			name:        "jwt required audience without issuer",
+			flags:       []string{"--jwt-required-audience=foo"},
+			expectError: true,
+		},
 	} {
 		tc := tc
 
