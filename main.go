@@ -3,22 +3,24 @@ package main
 import (
 	"context"
 	"fmt"
-	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
-	"github.com/rode/rode/auth"
-	"github.com/rode/rode/config"
-	pb "github.com/rode/rode/proto/v1alpha1"
-	grafeas "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
-	"github.com/rode/rode/server"
-	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/health/grpc_health_v1"
-	"google.golang.org/grpc/reflection"
 	"log"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
+	"github.com/rode/rode/auth"
+	"github.com/rode/rode/config"
+	pb "github.com/rode/rode/proto/v1alpha1"
+	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
+	grafeas_project_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/project_go_proto"
+	"github.com/rode/rode/server"
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/reflection"
 )
 
 func main() {
@@ -34,12 +36,12 @@ func main() {
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", c.Port))
 	if err != nil {
-		logger.Fatal("failed to listen", zap.NamedError("error", err))
+		logger.Fatal("failed to listen", zap.Error(err))
 	}
 
-	grafeasClient, err := createGrafeasClient(c.Grafeas.Host)
+	grafeasClientCommon, grafeasClientProjects, err := createGrafeasClients(c.Grafeas.Host)
 	if err != nil {
-		logger.Fatal("failed to connect to grafeas", zap.String("grafeas host", c.Grafeas.Host), zap.NamedError("error", err))
+		logger.Fatal("failed to connect to grafeas", zap.String("grafeas host", c.Grafeas.Host), zap.Error(err))
 	}
 
 	authenticator := auth.NewAuthenticator(c.Auth)
@@ -51,12 +53,14 @@ func main() {
 			grpc_auth.UnaryServerInterceptor(authenticator.Authenticate),
 		),
 	)
-
 	if c.Debug {
 		reflection.Register(s)
 	}
 
-	rodeServer := server.NewRodeServer(logger.Named("rode"), grafeasClient)
+	rodeServer, err := server.NewRodeServer(logger.Named("rode"), grafeasClientCommon, grafeasClientProjects)
+	if err != nil {
+		logger.Fatal("failed to create Rode server", zap.Error(err))
+	}
 	healthzServer := server.NewHealthzServer(logger.Named("healthz"))
 
 	pb.RegisterRodeServer(s, rodeServer)
@@ -64,7 +68,7 @@ func main() {
 
 	go func() {
 		if err := s.Serve(lis); err != nil {
-			logger.Fatal("failed to serve", zap.NamedError("error", err))
+			logger.Fatal("failed to serve", zap.Error(err))
 		}
 	}()
 
@@ -82,16 +86,19 @@ func main() {
 	s.GracefulStop()
 }
 
-func createGrafeasClient(grafeasEndpoint string) (grafeas.GrafeasV1Beta1Client, error) {
+func createGrafeasClients(grafeasEndpoint string) (grafeas_proto.GrafeasV1Beta1Client, grafeas_project_proto.ProjectsClient, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
 	connection, err := grpc.DialContext(ctx, grafeasEndpoint, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return grafeas.NewGrafeasV1Beta1Client(connection), err
+	grafeasClient := grafeas_proto.NewGrafeasV1Beta1Client(connection)
+	projectsClient := grafeas_project_proto.NewProjectsClient(connection)
+
+	return grafeasClient, projectsClient, nil
 }
 
 func createLogger(debug bool) (*zap.Logger, error) {
