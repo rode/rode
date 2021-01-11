@@ -16,13 +16,15 @@ import (
 var _ = Describe("opa client", func() {
 	var (
 		Opa       Client
+		opaHost   string
 		opaPolicy string
 	)
 
 	BeforeEach(func() {
-		Opa = Client{
-			logger: logger,
-			Host:   fmt.Sprintf("http://%s", gofakeit.DomainName()),
+		opaHost = fmt.Sprintf("http://%s", gofakeit.DomainName())
+		Opa = &client{
+			logger,
+			opaHost,
 		}
 		opaPolicy = gofakeit.Word()
 	})
@@ -31,8 +33,8 @@ var _ = Describe("opa client", func() {
 		It("returns OpaClient", func() {
 			host := fmt.Sprintf("http://%s", gofakeit.DomainName())
 			opa := NewClient(logger, host)
-			Expect(opa).To(BeAssignableToTypeOf(&Client{}))
-			Expect(opa.Host).To((Equal(host)))
+			Expect(opa).To(BeAssignableToTypeOf(&client{}))
+			Expect(opa.(*client).Host).To((Equal(host)))
 		})
 	})
 
@@ -47,7 +49,7 @@ var _ = Describe("opa client", func() {
 			getPolicyResponse = httpmock.NewStringResponse(200, "{}")
 			getPolicyError = nil
 
-			httpmock.RegisterResponder("GET", fmt.Sprintf("%s/v1/policies/%s", Opa.Host, opaPolicy),
+			httpmock.RegisterResponder("GET", fmt.Sprintf("%s/v1/policies/%s", opaHost, opaPolicy),
 				func(req *http.Request) (*http.Response, error) {
 					return getPolicyResponse, getPolicyError
 				},
@@ -115,7 +117,7 @@ var _ = Describe("opa client", func() {
 					createPolicyResponse = httpmock.NewStringResponse(200, "{}")
 					createPolicyError = nil
 
-					httpmock.RegisterResponder(http.MethodPut, fmt.Sprintf("%s/v1/policies/%s", Opa.Host, opaPolicy),
+					httpmock.RegisterResponder(http.MethodPut, fmt.Sprintf("%s/v1/policies/%s", opaHost, opaPolicy),
 						func(req *http.Request) (*http.Response, error) {
 							// todo assert http put body contains policy package
 							return createPolicyResponse, createPolicyError
@@ -162,7 +164,7 @@ var _ = Describe("opa client", func() {
 
 	Context("an OPA policy is evaluated", func() {
 		var (
-			input              string
+			input              []byte
 			opaResponse        *EvaluatePolicyResponse
 			expectedOpaRequest *EvalutePolicyRequest
 			opaResult          *EvaluatePolicyResult
@@ -179,7 +181,7 @@ var _ = Describe("opa client", func() {
 
 		When("OPA returns a valid response", func() {
 			BeforeEach(func() {
-				input = fmt.Sprintf(`{"%s":"%s"}`, gofakeit.Word(), gofakeit.Word())
+				input = []byte(fmt.Sprintf(`{"%s":"%s"}`, gofakeit.Word(), gofakeit.Word()))
 				opaResponse = &EvaluatePolicyResponse{
 					Result: &EvaluatePolicyResult{
 						Pass: gofakeit.Bool(),
@@ -191,7 +193,7 @@ var _ = Describe("opa client", func() {
 					},
 				}
 
-				httpmock.RegisterResponder("POST", fmt.Sprintf("%s/v1/data/%s", Opa.Host, opaPolicy),
+				httpmock.RegisterResponder("POST", fmt.Sprintf("%s/v1/data/%s", opaHost, opaPolicy),
 					func(req *http.Request) (*http.Response, error) {
 						err := json.NewDecoder(req.Body).Decode(&expectedOpaRequest)
 						Expect(err).To(Not(HaveOccurred()))
@@ -215,7 +217,7 @@ var _ = Describe("opa client", func() {
 
 		When("OPA returns an invalid status code", func() {
 			BeforeEach(func() {
-				httpmock.RegisterResponder("POST", fmt.Sprintf("%s/v1/data/%s", Opa.Host, opaPolicy),
+				httpmock.RegisterResponder("POST", fmt.Sprintf("%s/v1/data/%s", opaHost, opaPolicy),
 					func(req *http.Request) (*http.Response, error) {
 						return httpmock.NewStringResponse(500, "OPA error"), nil
 					},
@@ -231,7 +233,7 @@ var _ = Describe("opa client", func() {
 
 		When("there is a failure in the http request", func() {
 			BeforeEach(func() {
-				httpmock.RegisterResponder("POST", fmt.Sprintf("%s/v1/data/%s", Opa.Host, opaPolicy),
+				httpmock.RegisterResponder("POST", fmt.Sprintf("%s/v1/data/%s", opaHost, opaPolicy),
 					func(req *http.Request) (*http.Response, error) {
 						return nil, fmt.Errorf("HTTP POST failed")
 					},
@@ -247,7 +249,7 @@ var _ = Describe("opa client", func() {
 
 		When("response from OPA fails to decode", func() {
 			BeforeEach(func() {
-				httpmock.RegisterResponder("POST", fmt.Sprintf("%s/v1/data/%s", Opa.Host, opaPolicy),
+				httpmock.RegisterResponder("POST", fmt.Sprintf("%s/v1/data/%s", opaHost, opaPolicy),
 					func(req *http.Request) (*http.Response, error) {
 						return httpmock.NewStringResponse(200, `{"result":{"pass":"foo"}}`), nil
 					},
@@ -263,8 +265,8 @@ var _ = Describe("opa client", func() {
 
 		When("invalid input data is provided to the client", func() {
 			BeforeEach(func() {
-				input = gofakeit.Word()
-				httpmock.RegisterResponder("POST", fmt.Sprintf("%s/v1/data/%s", Opa.Host, opaPolicy), nil)
+				input = []byte(gofakeit.Word())
+				httpmock.RegisterResponder("POST", fmt.Sprintf("%s/v1/data/%s", opaHost, opaPolicy), nil)
 			})
 
 			It("should return an error", func() {

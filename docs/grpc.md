@@ -34,7 +34,7 @@
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| allow | [bool](#bool) |  |  |
+| pass | [bool](#bool) |  |  |
 | created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
 | violations | [AttestPolicyViolation](#rode.v1alpha1.AttestPolicyViolation) | repeated |  |
 
@@ -67,7 +67,7 @@
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| allow | [bool](#bool) |  |  |
+| pass | [bool](#bool) |  |  |
 | changed | [bool](#bool) |  |  |
 | attestations | [AttestPolicyAttestation](#rode.v1alpha1.AttestPolicyAttestation) | repeated |  |
 
@@ -87,6 +87,7 @@
 | id | [string](#string) |  |  |
 | name | [string](#string) |  |  |
 | description | [string](#string) |  |  |
+| message | [string](#string) |  |  |
 | link | [string](#string) |  |  |
 
 

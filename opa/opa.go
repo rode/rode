@@ -11,8 +11,13 @@ import (
 	"go.uber.org/zap"
 )
 
-// Client OPA client
-type Client struct {
+// Client is an interface for sending requests to the OPA API
+type Client interface {
+	InitializePolicy(policy string) ClientError
+	EvaluatePolicy(policy string, input []byte) (*EvaluatePolicyResult, error)
+}
+
+type client struct {
 	logger *zap.Logger
 	Host   string
 }
@@ -35,7 +40,11 @@ type EvaluatePolicyResult struct {
 
 // EvaluatePolicyViolation OPA evaulate policy violation
 type EvaluatePolicyViolation struct {
-	Message string `json:"message"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Message     string `json:"message"`
+	Link        string `json:"link"`
 }
 
 // PolicyViolation Rego rule conditions
@@ -51,8 +60,8 @@ func (v *PolicyViolation) Write(w io.Writer) {
 }
 
 // NewClient OpaClient constructor
-func NewClient(logger *zap.Logger, host string) *Client {
-	client := &Client{
+func NewClient(logger *zap.Logger, host string) Client {
+	client := &client{
 		logger: logger,
 		Host:   host,
 	}
@@ -60,7 +69,7 @@ func NewClient(logger *zap.Logger, host string) *Client {
 }
 
 // InitializePolicy initializes OPA policy if it does not already exist
-func (opa *Client) InitializePolicy(policy string) ClientError {
+func (opa *client) InitializePolicy(policy string) ClientError {
 	_ = opa.logger.Named("Initialize Policy")
 
 	exists, err := opa.policyExists(policy)
@@ -81,11 +90,11 @@ func (opa *Client) InitializePolicy(policy string) ClientError {
 }
 
 // EvaluatePolicy evalutes OPA policy agains provided input
-func (opa *Client) EvaluatePolicy(policy string, input string) (*EvaluatePolicyResult, error) {
+func (opa *client) EvaluatePolicy(policy string, input []byte) (*EvaluatePolicyResult, error) {
 	log := opa.logger.Named("Evalute Policy")
 	request, err := json.Marshal(&EvalutePolicyRequest{Input: json.RawMessage(input)})
 	if err != nil {
-		log.Error("failed to encode OPA input", zap.Error(err), zap.String("input", input))
+		log.Error("failed to encode OPA input", zap.Error(err), zap.String("input", string(input)))
 		return nil, fmt.Errorf("failed to encode OPA input: %s", err)
 	}
 	httpResponse, err := http.Post(opa.getURL(fmt.Sprintf("v1/data/%s", policy)), "application/json", bytes.NewReader(request))
@@ -94,7 +103,7 @@ func (opa *Client) EvaluatePolicy(policy string, input string) (*EvaluatePolicyR
 		return nil, fmt.Errorf("http request to OPA failed: %s", err)
 	}
 	if httpResponse.StatusCode != http.StatusOK {
-		log.Error("http response status from OPA no OK", zap.Any("status", httpResponse.Status))
+		log.Error("http response status from OPA not OK", zap.Any("status", httpResponse.Status))
 		return nil, fmt.Errorf("http response status not OK: %s", err)
 	}
 
@@ -109,7 +118,7 @@ func (opa *Client) EvaluatePolicy(policy string, input string) (*EvaluatePolicyR
 }
 
 // policyExists tests if OPA policy exists
-func (opa *Client) policyExists(policy string) (bool, error) {
+func (opa *client) policyExists(policy string) (bool, error) {
 	log := opa.logger.Named("Policy Exists")
 	response, err := http.Get(opa.getURL(fmt.Sprintf("v1/policies/%s", policy)))
 	if err != nil {
@@ -128,7 +137,7 @@ func (opa *Client) policyExists(policy string) (bool, error) {
 }
 
 // publishPolicy publishes attester violation rules to OPA policy
-func (opa *Client) publishPolicy(policy string, violations []PolicyViolation) error {
+func (opa *client) publishPolicy(policy string, violations []PolicyViolation) error {
 	log := opa.logger.Named("Publish Policy")
 	buf := new(bytes.Buffer)
 	buf.WriteString(fmt.Sprintf("package %s\n\n", policy))
@@ -153,6 +162,6 @@ func (opa *Client) publishPolicy(policy string, violations []PolicyViolation) er
 }
 
 // getURL for given OPA API path
-func (opa *Client) getURL(path string) string {
+func (opa *client) getURL(path string) string {
 	return fmt.Sprintf("%s/%s", opa.Host, path)
 }
