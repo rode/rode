@@ -23,5 +23,6 @@ test: fmtcheck vet
 	go test ./... -coverprofile=coverage.txt -covermode atomic
 
 mocks:
-	mockgen -package mocks github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto GrafeasV1Beta1Client > mocks/grafeasV1Beta1Client.go
-	mockgen -package mocks github.com/rode/rode/protodeps/grafeas/proto/v1beta1/project_go_proto ProjectsClient > mocks/grafeasProjectsClient.go
+	mockgen -package mocks -mock_names GrafeasV1Beta1Client=MockGrafeasClient github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto GrafeasV1Beta1Client > mocks/grafeasClient.go
+	mockgen -package mocks -mock_names ProjectsClient=MockGrafeasProjectsClient github.com/rode/rode/protodeps/grafeas/proto/v1beta1/project_go_proto ProjectsClient > mocks/grafeasProjectsClient.go
+	mockgen -package mocks -mock_names Client=MockOpaClient github.com/rode/rode/opa Client > mocks/opaClient.go
