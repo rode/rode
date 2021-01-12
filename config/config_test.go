@@ -83,13 +83,13 @@ func TestConfig(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			c, err := Build("rode", tc.flags)
+			conf, err := Build("rode", tc.flags)
 
 			if tc.expectError {
 				Expect(err).To(HaveOccurred())
 			} else {
 				Expect(err).ToNot(HaveOccurred())
-				Expect(c).To(BeEquivalentTo(tc.expected))
+				Expect(conf).To(BeEquivalentTo(tc.expected))
 			}
 		})
 	}

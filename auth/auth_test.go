@@ -26,41 +26,41 @@ func TestAuth(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("no authentication", func(t *testing.T) {
-		a := NewAuthenticator(&config.AuthConfig{
+		authenticator := NewAuthenticator(&config.AuthConfig{
 			Basic: &config.BasicAuthConfig{},
 			JWT:   &config.JWTAuthConfig{},
 		})
 
-		_, err := a.Authenticate(ctx)
+		_, err := authenticator.Authenticate(ctx)
 		Expect(err).ToNot(HaveOccurred())
 	})
 
 	t.Run("basic authentication", func(t *testing.T) {
-		c := &config.AuthConfig{
+		authConfig := &config.AuthConfig{
 			Basic: &config.BasicAuthConfig{
 				Username: gofakeit.LetterN(10),
 				Password: gofakeit.LetterN(10),
 			},
 		}
-		a := NewAuthenticator(c)
+		authenticator := NewAuthenticator(authConfig)
 
 		t.Run("should be successful when using the correct credentials", func(t *testing.T) {
-			_, err := a.Authenticate(createCtxWithBasicAuth(ctx, c.Basic.Username, c.Basic.Password))
+			_, err := authenticator.Authenticate(createCtxWithBasicAuth(ctx, authConfig.Basic.Username, authConfig.Basic.Password))
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		t.Run("should fail when using incorrect credentials", func(t *testing.T) {
-			_, err := a.Authenticate(createCtxWithBasicAuth(ctx, gofakeit.LetterN(10), gofakeit.LetterN(10)))
+			_, err := authenticator.Authenticate(createCtxWithBasicAuth(ctx, gofakeit.LetterN(10), gofakeit.LetterN(10)))
 			expectUnauthenticatedErrorToHaveOccurred(t, err)
 		})
 
 		t.Run("should fail when providing no credentials", func(t *testing.T) {
-			_, err := a.Authenticate(ctx)
+			_, err := authenticator.Authenticate(ctx)
 			expectUnauthenticatedErrorToHaveOccurred(t, err)
 		})
 
 		t.Run("should fail when using incorrect format for basic auth", func(t *testing.T) {
-			_, err := a.Authenticate(createCtxWithBasicAuth(ctx, fmt.Sprintf("%s:%s", gofakeit.LetterN(10), gofakeit.LetterN(10)), gofakeit.LetterN(10)))
+			_, err := authenticator.Authenticate(createCtxWithBasicAuth(ctx, fmt.Sprintf("%s:%s", gofakeit.LetterN(10), gofakeit.LetterN(10)), gofakeit.LetterN(10)))
 			expectUnauthenticatedErrorToHaveOccurred(t, err)
 		})
 
@@ -69,7 +69,7 @@ func TestAuth(t *testing.T) {
 				"authorization": fmt.Sprintf("Basic %s", gofakeit.LetterN(10)),
 			}))
 
-			_, err := a.Authenticate(meta.ToIncoming(ctx))
+			_, err := authenticator.Authenticate(meta.ToIncoming(ctx))
 			expectUnauthenticatedErrorToHaveOccurred(t, err)
 		})
 	})
@@ -82,21 +82,21 @@ func TestAuth(t *testing.T) {
 			ClientID: clientId,
 		})
 
-		c := &config.AuthConfig{
+		authConfig := &config.AuthConfig{
 			Basic: &config.BasicAuthConfig{},
 			JWT: &config.JWTAuthConfig{
 				Issuer:   issuer,
 				Verifier: verifier,
 			},
 		}
-		a := NewAuthenticator(c)
+		authenticator := NewAuthenticator(authConfig)
 
 		t.Run("should be successful when jwt validation is successful", func(t *testing.T) {
 			ctx, payload := createCtxWithJWT(ctx, issuer, clientId, time.Now().Add(time.Minute*1).Unix())
 			keySet.jwtPayload = payload
 			keySet.shouldVerify = true
 
-			_, err := a.Authenticate(ctx)
+			_, err := authenticator.Authenticate(ctx)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -105,7 +105,7 @@ func TestAuth(t *testing.T) {
 			keySet.jwtPayload = payload
 			keySet.shouldVerify = false
 
-			_, err := a.Authenticate(ctx)
+			_, err := authenticator.Authenticate(ctx)
 			expectUnauthenticatedErrorToHaveOccurred(t, err)
 		})
 
@@ -115,7 +115,7 @@ func TestAuth(t *testing.T) {
 				"authorization": fmt.Sprintf("Basic %s", gofakeit.LetterN(10)),
 			}))
 
-			_, err := a.Authenticate(meta.ToIncoming(ctx))
+			_, err := authenticator.Authenticate(meta.ToIncoming(ctx))
 			expectUnauthenticatedErrorToHaveOccurred(t, err)
 		})
 	})
