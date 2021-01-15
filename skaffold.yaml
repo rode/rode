@@ -10,8 +10,9 @@ deploy:
   helm:
     releases:
       - name: rode
-        chartPath: helm/rode
-        skipBuildDependencies: true
+        chartPath: rode/rode
+        version: 0.0.3
+        remote: true
         wait: true
         artifactOverrides:
           image: rode
@@ -46,6 +47,26 @@ profiles:
         path: /deploy/helm/releases/0/overrides
         value: 
           debug: true
+          grafeas-elasticsearch:
+            grafeas:
+              elasticsearch:
+                username: "test1234"
+                password: "test1234"
+            elasticsearch:
+              antiAffinity: "soft"
+              esJavaOpts: "-Xmx128m -Xms128m"
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "512M"
+                limits:
+                  cpu: "1000m"
+                  memory: "512M"
+              volumeClaimTemplate:
+                accessModes: ["ReadWriteOnce"]
+                resources:
+                  requests:
+                    storage: 10M
       - op: add
         path: /build/artifacts/1
         value:
