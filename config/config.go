@@ -49,6 +49,7 @@ func Build(name string, args []string) (*Config, error) {
 			JWT:   &JWTAuthConfig{},
 		},
 		Grafeas: &GrafeasConfig{},
+		Opa:     &OpaConfig{},
 	}
 
 	flags.StringVar(&conf.Auth.Basic.Username, "basic-auth-username", "", "when set, basic auth will be enabled for all endpoints, using the provided username. --basic-auth-password must also be set")
