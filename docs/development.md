@@ -2,7 +2,17 @@
 
 Use [Skaffold](https://skaffold.dev/) and Docker for Desktop to build and test Rode locally. Make sure your kubectl context is `docker-desktop` and Skaffold will use the local Skaffold profile deploy Rode, its dependencies and debug tools to the local cluster.
 
+Skaffold will install the [Rode Helm chart](https://github.com/rode/charts/tree/main/charts/rode) which deploys Rode, Grafeas, Elasticsearch and OPA into the cluster.
+
+Add Helm repositories
+```sh
+helm repo add rode https://rode.github.io/charts
+helm repo add elastic https://helm.elastic.co
+helm repo update 
 ```
+
+Run Rode
+```sh
 skaffold dev --port-forward
 ```
 
