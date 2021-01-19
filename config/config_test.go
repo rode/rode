@@ -30,6 +30,9 @@ func TestConfig(t *testing.T) {
 				Grafeas: &GrafeasConfig{
 					Host: "localhost:8080",
 				},
+				Opa: &OpaConfig{
+					Host: "localhost:8181",
+				},
 				Port:  50051,
 				Debug: false,
 			},
@@ -58,6 +61,9 @@ func TestConfig(t *testing.T) {
 				Grafeas: &GrafeasConfig{
 					Host: "localhost:8080",
 				},
+				Opa: &OpaConfig{
+					Host: "localhost:8181",
+				},
 				Port:  50051,
 				Debug: false,
 			},
@@ -76,6 +82,24 @@ func TestConfig(t *testing.T) {
 			name:        "jwt required audience without issuer",
 			flags:       []string{"--jwt-required-audience=foo"},
 			expectError: true,
+		},
+		{
+			name:  "OPA host",
+			flags: []string{"--opa-host=opa.test.na:8181"},
+			expected: &Config{
+				Auth: &AuthConfig{
+					Basic: &BasicAuthConfig{},
+					JWT:   &JWTAuthConfig{},
+				},
+				Grafeas: &GrafeasConfig{
+					Host: "localhost:8080",
+				},
+				Opa: &OpaConfig{
+					Host: "opa.test.na:8181",
+				},
+				Port:  50051,
+				Debug: false,
+			},
 		},
 	} {
 		tc := tc

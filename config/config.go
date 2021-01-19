@@ -60,7 +60,7 @@ func Build(name string, args []string) (*Config, error) {
 	flags.IntVar(&conf.Port, "port", 50051, "the port that the rode API server should listen on")
 	flags.BoolVar(&conf.Debug, "debug", false, "when set, debug mode will be enabled")
 	flags.StringVar(&conf.Grafeas.Host, "grafeas-host", "localhost:8080", "the host to use to connect to grafeas")
-	flags.StringVar(&c.Opa.Host, "opa-host", "localhost:8181", "the host to use to connect to Open Policy Agent")
+	flags.StringVar(&conf.Opa.Host, "opa-host", "localhost:8181", "the host to use to connect to Open Policy Agent")
 
 	err := flags.Parse(args)
 	if err != nil {
