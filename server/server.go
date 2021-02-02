@@ -65,7 +65,7 @@ func (r *rodeServer) AttestPolicy(ctx context.Context, request *pb.AttestPolicyR
 	// check OPA policy has been loaded
 
 	// fetch occurrences from grafeas
-	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{Filter: fmt.Sprintf("resource.uri = '%s'", request.ResourceURI)})
+	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{Parent: "projects/rode", Filter: fmt.Sprintf(`"resource.uri" == "%s"`, request.ResourceURI)})
 	if err != nil {
 		log.Error("list occurrences failed", zap.Error(err), zap.String("resource", request.ResourceURI))
 		return nil, status.Error(codes.Internal, "list occurrences failed")

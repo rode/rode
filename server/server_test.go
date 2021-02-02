@@ -217,7 +217,8 @@ var _ = Describe("rode server", func() {
 				resourceURI = gofakeit.URL()
 				policy = gofakeit.Word()
 				listOccurrencesRequest = &grafeas_proto.ListOccurrencesRequest{
-					Filter: fmt.Sprintf("resource.uri = '%s'", resourceURI),
+					Parent: "projects/rode",
+					Filter: fmt.Sprintf(`"resource.uri" == "%s"`, resourceURI),
 				}
 				attestPolicyRequest = &pb.AttestPolicyRequest{
 					ResourceURI: resourceURI,
