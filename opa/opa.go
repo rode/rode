@@ -13,6 +13,7 @@ import (
 
 // Client is an interface for sending requests to the OPA API
 type Client interface {
+	PolicyExists(policy string) (bool, error)
 	InitializePolicy(policy string) ClientError
 	EvaluatePolicy(policy string, input []byte) (*EvaluatePolicyResult, error)
 }
@@ -35,7 +36,7 @@ type EvaluatePolicyResponse struct {
 // EvaluatePolicyResult OPA evaluate policy result
 type EvaluatePolicyResult struct {
 	Pass       bool `json:"pass"`
-	Violations []*EvaluatePolicyViolation
+	Violations []*EvaluatePolicyViolation `json:"violations"`
 }
 
 // EvaluatePolicyViolation OPA evaulate policy violation
@@ -72,7 +73,7 @@ func NewClient(logger *zap.Logger, host string) Client {
 func (opa *client) InitializePolicy(policy string) ClientError {
 	_ = opa.logger.Named("Initialize Policy")
 
-	exists, err := opa.policyExists(policy)
+	exists, err := opa.PolicyExists(policy)
 	if err != nil {
 		return clientError{"error checking if policy exists", OpaClientErrorTypePolicyExists, err}
 	}
@@ -104,7 +105,7 @@ func (opa *client) EvaluatePolicy(policy string, input []byte) (*EvaluatePolicyR
 	}
 	if httpResponse.StatusCode != http.StatusOK {
 		log.Error("http response status from OPA not OK", zap.Any("status", httpResponse.Status))
-		return nil, fmt.Errorf("http response status not OK: %s", err)
+		return nil, fmt.Errorf("http response status not OK")
 	}
 
 	response := &EvaluatePolicyResponse{}
@@ -118,7 +119,7 @@ func (opa *client) EvaluatePolicy(policy string, input []byte) (*EvaluatePolicyR
 }
 
 // policyExists tests if OPA policy exists
-func (opa *client) policyExists(policy string) (bool, error) {
+func (opa *client) PolicyExists(policy string) (bool, error) {
 	log := opa.logger.Named("Policy Exists")
 	response, err := http.Get(opa.getURL(fmt.Sprintf("v1/policies/%s", policy)))
 	if err != nil {

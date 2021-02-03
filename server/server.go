@@ -59,10 +59,19 @@ func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceReque
 }
 
 func (r *rodeServer) AttestPolicy(ctx context.Context, request *pb.AttestPolicyRequest) (*pb.AttestPolicyResponse, error) {
-	log := r.logger.Named("AttestPolicy")
-	log.Debug("received requests")
+	log := r.logger.Named("AttestPolicy").With(zap.String("policy", request.Policy), zap.String("resource", request.ResourceURI))
+	log.Debug("evaluate policy request received")
 
 	// check OPA policy has been loaded
+	exists, err := r.opa.PolicyExists(request.Policy)
+	if err != nil {
+		log.Error("error checking if policy exists", zap.Error(err))
+		return nil, status.Error(codes.Internal, "check if policy exists failed")
+	}
+	if !exists {
+		log.Error("policy does not exists")
+		return nil, status.Error(codes.NotFound, "policy does not exists")
+	}
 
 	// fetch occurrences from grafeas
 	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{Parent: "projects/rode", Filter: fmt.Sprintf(`"resource.uri" == "%s"`, request.ResourceURI)})
@@ -70,6 +79,7 @@ func (r *rodeServer) AttestPolicy(ctx context.Context, request *pb.AttestPolicyR
 		log.Error("list occurrences failed", zap.Error(err), zap.String("resource", request.ResourceURI))
 		return nil, status.Error(codes.Internal, "list occurrences failed")
 	}
+	log.Debug("Occurrences found", zap.Any("occurrences", listOccurrencesResponse))
 
 	// json encode occurrences. list occurrences response should not generate error
 	input, _ := protojson.Marshal(proto.MessageV2(listOccurrencesResponse))
@@ -80,6 +90,7 @@ func (r *rodeServer) AttestPolicy(ctx context.Context, request *pb.AttestPolicyR
 		log.Error("evaluate OPA policy failed")
 		return nil, status.Error(codes.Internal, "evaluate OPA policy failed")
 	}
+	log.Debug("Evalute policy result", zap.Any("policy result", evaluatePolicyResult))
 
 	attestation := &pb.AttestPolicyAttestation{}
 	attestation.Created = timestamppb.Now()
