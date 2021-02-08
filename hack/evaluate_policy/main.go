@@ -3,16 +3,32 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 
-	// "github.com/rode/rode/hack/util"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
+var (
+	opaHost string
+	policy string
+	resource string
+)
+
+func init() {
+	flag.StringVar(&opaHost, "opa-host", "localhost:50051", "OPA host")
+	flag.StringVar(&policy, "policy", "example", "OPA policy name")
+	flag.StringVar(&resource, "resource", "harbor.localhost/library/nginx:latest", "resource URI")
+}
+
 func main() {
-	conn, err := grpc.Dial("localhost:50051",
+	flag.Parse()
+
+	conn, err := grpc.Dial(
+		opaHost,
 		grpc.WithInsecure(),
 		grpc.WithBlock(),
 	)
@@ -24,14 +40,20 @@ func main() {
 	rode := pb.NewRodeClient(conn)
 
 	response, err := rode.AttestPolicy(context.Background(), &pb.AttestPolicyRequest{
-		Policy: "example1",
-		ResourceURI: "harbor.localhost/library/nginx@sha256:0b159cd1ee1203dad901967ac55eee18c24da84ba3be384690304be93538bea8",
+		Policy: policy,
+		ResourceURI: resource,
 	})
 	if err != nil {
 		log.Fatalf("attest policy returned error: %v", err)
 	}
 
-	json, err := json.Marshal(response)
+	if response.Explanation != nil {
+		explanation, _ := json.Marshal(response.Explanation)
+		fmt.Println(string(explanation))
+		response.Explanation = nil
+	}
+
+	json, err := protojson.MarshalOptions{EmitUnpopulated: true}.Marshal(response)
 	if err != nil {
 		log.Fatal("error json encoding response")
 	}
