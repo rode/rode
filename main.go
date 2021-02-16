@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -72,6 +74,13 @@ func main() {
 		}
 	}()
 
+	logger.Info("starting grpc gateway", zap.String("host", lis.Addr().String()))
+	go func() {
+		if err := createGrpcGateway(context.Background(), lis.Addr().String(), ":50052"); err != nil {
+			logger.Fatal("failed to start gateway", zap.Error(err))
+		}
+	}()
+
 	logger.Info("listening", zap.String("host", lis.Addr().String()))
 	healthzServer.Ready()
 
@@ -99,6 +108,31 @@ func createGrafeasClients(grafeasEndpoint string) (grafeas_proto.GrafeasV1Beta1C
 	projectsClient := grafeas_project_proto.NewProjectsClient(connection)
 
 	return grafeasClient, projectsClient, nil
+}
+
+func createGrpcGateway(ctx context.Context, grpcAddress, httpPort string) error {
+	conn, err := grpc.DialContext(
+		context.Background(),
+		grpcAddress,
+		grpc.WithBlock(),
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalln("Failed to dial server:", err)
+	}
+	gwmux := runtime.NewServeMux()
+	if err := pb.RegisterRodeHandler(ctx, gwmux, conn); err != nil {
+		return err
+	}
+
+	srv := &http.Server{
+		Addr: httpPort,
+		Handler: gwmux,
+	}
+
+	srv.ListenAndServe()
+
+	return nil
 }
 
 func createLogger(debug bool) (*zap.Logger, error) {
