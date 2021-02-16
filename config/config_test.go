@@ -36,8 +36,13 @@ func TestConfig(t *testing.T) {
 			},
 		},
 		{
-			name:        "bad port",
-			flags:       []string{"--port=foo"},
+			name:        "bad gRPC port",
+			flags:       []string{"--grpc-port=foo"},
+			expectError: true,
+		},
+		{
+			name:        "bad http port",
+			flags:       []string{"--http-port=bar"},
 			expectError: true,
 		},
 		{
