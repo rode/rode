@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	opaHost string
-	policy string
+	opaHost  string
+	policy   string
 	resource string
 )
 
@@ -40,7 +40,7 @@ func main() {
 	rode := pb.NewRodeClient(conn)
 
 	response, err := rode.EvaluatePolicy(context.Background(), &pb.EvaluatePolicyRequest{
-		Policy: policy,
+		Policy:      policy,
 		ResourceURI: resource,
 	})
 	if err != nil {

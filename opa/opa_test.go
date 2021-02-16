@@ -164,11 +164,11 @@ var _ = Describe("opa client", func() {
 
 	Context("an OPA policy is evaluated", func() {
 		var (
-			input              []byte
-			opaResponse        *EvaluatePolicyResponse
-			expectedOpaRequest *EvalutePolicyRequest
-			opaResult          *EvaluatePolicyResult
-			expectedErr        error
+			input                 []byte
+			opaResponse           *EvaluatePolicyResponse
+			expectedOpaRequest    *EvalutePolicyRequest
+			evalutePolicyResponse *EvaluatePolicyResponse
+			expectedErr           error
 		)
 
 		BeforeEach(func() {
@@ -176,7 +176,7 @@ var _ = Describe("opa client", func() {
 		})
 
 		JustBeforeEach(func() {
-			opaResult, expectedErr = Opa.EvaluatePolicy(opaPolicy, input)
+			evalutePolicyResponse, expectedErr = Opa.EvaluatePolicy(opaPolicy, input)
 		})
 
 		When("OPA returns a valid response", func() {
@@ -209,9 +209,9 @@ var _ = Describe("opa client", func() {
 				Expect(httpmock.GetTotalCallCount()).To(Equal(1))
 			})
 
-			It("should return OPA evaluation results", func() {
+			It("should return OPA evaluation response", func() {
 				Expect(expectedErr).ToNot(HaveOccurred())
-				Expect(opaResult).To(Equal(opaResponse.Result))
+				Expect(evalutePolicyResponse).To(Equal(opaResponse))
 			})
 		})
 
@@ -227,7 +227,7 @@ var _ = Describe("opa client", func() {
 			It("should return a http status error", func() {
 				Expect(expectedErr).To(HaveOccurred())
 				Expect(expectedErr.Error()).To(ContainSubstring("http response status not OK"))
-				Expect(opaResult).To(BeNil())
+				Expect(evalutePolicyResponse).To(BeNil())
 			})
 		})
 
@@ -243,7 +243,7 @@ var _ = Describe("opa client", func() {
 			It("should return an error", func() {
 				Expect(expectedErr).To(HaveOccurred())
 				Expect(expectedErr.Error()).To(ContainSubstring("http request to OPA failed"))
-				Expect(opaResult).To(BeNil())
+				Expect(evalutePolicyResponse).To(BeNil())
 			})
 		})
 
@@ -259,7 +259,7 @@ var _ = Describe("opa client", func() {
 			It("should return a response decode error", func() {
 				Expect(expectedErr).To(HaveOccurred())
 				Expect(expectedErr.Error()).To(ContainSubstring("failed to decode OPA result"))
-				Expect(opaResult).To(BeNil())
+				Expect(evalutePolicyResponse).To(BeNil())
 			})
 		})
 

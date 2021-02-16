@@ -15,7 +15,7 @@ import (
 type Client interface {
 	PolicyExists(policy string) (bool, error)
 	InitializePolicy(policy string) ClientError
-	EvaluatePolicy(policy string, input []byte) (*EvaluatePolicyResult, error)
+	EvaluatePolicy(policy string, input []byte) (*EvaluatePolicyResponse, error)
 }
 
 type client struct {
@@ -30,12 +30,13 @@ type EvalutePolicyRequest struct {
 
 // EvaluatePolicyResponse OPA evaluate policy response
 type EvaluatePolicyResponse struct {
-	Result *EvaluatePolicyResult `json:"result"`
+	Result      *EvaluatePolicyResult `json:"result"`
+	Explanation *[]string             `json:"explanation"`
 }
 
 // EvaluatePolicyResult OPA evaluate policy result
 type EvaluatePolicyResult struct {
-	Pass       bool `json:"pass"`
+	Pass       bool                       `json:"pass"`
 	Violations []*EvaluatePolicyViolation `json:"violations"`
 }
 
@@ -46,6 +47,7 @@ type EvaluatePolicyViolation struct {
 	Description string `json:"description"`
 	Message     string `json:"message"`
 	Link        string `json:"link"`
+	Pass        bool   `json:"pass"`
 }
 
 // PolicyViolation Rego rule conditions
@@ -91,14 +93,14 @@ func (opa *client) InitializePolicy(policy string) ClientError {
 }
 
 // EvaluatePolicy evalutes OPA policy agains provided input
-func (opa *client) EvaluatePolicy(policy string, input []byte) (*EvaluatePolicyResult, error) {
+func (opa *client) EvaluatePolicy(policy string, input []byte) (*EvaluatePolicyResponse, error) {
 	log := opa.logger.Named("Evalute Policy")
 	request, err := json.Marshal(&EvalutePolicyRequest{Input: json.RawMessage(input)})
 	if err != nil {
 		log.Error("failed to encode OPA input", zap.Error(err), zap.String("input", string(input)))
 		return nil, fmt.Errorf("failed to encode OPA input: %s", err)
 	}
-	httpResponse, err := http.Post(opa.getURL(fmt.Sprintf("v1/data/%s", policy)), "application/json", bytes.NewReader(request))
+	httpResponse, err := http.Post(opa.getURL(fmt.Sprintf("v1/data/%s?explain=full&pretty", policy)), "application/json", bytes.NewReader(request))
 	if err != nil {
 		log.Error("http request to OPA failed", zap.Error(err))
 		return nil, fmt.Errorf("http request to OPA failed: %s", err)
@@ -115,7 +117,7 @@ func (opa *client) EvaluatePolicy(policy string, input []byte) (*EvaluatePolicyR
 		return nil, fmt.Errorf("failed to decode OPA result: %s", err)
 	}
 
-	return response.Result, nil
+	return response, nil
 }
 
 // policyExists tests if OPA policy exists

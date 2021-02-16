@@ -34,10 +34,10 @@ func (m *MockOpaClient) EXPECT() *MockOpaClientMockRecorder {
 }
 
 // EvaluatePolicy mocks base method
-func (m *MockOpaClient) EvaluatePolicy(arg0 string, arg1 []byte) (*opa.EvaluatePolicyResult, error) {
+func (m *MockOpaClient) EvaluatePolicy(arg0 string, arg1 []byte) (*opa.EvaluatePolicyResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EvaluatePolicy", arg0, arg1)
-	ret0, _ := ret[0].(*opa.EvaluatePolicyResult)
+	ret0, _ := ret[0].(*opa.EvaluatePolicyResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -60,4 +60,19 @@ func (m *MockOpaClient) InitializePolicy(arg0 string) opa.ClientError {
 func (mr *MockOpaClientMockRecorder) InitializePolicy(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitializePolicy", reflect.TypeOf((*MockOpaClient)(nil).InitializePolicy), arg0)
+}
+
+// PolicyExists mocks base method
+func (m *MockOpaClient) PolicyExists(arg0 string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PolicyExists", arg0)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PolicyExists indicates an expected call of PolicyExists
+func (mr *MockOpaClientMockRecorder) PolicyExists(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PolicyExists", reflect.TypeOf((*MockOpaClient)(nil).PolicyExists), arg0)
 }
