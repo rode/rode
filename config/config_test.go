@@ -31,7 +31,7 @@ func TestConfig(t *testing.T) {
 					Host: "localhost:8080",
 				},
 				Opa: &OpaConfig{
-					Host: "localhost:8181",
+					Host: "http://localhost:8181",
 				},
 				Port:  50051,
 				Debug: false,
@@ -62,7 +62,7 @@ func TestConfig(t *testing.T) {
 					Host: "localhost:8080",
 				},
 				Opa: &OpaConfig{
-					Host: "localhost:8181",
+					Host: "http://localhost:8181",
 				},
 				Port:  50051,
 				Debug: false,
