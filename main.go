@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"log"
 	"net"
 	"net/http"
@@ -11,6 +10,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	"github.com/rode/rode/auth"
@@ -74,11 +75,13 @@ func main() {
 		}
 	}()
 
-	logger.Info("starting grpc gateway", zap.String("host", lis.Addr().String()))
+	httpServer, err := createGrpcGateway(context.Background(), lis.Addr().String(), ":50052")
+	if err != nil {
+		logger.Fatal("failed to start gateway", zap.Error(err))
+	}
+
 	go func() {
-		if err := createGrpcGateway(context.Background(), lis.Addr().String(), ":50052"); err != nil {
-			logger.Fatal("failed to start gateway", zap.Error(err))
-		}
+		httpServer.ListenAndServe()
 	}()
 
 	logger.Info("listening", zap.String("host", lis.Addr().String()))
@@ -93,6 +96,7 @@ func main() {
 	healthzServer.NotReady()
 
 	s.GracefulStop()
+	httpServer.Shutdown(context.Background())
 }
 
 func createGrafeasClients(grafeasEndpoint string) (grafeas_proto.GrafeasV1Beta1Client, grafeas_project_proto.ProjectsClient, error) {
@@ -110,7 +114,7 @@ func createGrafeasClients(grafeasEndpoint string) (grafeas_proto.GrafeasV1Beta1C
 	return grafeasClient, projectsClient, nil
 }
 
-func createGrpcGateway(ctx context.Context, grpcAddress, httpPort string) error {
+func createGrpcGateway(ctx context.Context, grpcAddress, httpPort string) (*http.Server, error) {
 	conn, err := grpc.DialContext(
 		context.Background(),
 		grpcAddress,
@@ -122,17 +126,13 @@ func createGrpcGateway(ctx context.Context, grpcAddress, httpPort string) error 
 	}
 	gwmux := runtime.NewServeMux()
 	if err := pb.RegisterRodeHandler(ctx, gwmux, conn); err != nil {
-		return err
+		return nil, err
 	}
 
-	srv := &http.Server{
-		Addr: httpPort,
+	return &http.Server{
+		Addr:    httpPort,
 		Handler: gwmux,
-	}
-
-	srv.ListenAndServe()
-
-	return nil
+	}, nil
 }
 
 func createLogger(debug bool) (*zap.Logger, error) {
