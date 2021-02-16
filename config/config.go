@@ -9,10 +9,11 @@ import (
 )
 
 type Config struct {
-	Auth    *AuthConfig
-	Grafeas *GrafeasConfig
-	Port    int
-	Debug   bool
+	Auth     *AuthConfig
+	Grafeas  *GrafeasConfig
+	GrpcPort int
+	HttpPort int
+	Debug    bool
 }
 
 type GrafeasConfig struct {
@@ -51,7 +52,8 @@ func Build(name string, args []string) (*Config, error) {
 	flags.StringVar(&conf.Auth.JWT.Issuer, "jwt-issuer", "", "when set, jwt based auth will be enabled for all endpoints. the provided issuer will be used to fetch the discovery document in order to validate received jwts")
 	flags.StringVar(&conf.Auth.JWT.RequiredAudience, "jwt-required-audience", "", "when set, if jwt based auth is enabled, this audience must be specified within the `aud` claim of any received jwts")
 
-	flags.IntVar(&conf.Port, "port", 50051, "the port that the rode API server should listen on")
+	flags.IntVar(&conf.GrpcPort, "port", 50051, "the port that the rode gRPC API server should listen on")
+	flags.IntVar(&conf.HttpPort, "http-port", 50052, "the port that the rode HTTP API server should listen on")
 	flags.BoolVar(&conf.Debug, "debug", false, "when set, debug mode will be enabled")
 	flags.StringVar(&conf.Grafeas.Host, "grafeas-host", "localhost:8080", "the host to use to connect to grafeas")
 

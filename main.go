@@ -37,7 +37,7 @@ func main() {
 		log.Fatalf("failed to create logger: %v", err)
 	}
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", c.Port))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", c.GrpcPort))
 	if err != nil {
 		logger.Fatal("failed to listen", zap.Error(err))
 	}
@@ -75,7 +75,7 @@ func main() {
 		}
 	}()
 
-	httpServer, err := createGrpcGateway(context.Background(), lis.Addr().String(), ":50052")
+	httpServer, err := createGrpcGateway(context.Background(), lis.Addr().String(), fmt.Sprintf(":%d", c.HttpPort))
 	if err != nil {
 		logger.Fatal("failed to start gateway", zap.Error(err))
 	}

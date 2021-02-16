@@ -30,8 +30,8 @@ func TestConfig(t *testing.T) {
 				Grafeas: &GrafeasConfig{
 					Host: "localhost:8080",
 				},
-				Port:  50051,
-				Debug: false,
+				GrpcPort: 50051,
+				Debug:    false,
 			},
 		},
 		{
@@ -58,8 +58,8 @@ func TestConfig(t *testing.T) {
 				Grafeas: &GrafeasConfig{
 					Host: "localhost:8080",
 				},
-				Port:  50051,
-				Debug: false,
+				GrpcPort: 50051,
+				Debug:    false,
 			},
 		},
 		{
