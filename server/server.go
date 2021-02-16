@@ -58,7 +58,7 @@ func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceReque
 	}, nil
 }
 
-func (r *rodeServer) AttestPolicy(ctx context.Context, request *pb.AttestPolicyRequest) (*pb.AttestPolicyResponse, error) {
+func (r *rodeServer) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePolicyRequest) (*pb.EvaluatePolicyResponse, error) {
 	log := r.logger.Named("AttestPolicy").With(zap.String("policy", request.Policy), zap.String("resource", request.ResourceURI))
 	log.Debug("evaluate policy request received")
 
@@ -85,30 +85,33 @@ func (r *rodeServer) AttestPolicy(ctx context.Context, request *pb.AttestPolicyR
 	input, _ := protojson.Marshal(proto.MessageV2(listOccurrencesResponse))
 
 	// evalute OPA policy
-	evaluatePolicyResult, err := r.opa.EvaluatePolicy(request.Policy, input)
+	evaluatePolicyResponse, err := r.opa.EvaluatePolicy(request.Policy, input)
 	if err != nil {
 		log.Error("evaluate OPA policy failed")
 		return nil, status.Error(codes.Internal, "evaluate OPA policy failed")
 	}
-	log.Debug("Evalute policy result", zap.Any("policy result", evaluatePolicyResult))
+	log.Debug("Evalute policy result", zap.Any("policy result", evaluatePolicyResponse))
 
-	attestation := &pb.AttestPolicyAttestation{}
+	attestation := &pb.EvaluatePolicyResult{}
 	attestation.Created = timestamppb.Now()
-	for _, violation := range evaluatePolicyResult.Violations {
-		attestation.Violations = append(attestation.Violations, &pb.AttestPolicyViolation{
+	attestation.Pass = evaluatePolicyResponse.Result.Pass
+	for _, violation := range evaluatePolicyResponse.Result.Violations {
+		attestation.Violations = append(attestation.Violations, &pb.EvaluatePolicyViolation{
 			Id:          violation.ID,
 			Name:        violation.Name,
 			Description: violation.Description,
 			Message:     violation.Message,
 			Link:        violation.Link,
+			Pass:        violation.Pass,
 		})
 	}
 
-	return &pb.AttestPolicyResponse{
-		Pass: evaluatePolicyResult.Pass,
-		Attestations: []*pb.AttestPolicyAttestation{
+	return &pb.EvaluatePolicyResponse{
+		Pass: evaluatePolicyResponse.Result.Pass,
+		Result: []*pb.EvaluatePolicyResult{
 			attestation,
 		},
+		Explanation: *evaluatePolicyResponse.Explanation,
 	}, nil
 }
 

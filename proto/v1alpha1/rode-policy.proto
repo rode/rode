@@ -6,27 +6,29 @@ option go_package = "github.com/rode/rode/proto/v1alpha1";
 
 import "google/protobuf/timestamp.proto";
 
-message AttestPolicyRequest {
+message EvaluatePolicyRequest {
   string policy = 1;
   string resourceURI = 2;
 }
 
-message AttestPolicyResponse {
+message EvaluatePolicyResponse {
   bool pass = 1;
   bool changed = 2;
-  repeated AttestPolicyAttestation attestations = 3;
+  repeated EvaluatePolicyResult result = 3;
+  repeated string explanation = 4;
 }
 
-message AttestPolicyAttestation {
+message EvaluatePolicyResult {
   bool pass = 1;
   google.protobuf.Timestamp created = 2;
-  repeated AttestPolicyViolation violations = 3;
+  repeated EvaluatePolicyViolation violations = 3;
 }
 
-message AttestPolicyViolation {
+message EvaluatePolicyViolation {
   string id = 1;
   string name = 2;
   string description = 3;
   string message = 4;
-  string link = 5;  
+  string link = 5;
+  bool pass = 6;
 }

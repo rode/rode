@@ -39,7 +39,7 @@ func main() {
 
 	rode := pb.NewRodeClient(conn)
 
-	response, err := rode.AttestPolicy(context.Background(), &pb.AttestPolicyRequest{
+	response, err := rode.EvaluatePolicy(context.Background(), &pb.EvaluatePolicyRequest{
 		Policy: policy,
 		ResourceURI: resource,
 	})
