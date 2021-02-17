@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	"github.com/rode/rode/auth"
@@ -34,7 +37,7 @@ func main() {
 		log.Fatalf("failed to create logger: %v", err)
 	}
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", c.Port))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", c.GrpcPort))
 	if err != nil {
 		logger.Fatal("failed to listen", zap.Error(err))
 	}
@@ -72,6 +75,15 @@ func main() {
 		}
 	}()
 
+	httpServer, err := createGrpcGateway(context.Background(), lis.Addr().String(), fmt.Sprintf(":%d", c.HttpPort))
+	if err != nil {
+		logger.Fatal("failed to start gateway", zap.Error(err))
+	}
+
+	go func() {
+		httpServer.ListenAndServe()
+	}()
+
 	logger.Info("listening", zap.String("host", lis.Addr().String()))
 	healthzServer.Ready()
 
@@ -84,6 +96,7 @@ func main() {
 	healthzServer.NotReady()
 
 	s.GracefulStop()
+	httpServer.Shutdown(context.Background())
 }
 
 func createGrafeasClients(grafeasEndpoint string) (grafeas_proto.GrafeasV1Beta1Client, grafeas_project_proto.ProjectsClient, error) {
@@ -99,6 +112,27 @@ func createGrafeasClients(grafeasEndpoint string) (grafeas_proto.GrafeasV1Beta1C
 	projectsClient := grafeas_project_proto.NewProjectsClient(connection)
 
 	return grafeasClient, projectsClient, nil
+}
+
+func createGrpcGateway(ctx context.Context, grpcAddress, httpPort string) (*http.Server, error) {
+	conn, err := grpc.DialContext(
+		context.Background(),
+		grpcAddress,
+		grpc.WithBlock(),
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalln("Failed to dial server:", err)
+	}
+	gwmux := runtime.NewServeMux()
+	if err := pb.RegisterRodeHandler(ctx, gwmux, conn); err != nil {
+		return nil, err
+	}
+
+	return &http.Server{
+		Addr:    httpPort,
+		Handler: gwmux,
+	}, nil
 }
 
 func createLogger(debug bool) (*zap.Logger, error) {

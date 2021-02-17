@@ -30,13 +30,19 @@ func TestConfig(t *testing.T) {
 				Grafeas: &GrafeasConfig{
 					Host: "localhost:8080",
 				},
-				Port:  50051,
-				Debug: false,
+				GrpcPort: 50051,
+				HttpPort: 50052,
+				Debug:    false,
 			},
 		},
 		{
-			name:        "bad port",
-			flags:       []string{"--port=foo"},
+			name:        "bad gRPC port",
+			flags:       []string{"--grpc-port=foo"},
+			expectError: true,
+		},
+		{
+			name:        "bad http port",
+			flags:       []string{"--http-port=bar"},
 			expectError: true,
 		},
 		{
@@ -58,8 +64,9 @@ func TestConfig(t *testing.T) {
 				Grafeas: &GrafeasConfig{
 					Host: "localhost:8080",
 				},
-				Port:  50051,
-				Debug: false,
+				GrpcPort: 50051,
+				HttpPort: 50052,
+				Debug:    false,
 			},
 		},
 		{
