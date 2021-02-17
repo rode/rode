@@ -60,7 +60,7 @@ func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceReque
 
 func (r *rodeServer) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePolicyRequest) (*pb.EvaluatePolicyResponse, error) {
 	var err error
-	log := r.logger.Named("AttestPolicy").With(zap.String("policy", request.Policy), zap.String("resource", request.ResourceURI))
+	log := r.logger.Named("EvaluatePolicy").With(zap.String("policy", request.Policy), zap.String("resource", request.ResourceURI))
 	log.Debug("evaluate policy request received")
 
 	// check OPA policy has been loaded
