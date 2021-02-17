@@ -31,7 +31,7 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 		uniqueResources[occurrence.Resource.Uri] = occurrence.Resource.Uri
 	}
 
-	resources := make([]*grafeas_proto.Resource, len(uniqueResources))
+	resources := make([]*grafeas_proto.Resource, 0)
 	for resourceUri := range uniqueResources {
 		resources = append(resources, &grafeas_proto.Resource{
 			Uri: resourceUri,
