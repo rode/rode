@@ -61,18 +61,3 @@ func (mr *MockOpaClientMockRecorder) InitializePolicy(arg0 interface{}) *gomock.
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitializePolicy", reflect.TypeOf((*MockOpaClient)(nil).InitializePolicy), arg0)
 }
-
-// PolicyExists mocks base method
-func (m *MockOpaClient) PolicyExists(arg0 string) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PolicyExists", arg0)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// PolicyExists indicates an expected call of PolicyExists
-func (mr *MockOpaClientMockRecorder) PolicyExists(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PolicyExists", reflect.TypeOf((*MockOpaClient)(nil).PolicyExists), arg0)
-}

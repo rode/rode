@@ -59,18 +59,15 @@ func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceReque
 }
 
 func (r *rodeServer) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePolicyRequest) (*pb.EvaluatePolicyResponse, error) {
+	var err error
 	log := r.logger.Named("AttestPolicy").With(zap.String("policy", request.Policy), zap.String("resource", request.ResourceURI))
 	log.Debug("evaluate policy request received")
 
 	// check OPA policy has been loaded
-	exists, err := r.opa.PolicyExists(request.Policy)
+	err = r.opa.InitializePolicy(request.Policy)
 	if err != nil {
 		log.Error("error checking if policy exists", zap.Error(err))
 		return nil, status.Error(codes.Internal, "check if policy exists failed")
-	}
-	if !exists {
-		log.Error("policy does not exists")
-		return nil, status.Error(codes.NotFound, "policy does not exists")
 	}
 
 	// fetch occurrences from grafeas

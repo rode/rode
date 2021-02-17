@@ -18,12 +18,22 @@ type clientError struct {
 // ClientErrorType defines error types
 type ClientErrorType string
 
+// NewClientError constructor
+func NewClientError(message string, errorType ClientErrorType, causedBy error) ClientError {
+	return clientError{
+		message,
+		errorType,
+		causedBy,
+	}
+}
+
 // OpaClientErrorType constants
 const (
-	OpaClientErrorTypePolicyExists  ClientErrorType = "Policy Exists"
-	OpaClientErrorTypePublishPolicy ClientErrorType = "Publish Policy"
-	OpaClientErrorTypeHTTP          ClientErrorType = "HTTP Error"
-	OpaClientErrorTypeBadResponse   ClientErrorType = "Bad Response"
+	OpaClientErrorTypeGetPolicy      ClientErrorType = "Get Policy"
+	OpaClientErrorTypePolicyNotFound ClientErrorType = "Policy Not Found"
+	OpaClientErrorTypePublishPolicy  ClientErrorType = "Publish Policy"
+	OpaClientErrorTypeHTTP           ClientErrorType = "HTTP Error"
+	OpaClientErrorTypeBadResponse    ClientErrorType = "Bad Response"
 )
 
 // Error returns formatted error message

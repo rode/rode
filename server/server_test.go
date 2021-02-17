@@ -231,7 +231,6 @@ var _ = Describe("rode server", func() {
 					},
 					Explanation: &[]string{},
 				}
-				opaClient.EXPECT().PolicyExists(policy).Return(true, nil)
 			})
 
 			It("should initialize OPA policy", func() {
@@ -239,12 +238,17 @@ var _ = Describe("rode server", func() {
 				grafeasClient.EXPECT().ListOccurrences(gomock.Any(), gomock.Any()).AnyTimes()
 				opaClient.EXPECT().EvaluatePolicy(gomock.Any(), gomock.Any()).AnyTimes().Return(opaEvaluatePolicyResponse, nil)
 
-				// expect OPA initPolicy call
+				// expect OPA initialize policy call
+				opaClient.EXPECT().InitializePolicy(policy).Return(nil)
 
 				_, _ = rodeServer.EvaluatePolicy(context.Background(), evaluatePolicyRequest)
 			})
 
 			When("OPA policy initializes", func() {
+
+				BeforeEach(func() {
+					opaClient.EXPECT().InitializePolicy(gomock.Any()).AnyTimes().Return(nil)
+				})
 
 				It("should list Grafeas occurrences", func() {
 					// ingore non test calls
@@ -293,6 +297,15 @@ var _ = Describe("rode server", func() {
 						_, evaluatePolicyError := rodeServer.EvaluatePolicy(context.Background(), evaluatePolicyRequest)
 						Expect(evaluatePolicyError).To(HaveOccurred())
 					})
+				})
+			})
+
+			When("OPA policy is not found", func() {
+				It("should return an error", func() {
+					opaClient.EXPECT().InitializePolicy(gomock.Any()).Return(opa.NewClientError("policy not found", opa.OpaClientErrorTypePolicyNotFound, fmt.Errorf("es search result empty")))
+
+					_, evaluatePolicyError := rodeServer.EvaluatePolicy(context.Background(), evaluatePolicyRequest)
+					Expect(evaluatePolicyError).To(HaveOccurred())
 				})
 			})
 		})
