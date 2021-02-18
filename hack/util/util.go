@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	Address = "localhost:50053"
+	Address = "localhost:50051"
 )
 
 func CreateOccurrences(c pb.RodeClient) {
