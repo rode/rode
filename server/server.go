@@ -169,7 +169,6 @@ func decodeResponse(r io.ReadCloser, i interface{}) error {
 	return json.NewDecoder(r).Decode(i)
 }
 
-
 func (r *rodeServer) initialize(ctx context.Context) error {
 	log := r.logger.Named("initialize")
 

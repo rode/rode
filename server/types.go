@@ -6,7 +6,7 @@ import (
 )
 
 // These Elasticsearch types were originally defined in rode/grafeas-elasticsearch; however,
-// referencing them directly had the adverse side effect protobuf namespace conflicts with the
+// referencing them directly had the adverse side effect of protobuf namespace conflicts with the
 // vendored Grafeas protobufs in Rode. As a result they're copied here
 // original types: https://github.com/rode/grafeas-elasticsearch/blob/624ccb5d038b55d90fb7c6b3b5378125d7ad0aa5/go/v1beta1/storage/types.go#L32
 type esCollapse struct {
