@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/elastic/go-elasticsearch/v7"
+	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	grafeas_project_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/project_go_proto"
@@ -17,12 +18,19 @@ import (
 )
 
 // NewRodeServer constructor for rodeServer
-func NewRodeServer(logger *zap.Logger, grafeasCommon grafeas_proto.GrafeasV1Beta1Client, grafeasProjects grafeas_project_proto.ProjectsClient, esClient *elasticsearch.Client) (pb.RodeServer, error) {
+func NewRodeServer(
+	logger *zap.Logger,
+	grafeasCommon grafeas_proto.GrafeasV1Beta1Client,
+	grafeasProjects grafeas_project_proto.ProjectsClient,
+	esClient *elasticsearch.Client,
+	filterer filtering.Filterer,
+) (pb.RodeServer, error) {
 	rodeServer := &rodeServer{
 		logger:          logger,
 		grafeasCommon:   grafeasCommon,
 		grafeasProjects: grafeasProjects,
-		esClient: esClient,
+		esClient:        esClient,
+		filterer:        filterer,
 	}
 	if err := rodeServer.initialize(context.Background()); err != nil {
 		return nil, fmt.Errorf("failed to initialize rode server: %s", err)
@@ -34,6 +42,7 @@ type rodeServer struct {
 	pb.UnimplementedRodeServer
 	logger          *zap.Logger
 	esClient        *elasticsearch.Client
+	filterer        filtering.Filterer
 	grafeasCommon   grafeas_proto.GrafeasV1Beta1Client
 	grafeasProjects grafeas_project_proto.ProjectsClient
 }

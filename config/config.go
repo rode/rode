@@ -52,7 +52,7 @@ func Build(name string, args []string) (*Config, error) {
 			JWT:   &JWTAuthConfig{},
 		},
 		Elasticsearch: &ElasticsearchConfig{},
-		Grafeas: &GrafeasConfig{},
+		Grafeas:       &GrafeasConfig{},
 	}
 
 	flags.StringVar(&conf.Auth.Basic.Username, "basic-auth-username", "", "when set, basic auth will be enabled for all endpoints, using the provided username. --basic-auth-password must also be set")
@@ -65,10 +65,10 @@ func Build(name string, args []string) (*Config, error) {
 	flags.BoolVar(&conf.Debug, "debug", false, "when set, debug mode will be enabled")
 	flags.StringVar(&conf.Grafeas.Host, "grafeas-host", "localhost:8080", "the host to use to connect to grafeas")
 
-	flags.StringVar(&conf.Elasticsearch.Host, "es-host", "http://elasticsearch-master:9200", "the Elasticsearch endpoint used by Grafeas")
+	flags.StringVar(&conf.Elasticsearch.Host, "elasticsearch-host", "http://elasticsearch-master:9200", "the Elasticsearch endpoint used by Grafeas")
 	defaultEsCredentialsPlsRemoveBeforePr := "test1234"
-	flags.StringVar(&conf.Elasticsearch.Username, "es-username", defaultEsCredentialsPlsRemoveBeforePr, "username for the Grafeas Elasticsearch instance")
-	flags.StringVar(&conf.Elasticsearch.Password, "es-password", defaultEsCredentialsPlsRemoveBeforePr, "password for the Grafeas Elasticsearch instance")
+	flags.StringVar(&conf.Elasticsearch.Username, "elasticsearch-username", defaultEsCredentialsPlsRemoveBeforePr, "username for the Grafeas Elasticsearch instance")
+	flags.StringVar(&conf.Elasticsearch.Password, "elasticsearch-password", defaultEsCredentialsPlsRemoveBeforePr, "password for the Grafeas Elasticsearch instance")
 
 	err := flags.Parse(args)
 	if err != nil {
@@ -80,7 +80,7 @@ func Build(name string, args []string) (*Config, error) {
 	}
 
 	if (conf.Elasticsearch.Username != "" && conf.Elasticsearch.Password == "") || (conf.Elasticsearch.Username == "" && conf.Elasticsearch.Password != "") {
-		return nil, errors.New("if Elasticsearch auth is configured, both --es-username and --es-password must be set")
+		return nil, errors.New("if Elasticsearch auth is configured, both --elasticsearch-username and --elasticsearch-password must be set")
 	}
 
 	if conf.Auth.JWT.Issuer != "" {

@@ -8,7 +8,7 @@ import (
 	"io"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
+	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	"go.uber.org/zap"
@@ -19,15 +19,14 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 	log := r.logger.Named("ListResources")
 	log.Debug("received request", zap.Any("ListResourcesRequest", request))
 
-	searchQuery := esQuery{
-		Collapse: &esCollapse{
+	searchQuery := storage.EsSearch{
+		Collapse: &storage.EsCollapse{
 			Field: "resource.uri",
 		},
 	}
 
 	if request.Filter != "" {
-		filterer := filtering.NewFilterer()
-		parsedQuery, err := filterer.ParseExpression(request.Filter)
+		parsedQuery, err := r.filterer.ParseExpression(request.Filter)
 		if err != nil {
 			log.Error("failed to parse query", zap.Error(err))
 			return nil, err
@@ -38,7 +37,6 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 
 	encodedBody, requestJSON := encodeRequest(searchQuery)
 	log.Debug("es request payload", zap.Any("payload", requestJSON))
-	//log = log.With(zap.String("request", requestJSON))
 	res, err := r.esClient.Search(
 		r.esClient.Search.WithContext(ctx),
 		r.esClient.Search.WithIndex("grafeas-v1beta1-rode-occurrences"),
@@ -49,17 +47,18 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 	if err != nil {
 		return nil, err
 	}
+
 	if res.IsError() {
 		return nil, fmt.Errorf("error occurred during ES query %v", res)
 	}
 
-	var searchResults esSearchResponse
+	var searchResults storage.EsSearchResponse
 	if err := decodeResponse(res.Body, &searchResults); err != nil {
 		return nil, err
 	}
 	var resources []*grafeas_proto.Resource
 	for _, hit := range searchResults.Hits.Hits {
-		hitLogger := log.With(zap.String("project raw", string(hit.Source)))
+		hitLogger := log.With(zap.String("raw occurrence", string(hit.Source)))
 
 		occurrence := &grafeas_proto.Occurrence{}
 		err := protojson.Unmarshal(hit.Source, proto.MessageV2(occurrence))
@@ -68,7 +67,7 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 			return nil, err
 		}
 
-		hitLogger.Debug("resource hit", zap.Any("occurrence", occurrence))
+		hitLogger.Debug("occurrence hit", zap.Any("occurrence", occurrence))
 
 		resources = append(resources, occurrence.Resource)
 	}
@@ -91,34 +90,4 @@ func encodeRequest(body interface{}) (io.Reader, string) {
 
 func decodeResponse(r io.ReadCloser, i interface{}) error {
 	return json.NewDecoder(r).Decode(i)
-}
-
-type esCollapse struct {
-	Field string `json:"field,omitempty"`
-}
-
-type esQuery struct {
-	Query    *filtering.Query `json:"query,omitempty"`
-	Collapse *esCollapse      `json:"collapse,omitempty"`
-}
-
-type esSearchResponse struct {
-	Took int                   `json:"took"`
-	Hits *esSearchResponseHits `json:"hits"`
-}
-
-type esSearchResponseHits struct {
-	Total *esSearchResponseTotal `json:"total"`
-	Hits  []*esSearchResponseHit `json:"hits"`
-}
-
-type esSearchResponseTotal struct {
-	Value int `json:"value"`
-}
-
-type esSearchResponseHit struct {
-	ID         string          `json:"_id"`
-	Source     json.RawMessage `json:"_source"`
-	Highlights json.RawMessage `json:"highlight"`
-	Sort       []interface{}   `json:"sort"`
 }
