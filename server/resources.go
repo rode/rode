@@ -8,7 +8,6 @@ import (
 	"io"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	"go.uber.org/zap"
@@ -19,8 +18,8 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 	log := r.logger.Named("ListResources")
 	log.Debug("received request", zap.Any("ListResourcesRequest", request))
 
-	searchQuery := storage.EsSearch{
-		Collapse: &storage.EsCollapse{
+	searchQuery := esSearch{
+		Collapse: &esCollapse{
 			Field: "resource.uri",
 		},
 	}
@@ -52,7 +51,7 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 		return nil, fmt.Errorf("error occurred during ES query %v", res)
 	}
 
-	var searchResults storage.EsSearchResponse
+	var searchResults esSearchResponse
 	if err := decodeResponse(res.Body, &searchResults); err != nil {
 		return nil, err
 	}
