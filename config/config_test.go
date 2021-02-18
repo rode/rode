@@ -27,6 +27,9 @@ func TestConfig(t *testing.T) {
 					Basic: &BasicAuthConfig{},
 					JWT:   &JWTAuthConfig{},
 				},
+				Elasticsearch: &ElasticsearchConfig{
+					Host: "http://elasticsearch-master:9200",
+				},
 				Grafeas: &GrafeasConfig{
 					Host: "localhost:8080",
 				},
@@ -61,6 +64,9 @@ func TestConfig(t *testing.T) {
 					},
 					JWT: &JWTAuthConfig{},
 				},
+				Elasticsearch: &ElasticsearchConfig{
+					Host: "http://elasticsearch-master:9200",
+				},
 				Grafeas: &GrafeasConfig{
 					Host: "localhost:8080",
 				},
@@ -82,6 +88,16 @@ func TestConfig(t *testing.T) {
 		{
 			name:        "jwt required audience without issuer",
 			flags:       []string{"--jwt-required-audience=foo"},
+			expectError: true,
+		},
+		{
+			name:        "Elasticsearch config missing username",
+			flags:       []string{"--elasticsearch-password=bar"},
+			expectError: true,
+		},
+		{
+			name:        "Elasticsearch missing password",
+			flags:       []string{"--elasticsearch-username=foo"},
 			expectError: true,
 		},
 	} {

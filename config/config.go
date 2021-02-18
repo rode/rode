@@ -10,8 +10,8 @@ import (
 
 type Config struct {
 	Auth          *AuthConfig
-	Grafeas       *GrafeasConfig
 	Elasticsearch *ElasticsearchConfig
+	Grafeas       *GrafeasConfig
 	GrpcPort      int
 	HttpPort      int
 	Debug         bool
@@ -66,9 +66,8 @@ func Build(name string, args []string) (*Config, error) {
 	flags.StringVar(&conf.Grafeas.Host, "grafeas-host", "localhost:8080", "the host to use to connect to grafeas")
 
 	flags.StringVar(&conf.Elasticsearch.Host, "elasticsearch-host", "http://elasticsearch-master:9200", "the Elasticsearch endpoint used by Grafeas")
-	defaultEsCredentialsPlsRemoveBeforePr := "test1234"
-	flags.StringVar(&conf.Elasticsearch.Username, "elasticsearch-username", defaultEsCredentialsPlsRemoveBeforePr, "username for the Grafeas Elasticsearch instance")
-	flags.StringVar(&conf.Elasticsearch.Password, "elasticsearch-password", defaultEsCredentialsPlsRemoveBeforePr, "password for the Grafeas Elasticsearch instance")
+	flags.StringVar(&conf.Elasticsearch.Username, "elasticsearch-username", "", "username for the Grafeas Elasticsearch instance")
+	flags.StringVar(&conf.Elasticsearch.Password, "elasticsearch-password", "", "password for the Grafeas Elasticsearch instance")
 
 	err := flags.Parse(args)
 	if err != nil {
