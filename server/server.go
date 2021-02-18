@@ -139,16 +139,12 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 	}
 	var resources []*grafeas_proto.Resource
 	for _, hit := range searchResults.Hits.Hits {
-		hitLogger := log.With(zap.String("raw occurrence", string(hit.Source)))
-
 		occurrence := &grafeas_proto.Occurrence{}
 		err := protojson.Unmarshal(hit.Source, proto.MessageV2(occurrence))
 		if err != nil {
 			log.Error("failed to convert", zap.Error(err))
 			return nil, err
 		}
-
-		hitLogger.Debug("occurrence hit", zap.Any("occurrence", occurrence))
 
 		resources = append(resources, occurrence.Resource)
 	}
