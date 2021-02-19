@@ -25,3 +25,4 @@ test: fmtcheck vet
 mocks:
 	mockgen -package mocks github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto GrafeasV1Beta1Client > mocks/grafeasV1Beta1Client.go
 	mockgen -package mocks github.com/rode/rode/protodeps/grafeas/proto/v1beta1/project_go_proto ProjectsClient > mocks/grafeasProjectsClient.go
+	mockgen -package mocks github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering Filterer > mocks/grafeasElasticsearch.go

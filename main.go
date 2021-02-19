@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/elastic/go-elasticsearch/v7"
+	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 	"log"
 	"net"
 	"net/http"
@@ -60,7 +63,9 @@ func main() {
 		reflection.Register(s)
 	}
 
-	rodeServer, err := server.NewRodeServer(logger.Named("rode"), grafeasClientCommon, grafeasClientProjects)
+	esClient, err := createESClient(logger, c.Elasticsearch.Host, c.Elasticsearch.Username, c.Elasticsearch.Password)
+
+	rodeServer, err := server.NewRodeServer(logger.Named("rode"), grafeasClientCommon, grafeasClientProjects, esClient, filtering.NewFilterer())
 	if err != nil {
 		logger.Fatal("failed to create Rode server", zap.Error(err))
 	}
@@ -141,4 +146,33 @@ func createLogger(debug bool) (*zap.Logger, error) {
 	}
 
 	return zap.NewProduction()
+}
+
+// https://github.com/rode/grafeas-elasticsearch/blob/bcdf8c2a4e1ec473e18794f6ca8e1718180051e7/go/v1beta1/main/main.go#L44
+func createESClient(logger *zap.Logger, elasticsearchEndpoint, username, password string) (*elasticsearch.Client, error) {
+	c, err := elasticsearch.NewClient(elasticsearch.Config{
+		Addresses: []string{
+			elasticsearchEndpoint,
+		},
+		Username: username,
+		Password: password,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := c.Info()
+	if err != nil {
+		return nil, err
+	}
+
+	var r map[string]interface{}
+	if err := json.NewDecoder(res.Body).Decode(&r); err != nil {
+		return nil, err
+	}
+
+	logger.Debug("Successful Elasticsearch connection", zap.String("ES Server version", r["version"].(map[string]interface{})["number"].(string)))
+
+	return c, nil
 }

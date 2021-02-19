@@ -1,9 +1,14 @@
 package server
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 
+	"github.com/elastic/go-elasticsearch/v7"
+	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	grafeas_project_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/project_go_proto"
@@ -15,12 +20,24 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
+const (
+	rodeElasticsearchOccurrencesIndex = "grafeas-v1beta1-rode-occurrences"
+)
+
 // NewRodeServer constructor for rodeServer
-func NewRodeServer(logger *zap.Logger, grafeasCommon grafeas_proto.GrafeasV1Beta1Client, grafeasProjects grafeas_project_proto.ProjectsClient) (pb.RodeServer, error) {
+func NewRodeServer(
+	logger *zap.Logger,
+	grafeasCommon grafeas_proto.GrafeasV1Beta1Client,
+	grafeasProjects grafeas_project_proto.ProjectsClient,
+	esClient *elasticsearch.Client,
+	filterer filtering.Filterer,
+) (pb.RodeServer, error) {
 	rodeServer := &rodeServer{
 		logger:          logger,
 		grafeasCommon:   grafeasCommon,
 		grafeasProjects: grafeasProjects,
+		esClient:        esClient,
+		filterer:        filterer,
 	}
 	if err := rodeServer.initialize(context.Background()); err != nil {
 		return nil, fmt.Errorf("failed to initialize rode server: %s", err)
@@ -31,6 +48,8 @@ func NewRodeServer(logger *zap.Logger, grafeasCommon grafeas_proto.GrafeasV1Beta
 type rodeServer struct {
 	pb.UnimplementedRodeServer
 	logger          *zap.Logger
+	esClient        *elasticsearch.Client
+	filterer        filtering.Filterer
 	grafeasCommon   grafeas_proto.GrafeasV1Beta1Client
 	grafeasProjects grafeas_project_proto.ProjectsClient
 }
@@ -75,6 +94,79 @@ func (r *rodeServer) AttestPolicy(ctx context.Context, request *pb.AttestPolicyR
 	// create attestation
 
 	return &pb.AttestPolicyResponse{}, nil
+}
+
+func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResourcesRequest) (*pb.ListResourcesResponse, error) {
+	log := r.logger.Named("ListResources")
+	log.Debug("received request", zap.Any("ListResourcesRequest", request))
+
+	searchQuery := esSearch{
+		Collapse: &esCollapse{
+			Field: "resource.uri",
+		},
+	}
+
+	if request.Filter != "" {
+		parsedQuery, err := r.filterer.ParseExpression(request.Filter)
+		if err != nil {
+			log.Error("failed to parse query", zap.Error(err))
+			return nil, err
+		}
+
+		searchQuery.Query = parsedQuery
+	}
+
+	encodedBody, requestJSON := encodeRequest(searchQuery)
+	log.Debug("es request payload", zap.Any("payload", requestJSON))
+	res, err := r.esClient.Search(
+		r.esClient.Search.WithContext(ctx),
+		r.esClient.Search.WithIndex(rodeElasticsearchOccurrencesIndex),
+		r.esClient.Search.WithBody(encodedBody),
+		r.esClient.Search.WithSize(1000),
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if res.IsError() {
+		return nil, fmt.Errorf("error occurred during ES query %v", res)
+	}
+
+	var searchResults esSearchResponse
+	if err := decodeResponse(res.Body, &searchResults); err != nil {
+		return nil, err
+	}
+	var resources []*grafeas_proto.Resource
+	for _, hit := range searchResults.Hits.Hits {
+		occurrence := &grafeas_proto.Occurrence{}
+		err := protojson.Unmarshal(hit.Source, proto.MessageV2(occurrence))
+		if err != nil {
+			log.Error("failed to convert", zap.Error(err))
+			return nil, err
+		}
+
+		resources = append(resources, occurrence.Resource)
+	}
+
+	return &pb.ListResourcesResponse{
+		Resources:     resources,
+		NextPageToken: "",
+	}, nil
+}
+
+func encodeRequest(body interface{}) (io.Reader, string) {
+	b, err := json.Marshal(body)
+	if err != nil {
+		// we should know that `body` is a serializable struct before invoking `encodeRequest`
+		panic(err)
+	}
+
+	return bytes.NewReader(b), string(b)
+}
+
+func decodeResponse(r io.ReadCloser, i interface{}) error {
+	return json.NewDecoder(r).Decode(i)
 }
 
 func (r *rodeServer) initialize(ctx context.Context) error {

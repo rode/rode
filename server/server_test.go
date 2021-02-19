@@ -1,13 +1,18 @@
 package server
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
-
 	"github.com/brianvoe/gofakeit/v5"
+	"github.com/elastic/go-elasticsearch/v7"
+	"github.com/elastic/go-elasticsearch/v7/esapi"
 	gomock "github.com/golang/mock/gomock"
+	"github.com/golang/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 	"github.com/rode/rode/mocks"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	grafeas_common_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/common_go_proto"
@@ -16,7 +21,12 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"io"
+	"io/ioutil"
+	"net/http"
 )
 
 var _ = Describe("rode server", func() {
@@ -31,6 +41,9 @@ var _ = Describe("rode server", func() {
 		rodeServerError       error
 		grafeasClient         *mocks.MockGrafeasV1Beta1Client
 		grafeasProjectsClient *mocks.MockProjectsClient
+		esClient              *elasticsearch.Client
+		esTransport           *mockEsTransport
+		mockFilterer          *mocks.MockFilterer
 		mockCtrl              *gomock.Controller
 		getProjectRequest     = &grafeas_project_proto.GetProjectRequest{Name: "projects/rode"}
 	)
@@ -40,6 +53,13 @@ var _ = Describe("rode server", func() {
 		mockCtrl = gomock.NewController(GinkgoT())
 		grafeasClient = mocks.NewMockGrafeasV1Beta1Client(mockCtrl)
 		grafeasProjectsClient = mocks.NewMockProjectsClient(mockCtrl)
+
+		esTransport = &mockEsTransport{}
+		esClient = &elasticsearch.Client{
+			Transport: esTransport,
+			API:       esapi.New(esTransport),
+		}
+		mockFilterer = mocks.NewMockFilterer(mockCtrl)
 	})
 
 	AfterEach(func() {
@@ -52,7 +72,7 @@ var _ = Describe("rode server", func() {
 				EXPECT().
 				GetProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(getProjectRequest))
 
-			rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient)
+			rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, esClient, mockFilterer)
 		})
 
 		When("the rode project does not exist", func() {
@@ -73,7 +93,7 @@ var _ = Describe("rode server", func() {
 					EXPECT().
 					CreateProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(createProjectRequest))
 
-				rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient)
+				rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, esClient, mockFilterer)
 			})
 
 			When("create project returns error from Grafeas", func() {
@@ -84,7 +104,7 @@ var _ = Describe("rode server", func() {
 				})
 
 				It("should returns error", func() {
-					rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient)
+					rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, esClient, mockFilterer)
 
 					Expect(rodeServerError).To(HaveOccurred())
 					Expect(rodeServerError.Error()).To(ContainSubstring(createProjectError))
@@ -99,7 +119,7 @@ var _ = Describe("rode server", func() {
 				})
 
 				It("should return the Rode server", func() {
-					rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient)
+					rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, esClient, mockFilterer)
 
 					Expect(rodeServer).ToNot(BeNil())
 					Expect(rodeServerError).ToNot(HaveOccurred())
@@ -120,11 +140,11 @@ var _ = Describe("rode server", func() {
 					EXPECT().
 					CreateProject(gomock.Any(), gomock.Any()).MaxTimes(0)
 
-				rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient)
+				rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, esClient, mockFilterer)
 			})
 
 			It("should return the Rode server", func() {
-				rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient)
+				rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, esClient, mockFilterer)
 
 				Expect(rodeServer).ToNot(BeNil())
 				Expect(rodeServerError).To(BeNil())
@@ -140,7 +160,7 @@ var _ = Describe("rode server", func() {
 			})
 
 			It("should return an error", func() {
-				rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient)
+				rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, esClient, mockFilterer)
 
 				Expect(rodeServerError).To(HaveOccurred())
 				Expect(rodeServerError.Error()).To(ContainSubstring(getProjectError))
@@ -155,7 +175,7 @@ var _ = Describe("rode server", func() {
 				GetProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(getProjectRequest)).
 				Return(&grafeas_project_proto.Project{}, nil)
 
-			rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient)
+			rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, esClient, mockFilterer)
 		})
 
 		When("occurrences are created", func() {
@@ -339,6 +359,123 @@ var _ = Describe("rode server", func() {
 				})
 			})
 		})
+
+		When("listing resources", func() {
+			var (
+				occurrences              []*grafeas_proto.Occurrence
+				request                  *pb.ListResourcesRequest
+				listResourcesResponse    *pb.ListResourcesResponse
+				listResourcesResponseErr error
+			)
+
+			BeforeEach(func() {
+				request = &pb.ListResourcesRequest{}
+				occurrences = []*grafeas_proto.Occurrence{
+					createRandomOccurrence(grafeas_common_proto.NoteKind_VULNERABILITY),
+					createRandomOccurrence(grafeas_common_proto.NoteKind_ATTESTATION),
+				}
+				esTransport.preparedHttpResponses = []*http.Response{
+					{
+						StatusCode: http.StatusOK,
+						Body:       createEsSearchResponse(occurrences),
+					},
+				}
+			})
+
+			When("querying for resources without a filter", func() {
+				BeforeEach(func() {
+					mockFilterer.EXPECT().ParseExpression(gomock.Any()).Times(0)
+
+					listResourcesResponse, listResourcesResponseErr = rodeServer.ListResources(context.Background(), request)
+				})
+
+				It("should query the Rode occurrences index", func() {
+					actualRequest := esTransport.receivedHttpRequests[0]
+
+					Expect(actualRequest.URL.Path).To(Equal("/grafeas-v1beta1-rode-occurrences/_search"))
+				})
+
+				It("should take the first 1000 matches", func() {
+					actualRequest := esTransport.receivedHttpRequests[0]
+					query := actualRequest.URL.Query()
+
+					Expect(query.Get("size")).To(Equal("1000"))
+				})
+
+				It("should collapse fields on resource.uri", func() {
+					actualRequest := esTransport.receivedHttpRequests[0]
+					search := readEsSearchResponse(actualRequest)
+
+					Expect(search.Collapse.Field).To(Equal("resource.uri"))
+				})
+
+				It("should not return an error", func() {
+					Expect(listResourcesResponseErr).To(BeNil())
+				})
+
+				It("should return all resources from the query", func() {
+					var expectedResourceUris []string
+
+					for _, occurrence := range occurrences {
+						expectedResourceUris = append(expectedResourceUris, occurrence.Resource.Uri)
+					}
+
+					var actualResourceUris []string
+					for _, resource := range listResourcesResponse.Resources {
+						actualResourceUris = append(actualResourceUris, resource.Uri)
+					}
+
+					Expect(actualResourceUris).To(ConsistOf(expectedResourceUris))
+				})
+			})
+
+			When("querying for resources with a filter", func() {
+				BeforeEach(func() {
+					request.Filter = gofakeit.UUID()
+				})
+
+				It("should pass the filter to the filterer", func() {
+					mockFilterer.EXPECT().ParseExpression(request.Filter)
+
+					rodeServer.ListResources(context.Background(), request)
+				})
+
+				It("should include the Elasticsearch query in the response", func() {
+					expectedQuery := &filtering.Query{
+						Term: &filtering.Term{
+							gofakeit.UUID(): gofakeit.UUID(),
+						},
+					}
+					mockFilterer.EXPECT().ParseExpression(gomock.Any()).Return(expectedQuery, nil)
+
+					_, err := rodeServer.ListResources(context.Background(), request)
+					Expect(err).To(BeNil())
+
+					actualRequest := esTransport.receivedHttpRequests[0]
+					search := readEsSearchResponse(actualRequest)
+
+					Expect(search.Query).To(Equal(expectedQuery))
+				})
+			})
+
+			When("Elasticsearch returns with an error", func() {
+				BeforeEach(func() {
+					esTransport.preparedHttpResponses[0] = &http.Response{
+						StatusCode: http.StatusInternalServerError,
+					}
+
+					listResourcesResponse, listResourcesResponseErr = rodeServer.ListResources(context.Background(), request)
+				})
+
+				It("should return the error", func() {
+					Expect(listResourcesResponseErr).ToNot(BeNil())
+				})
+
+				It("should not return a protobuf response", func() {
+					Expect(listResourcesResponse).To(BeNil())
+				})
+			})
+		})
 	})
 })
 
@@ -355,4 +492,43 @@ func createRandomOccurrence(kind grafeas_common_proto.NoteKind) *grafeas_proto.O
 		UpdateTime:  timestamppb.New(gofakeit.Date()),
 		Details:     nil,
 	}
+}
+
+func createEsSearchResponse(occurrences []*grafeas_proto.Occurrence) io.ReadCloser {
+	var occurrenceHits []*esSearchResponseHit
+
+	for _, occurrence := range occurrences {
+		source, err := protojson.Marshal(proto.MessageV2(occurrence))
+		Expect(err).To(BeNil())
+
+		response := &esSearchResponseHit{
+			ID:     gofakeit.UUID(),
+			Source: source,
+		}
+
+		occurrenceHits = append(occurrenceHits, response)
+	}
+
+	response := &esSearchResponse{
+		Hits: &esSearchResponseHits{
+			Hits: occurrenceHits,
+		},
+		Took: gofakeit.Number(1, 10),
+	}
+
+	responseBody, err := json.Marshal(response)
+	Expect(err).To(BeNil())
+
+	return ioutil.NopCloser(bytes.NewReader(responseBody))
+}
+
+func readEsSearchResponse(request *http.Request) *esSearch {
+	requestBody, err := ioutil.ReadAll(request.Body)
+	Expect(err).To(BeNil())
+
+	search := &esSearch{}
+	err = json.Unmarshal(requestBody, search)
+	Expect(err).To(BeNil())
+
+	return search
 }
