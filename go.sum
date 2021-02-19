@@ -296,6 +296,8 @@ github.com/rode/grafeas-elasticsearch v0.2.1-0.20210218152403-201fa3ca51d2 h1:Ml
 github.com/rode/grafeas-elasticsearch v0.2.1-0.20210218152403-201fa3ca51d2/go.mod h1:uQKMdz9DlTj0zYTuGVGr0rcIYFAgVnYgXoCYMs/U7E0=
 github.com/rode/grafeas-elasticsearch v0.2.1-0.20210218170732-624ccb5d038b h1:cK5nZWJW4klAhXbWi80o4K0aH9XzZ3i26TYeYtiY4i8=
 github.com/rode/grafeas-elasticsearch v0.2.1-0.20210218170732-624ccb5d038b/go.mod h1:uQKMdz9DlTj0zYTuGVGr0rcIYFAgVnYgXoCYMs/U7E0=
+github.com/rode/grafeas-elasticsearch v0.3.0 h1:5PGUwFaWVjTxjp4Vz9ZABsyYLoF3lZt2zWmwDk5re0c=
+github.com/rode/grafeas-elasticsearch v0.3.0/go.mod h1:uQKMdz9DlTj0zYTuGVGr0rcIYFAgVnYgXoCYMs/U7E0=
 github.com/rogpeppe/fastuuid v0.0.0-20150106093220-6724a57986af/go.mod h1:XWv6SoW27p1b0cqNHllgS5HIMJraePCO15w5zCzIWYg=
 github.com/rogpeppe/fastuuid v1.2.0/go.mod h1:jVj6XXZzXRy/MSR5jhDC/2q6DgLz+nrA6LYCDYWNEvQ=
 github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=

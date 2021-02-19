@@ -16,7 +16,7 @@ require (
 	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.3
 	github.com/pquerna/cachecontrol v0.0.0-20201205024021-ac21108117ac // indirect
-	github.com/rode/grafeas-elasticsearch v0.2.0
+	github.com/rode/grafeas-elasticsearch v0.3.0
 	go.uber.org/zap v1.16.0
 	golang.org/x/net v0.0.0-20201022231255-08b38378de70 // indirect
 	golang.org/x/oauth2 v0.0.0-20210201163806-010130855d6c
