@@ -31,5 +31,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - run: go get -u github.com/google/addlicense
-    - run: addlicense -check **/*.{go,proto}
+    - run: |
+        shopt -s globstar
+        addlicense -check **/*.{go,proto}
       shell: bash
