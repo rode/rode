@@ -25,3 +25,10 @@ jobs:
 
       - name: Build
         run: go build -v .
+  license-check:
+    runs-on: ubuntu-latest
+    container: golang:1.15
+    steps:
+    - uses: actions/checkout@v2
+    - run: go get -u github.com/google/addlicense
+    - run: addlicense -check .
