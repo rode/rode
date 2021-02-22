@@ -31,4 +31,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - run: go get -u github.com/google/addlicense
-    - run: addlicense -check .
+    - run: |
+        addlicense -check **/*.go
+        addlicense -check **/*.proto
