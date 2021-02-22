@@ -25,3 +25,15 @@ jobs:
 
       - name: Build
         run: go build -v .
+  license-check:
+    runs-on: ubuntu-latest
+    container: golang:1.15
+    steps:
+    - uses: actions/checkout@v2
+    - name: Download License Utility
+      run: go get -u github.com/google/addlicense
+    - name: Check License Headers
+      run: |
+        shopt -s globstar
+        addlicense -check **/*.{go,proto}
+      shell: bash
