@@ -25,6 +25,7 @@ var _ = Describe("opa client", func() {
 		Opa = &client{
 			logger,
 			opaHost,
+			false,
 		}
 		opaPolicy = gofakeit.Word()
 	})
@@ -32,7 +33,7 @@ var _ = Describe("opa client", func() {
 	When("a new OPA client is created", func() {
 		It("returns OpaClient", func() {
 			host := fmt.Sprintf("http://%s", gofakeit.DomainName())
-			opa := NewClient(logger, host)
+			opa := NewClient(logger, host, false)
 			Expect(opa).To(BeAssignableToTypeOf(&client{}))
 			Expect(opa.(*client).Host).To((Equal(host)))
 		})

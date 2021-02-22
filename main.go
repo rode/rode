@@ -57,7 +57,7 @@ func main() {
 	if err != nil {
 		logger.Fatal("failed to connect to grafeas", zap.String("grafeas host", c.Grafeas.Host), zap.Error(err))
 	}
-	opaClient := opa.NewClient(logger.Named("opa"), c.Opa.Host)
+	opaClient := opa.NewClient(logger.Named("opa"), c.Opa.Host, c.Debug)
 
 	rodeServer, err := server.NewRodeServer(logger.Named("rode"), grafeasClientCommon, grafeasClientProjects, opaClient)
 	if err != nil {

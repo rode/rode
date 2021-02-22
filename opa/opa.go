@@ -18,8 +18,9 @@ type Client interface {
 }
 
 type client struct {
-	logger *zap.Logger
-	Host   string
+	logger       *zap.Logger
+	Host         string
+	ExplainQuery bool
 }
 
 // EvalutePolicyRequest OPA evalute policy request
@@ -62,10 +63,11 @@ func (v *PolicyViolation) Write(w io.Writer) {
 }
 
 // NewClient OpaClient constructor
-func NewClient(logger *zap.Logger, host string) Client {
+func NewClient(logger *zap.Logger, host string, explainQuery bool) Client {
 	client := &client{
-		logger: logger,
-		Host:   host,
+		logger:       logger,
+		Host:         host,
+		ExplainQuery: explainQuery,
 	}
 	return client
 }
@@ -95,7 +97,7 @@ func (opa *client) EvaluatePolicy(policy string, input []byte) (*EvaluatePolicyR
 		log.Error("failed to encode OPA input", zap.Error(err), zap.String("input", string(input)))
 		return nil, fmt.Errorf("failed to encode OPA input: %s", err)
 	}
-	httpResponse, err := http.Post(opa.getURL(fmt.Sprintf("v1/data/%s?explain=full&pretty", policy)), "application/json", bytes.NewReader(request))
+	httpResponse, err := http.Post(opa.getDataQueryURL(policy), "application/json", bytes.NewReader(request))
 	if err != nil {
 		log.Error("http request to OPA failed", zap.Error(err))
 		return nil, fmt.Errorf("http request to OPA failed: %s", err)
@@ -162,4 +164,14 @@ func (opa *client) publishPolicy(policy string, violations []PolicyViolation) er
 // getURL for given OPA API path
 func (opa *client) getURL(path string) string {
 	return fmt.Sprintf("%s/%s", opa.Host, path)
+}
+
+func (opa *client) getDataQueryURL(path string) string {
+	var query string
+	if opa.ExplainQuery {
+		query = "explain=full&pretty"
+	} else {
+		query = ""
+	}
+	return opa.getURL(fmt.Sprintf("v1/data/%s?%s", path, query))
 }
