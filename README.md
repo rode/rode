@@ -1,4 +1,18 @@
 # rode
+Text here, What rode is
+
+## Why rode?
+Automated Governance...
+
+## rode Architecture
+#### Architecture Image
+### Collectors
+..
+### Grafeas
+..
+### Open Policy Agent
+#### Policy Evaluation
+..
 
 ## Installation
 
