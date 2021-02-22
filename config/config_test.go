@@ -27,19 +27,28 @@ func TestConfig(t *testing.T) {
 					Basic: &BasicAuthConfig{},
 					JWT:   &JWTAuthConfig{},
 				},
+				Elasticsearch: &ElasticsearchConfig{
+					Host: "http://elasticsearch-master:9200",
+				},
 				Grafeas: &GrafeasConfig{
 					Host: "localhost:8080",
 				},
 				Opa: &OpaConfig{
 					Host: "http://localhost:8181",
 				},
-				Port:  50051,
-				Debug: false,
+				GrpcPort: 50051,
+				HttpPort: 50052,
+				Debug:    false,
 			},
 		},
 		{
-			name:        "bad port",
-			flags:       []string{"--port=foo"},
+			name:        "bad gRPC port",
+			flags:       []string{"--grpc-port=foo"},
+			expectError: true,
+		},
+		{
+			name:        "bad http port",
+			flags:       []string{"--http-port=bar"},
 			expectError: true,
 		},
 		{
@@ -58,14 +67,18 @@ func TestConfig(t *testing.T) {
 					},
 					JWT: &JWTAuthConfig{},
 				},
+				Elasticsearch: &ElasticsearchConfig{
+					Host: "http://elasticsearch-master:9200",
+				},
 				Grafeas: &GrafeasConfig{
 					Host: "localhost:8080",
 				},
 				Opa: &OpaConfig{
 					Host: "http://localhost:8181",
 				},
-				Port:  50051,
-				Debug: false,
+				GrpcPort: 50051,
+				HttpPort: 50052,
+				Debug:    false,
 			},
 		},
 		{
@@ -94,12 +107,26 @@ func TestConfig(t *testing.T) {
 				Grafeas: &GrafeasConfig{
 					Host: "localhost:8080",
 				},
+				Elasticsearch: &ElasticsearchConfig{
+					Host: "http://elasticsearch-master:9200",
+				},
 				Opa: &OpaConfig{
 					Host: "opa.test.na:8181",
 				},
-				Port:  50051,
-				Debug: false,
+				GrpcPort: 50051,
+				HttpPort: 50052,
+				Debug:    false,
 			},
+		},
+		{
+			name:        "Elasticsearch config missing username",
+			flags:       []string{"--elasticsearch-password=bar"},
+			expectError: true,
+		},
+		{
+			name:        "Elasticsearch missing password",
+			flags:       []string{"--elasticsearch-username=foo"},
+			expectError: true,
 		},
 	} {
 		tc := tc

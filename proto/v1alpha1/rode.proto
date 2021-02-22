@@ -4,14 +4,31 @@ package rode.v1alpha1;
 
 option go_package = "github.com/rode/rode/proto/v1alpha1";
 
+import "google/api/annotations.proto";
 import "proto/v1alpha1/rode-policy.proto";
 import "proto/v1beta1/grafeas.proto";
 
 service Rode {
   // Create occurrences 
-  rpc BatchCreateOccurrences(BatchCreateOccurrencesRequest) returns (BatchCreateOccurrencesResponse) {}
+  rpc BatchCreateOccurrences(BatchCreateOccurrencesRequest) returns (BatchCreateOccurrencesResponse) {
+    option (google.api.http) = {
+      post: "/v1alpha1/occurrences:batchCreate"
+      body: "*"
+    };
+  }
   // Verify that an artifact satisfies a policy
-  rpc EvaluatePolicy(EvaluatePolicyRequest) returns (EvaluatePolicyResponse) {}
+  rpc EvaluatePolicy(EvaluatePolicyRequest) returns (EvaluatePolicyResponse) {
+    option (google.api.http) = {
+      post: "/v1alpha1/policies/{policy}:attest"
+      body: "*"
+    };
+  }
+  // List resource URI
+  rpc ListResources(ListResourcesRequest) returns (ListResourcesResponse) {
+    option (google.api.http) = {
+      get: "/v1alpha1/resources"
+    };
+  }
 }
 
 // Request to create occurrences in batch.
@@ -24,4 +41,18 @@ message BatchCreateOccurrencesRequest {
 message BatchCreateOccurrencesResponse {
   // The occurrences that were created.
   repeated grafeas.v1beta1.Occurrence occurrences = 1;
+}
+
+// modeled after Grafeas' ListOccurrence request/response
+// https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576/proto/v1beta1/grafeas.proto#L345-L374
+message ListResourcesRequest {
+  string filter = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+// https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576/proto/v1beta1/grafeas.proto#L254-L271
+
+message ListResourcesResponse {
+  repeated grafeas.v1beta1.Resource resources = 1;
+  string next_page_token = 2;
 }

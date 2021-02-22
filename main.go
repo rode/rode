@@ -2,13 +2,19 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/elastic/go-elasticsearch/v7"
+	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	"github.com/rode/rode/auth"
@@ -35,7 +41,7 @@ func main() {
 		log.Fatalf("failed to create logger: %v", err)
 	}
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", c.Port))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", c.GrpcPort))
 	if err != nil {
 		logger.Fatal("failed to listen", zap.Error(err))
 	}
@@ -59,7 +65,9 @@ func main() {
 	}
 	opaClient := opa.NewClient(logger.Named("opa"), c.Opa.Host, c.Debug)
 
-	rodeServer, err := server.NewRodeServer(logger.Named("rode"), grafeasClientCommon, grafeasClientProjects, opaClient)
+	esClient, err := createESClient(logger, c.Elasticsearch.Host, c.Elasticsearch.Username, c.Elasticsearch.Password)
+
+	rodeServer, err := server.NewRodeServer(logger.Named("rode"), grafeasClientCommon, grafeasClientProjects, opaClient, esClient, filtering.NewFilterer())
 	if err != nil {
 		logger.Fatal("failed to create Rode server", zap.Error(err))
 	}
@@ -74,6 +82,15 @@ func main() {
 		}
 	}()
 
+	httpServer, err := createGrpcGateway(context.Background(), lis.Addr().String(), fmt.Sprintf(":%d", c.HttpPort))
+	if err != nil {
+		logger.Fatal("failed to start gateway", zap.Error(err))
+	}
+
+	go func() {
+		httpServer.ListenAndServe()
+	}()
+
 	logger.Info("listening", zap.String("host", lis.Addr().String()))
 	healthzServer.Ready()
 
@@ -86,6 +103,7 @@ func main() {
 	healthzServer.NotReady()
 
 	s.GracefulStop()
+	httpServer.Shutdown(context.Background())
 }
 
 func createGrafeasClients(grafeasEndpoint string) (grafeas_proto.GrafeasV1Beta1Client, grafeas_project_proto.ProjectsClient, error) {
@@ -103,10 +121,60 @@ func createGrafeasClients(grafeasEndpoint string) (grafeas_proto.GrafeasV1Beta1C
 	return grafeasClient, projectsClient, nil
 }
 
+func createGrpcGateway(ctx context.Context, grpcAddress, httpPort string) (*http.Server, error) {
+	conn, err := grpc.DialContext(
+		context.Background(),
+		grpcAddress,
+		grpc.WithBlock(),
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatalln("Failed to dial server:", err)
+	}
+	gwmux := runtime.NewServeMux()
+	if err := pb.RegisterRodeHandler(ctx, gwmux, conn); err != nil {
+		return nil, err
+	}
+
+	return &http.Server{
+		Addr:    httpPort,
+		Handler: gwmux,
+	}, nil
+}
+
 func createLogger(debug bool) (*zap.Logger, error) {
 	if debug {
 		return zap.NewDevelopment()
 	}
 
 	return zap.NewProduction()
+}
+
+// https://github.com/rode/grafeas-elasticsearch/blob/bcdf8c2a4e1ec473e18794f6ca8e1718180051e7/go/v1beta1/main/main.go#L44
+func createESClient(logger *zap.Logger, elasticsearchEndpoint, username, password string) (*elasticsearch.Client, error) {
+	c, err := elasticsearch.NewClient(elasticsearch.Config{
+		Addresses: []string{
+			elasticsearchEndpoint,
+		},
+		Username: username,
+		Password: password,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	res, err := c.Info()
+	if err != nil {
+		return nil, err
+	}
+
+	var r map[string]interface{}
+	if err := json.NewDecoder(res.Body).Decode(&r); err != nil {
+		return nil, err
+	}
+
+	logger.Debug("Successful Elasticsearch connection", zap.String("ES Server version", r["version"].(map[string]interface{})["number"].(string)))
+
+	return c, nil
 }
