@@ -236,6 +236,49 @@ var _ = Describe("rode server", func() {
 			})
 		})
 
+		When("listing occurrences for a resource", func() {
+			var (
+				randomOccurrence               *grafeas_proto.Occurrence
+				grafeasListOccurrencesRequest  *grafeas_proto.ListOccurrencesRequest
+				grafeasListOccurrencesResponse *grafeas_proto.ListOccurrencesResponse
+				uri                            string
+			)
+
+			BeforeEach(func() {
+				randomOccurrence = createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED)
+
+				uri = randomOccurrence.Resource.Uri
+
+				// expected Grafeas ListOccurrencesRequest request
+				grafeasListOccurrencesRequest = &grafeas_proto.ListOccurrencesRequest{
+					Parent: "projects/rode",
+					Filter: fmt.Sprintf(`"resource.uri" == "%s"`, uri),
+				}
+
+				// mocked Grafeas ListOccurrencesResponse response
+				grafeasListOccurrencesResponse = &grafeas_proto.ListOccurrencesResponse{
+					Occurrences: []*grafeas_proto.Occurrence{
+						randomOccurrence,
+					},
+				}
+
+			})
+
+			It("should list occurrences from grafeas", func() {
+				// ensure Grafeas ListOccurrences is called with expected request and inject response
+				grafeasClient.EXPECT().ListOccurrences(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(grafeasListOccurrencesRequest)).Return(grafeasListOccurrencesResponse, nil)
+
+				listOccurrencesRequest := &pb.ListOccurrencesRequest{
+					ResourceUri: uri,
+				}
+				response, err := rodeServer.ListOccurrences(context.Background(), listOccurrencesRequest)
+				Expect(err).ToNot(HaveOccurred())
+
+				// check response
+				Expect(response.Occurrences).To(BeEquivalentTo(grafeasListOccurrencesResponse.Occurrences))
+			})
+		})
+
 		When("policy is evaluated", func() {
 			var (
 				resourceURI            string
