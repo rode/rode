@@ -14,7 +14,21 @@ The overall architecture of **rode** is built around bringing together tools bui
 [Collectors](./docs/collectors.md) package the metadata in the form of an "occurrence". These occurrences represent verifiable, individual software delivery process events. Collectors provide an entrypoint to the **rode** system by helping standardize the way metadata is brought in. They will be "purpose built" to collect metadata from any of the tools you are using in your software delivery toolchain.
 
 ### Grafeas
-..
+
+[Grafeas](https://github.com/grafeas/grafeas) is an open source project that provides an API and storage layer for artifact metadata.
+
+Information that is gathered by collectors is ultimately stored within Grafeas as [Occurrences](https://github.com/grafeas/grafeas/blob/master/docs/grafeas_concepts.md#occurrences).
+Occurrences represent a particular piece of metadata about an artifact, and they can be used by Rode when evaluating policies
+against artifacts. Information such as an artifact's vulnerabilities, how it was built, and the quality of the codebase
+that produced the artifact can be fed to a policy in order to determine whether that artifact meets a certain set of
+standards set by your organization.
+
+The primary way that Grafeas adds value to the Rode project is through its models around how artifact metadata should be
+tracked and stored. Over time, we plan to add new types of Occurrences to Grafeas to represent artifact metadata concepts
+that we believe are important, but aren't currently represented in the existing models.
+
+We currently use a [custom backend](https://github.com/rode/grafeas-elasticsearch) for Grafeas that's based on Elasticsearch.
+
 ### Open Policy Agent
 #### Policy Evaluation
 ..
