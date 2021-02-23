@@ -203,3 +203,17 @@ func (r *rodeServer) initialize(ctx context.Context) error {
 
 	return nil
 }
+
+func (r *rodeServer) ListOccurrences(ctx context.Context, occurrenceRequest *pb.ListOccurrencesRequest) (*pb.ListOccurrencesResponse, error) {
+	log := r.logger.Named("ListOccurrences")
+	log.Debug("received request", zap.Any("ListOccurrencesRequest", occurrenceRequest))
+
+	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{Parent: "projects/rode", Filter: fmt.Sprintf(`"resource.uri" == "%s"`, occurrenceRequest.ResourceUri)})
+	if err != nil {
+		log.Error("list occurrences failed", zap.Error(err), zap.String("resource", occurrenceRequest.ResourceUri))
+		return nil, status.Error(codes.Internal, "list occurrences failed")
+	}
+	return &pb.ListOccurrencesResponse{
+		Occurrences: listOccurrencesResponse.GetOccurrences(),
+	}, nil
+}

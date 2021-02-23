@@ -22,6 +22,7 @@ type RodeClient interface {
 	// Verify that an artifact satisfies a policy
 	AttestPolicy(ctx context.Context, in *AttestPolicyRequest, opts ...grpc.CallOption) (*AttestPolicyResponse, error)
 	ListResources(ctx context.Context, in *ListResourcesRequest, opts ...grpc.CallOption) (*ListResourcesResponse, error)
+	ListOccurrences(ctx context.Context, in *ListOccurrencesRequest, opts ...grpc.CallOption) (*ListOccurrencesResponse, error)
 }
 
 type rodeClient struct {
@@ -59,6 +60,15 @@ func (c *rodeClient) ListResources(ctx context.Context, in *ListResourcesRequest
 	return out, nil
 }
 
+func (c *rodeClient) ListOccurrences(ctx context.Context, in *ListOccurrencesRequest, opts ...grpc.CallOption) (*ListOccurrencesResponse, error) {
+	out := new(ListOccurrencesResponse)
+	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/ListOccurrences", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RodeServer is the server API for Rode service.
 // All implementations must embed UnimplementedRodeServer
 // for forward compatibility
@@ -68,6 +78,7 @@ type RodeServer interface {
 	// Verify that an artifact satisfies a policy
 	AttestPolicy(context.Context, *AttestPolicyRequest) (*AttestPolicyResponse, error)
 	ListResources(context.Context, *ListResourcesRequest) (*ListResourcesResponse, error)
+	ListOccurrences(context.Context, *ListOccurrencesRequest) (*ListOccurrencesResponse, error)
 	mustEmbedUnimplementedRodeServer()
 }
 
@@ -83,6 +94,9 @@ func (UnimplementedRodeServer) AttestPolicy(context.Context, *AttestPolicyReques
 }
 func (UnimplementedRodeServer) ListResources(context.Context, *ListResourcesRequest) (*ListResourcesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListResources not implemented")
+}
+func (UnimplementedRodeServer) ListOccurrences(context.Context, *ListOccurrencesRequest) (*ListOccurrencesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListOccurrences not implemented")
 }
 func (UnimplementedRodeServer) mustEmbedUnimplementedRodeServer() {}
 
@@ -151,6 +165,24 @@ func _Rode_ListResources_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Rode_ListOccurrences_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListOccurrencesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RodeServer).ListOccurrences(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rode.v1alpha1.Rode/ListOccurrences",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RodeServer).ListOccurrences(ctx, req.(*ListOccurrencesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Rode_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "rode.v1alpha1.Rode",
 	HandlerType: (*RodeServer)(nil),
@@ -166,6 +198,10 @@ var _Rode_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListResources",
 			Handler:    _Rode_ListResources_Handler,
+		},
+		{
+			MethodName: "ListOccurrences",
+			Handler:    _Rode_ListOccurrences_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

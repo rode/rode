@@ -12,6 +12,8 @@
 - [proto/v1alpha1/rode.proto](#proto/v1alpha1/rode.proto)
     - [BatchCreateOccurrencesRequest](#rode.v1alpha1.BatchCreateOccurrencesRequest)
     - [BatchCreateOccurrencesResponse](#rode.v1alpha1.BatchCreateOccurrencesResponse)
+    - [ListOccurrencesRequest](#rode.v1alpha1.ListOccurrencesRequest)
+    - [ListOccurrencesResponse](#rode.v1alpha1.ListOccurrencesResponse)
     - [ListResourcesRequest](#rode.v1alpha1.ListResourcesRequest)
     - [ListResourcesResponse](#rode.v1alpha1.ListResourcesResponse)
   
@@ -142,6 +144,37 @@ Response for creating occurrences in batch.
 
 
 
+<a name="rode.v1alpha1.ListOccurrencesRequest"></a>
+
+### ListOccurrencesRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| resource_uri | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ListOccurrencesResponse"></a>
+
+### ListOccurrencesResponse
+Response for listing occurrences.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| occurrences | [grafeas.v1beta1.Occurrence](#grafeas.v1beta1.Occurrence) | repeated | The occurrences requested. |
+| next_page_token | [string](#string) |  | The next pagination token in the list response. It should be used as `page_token` for the following request. An empty value means no more results. |
+
+
+
+
+
+
 <a name="rode.v1alpha1.ListResourcesRequest"></a>
 
 ### ListResourcesRequest
@@ -192,6 +225,7 @@ https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576
 | BatchCreateOccurrences | [BatchCreateOccurrencesRequest](#rode.v1alpha1.BatchCreateOccurrencesRequest) | [BatchCreateOccurrencesResponse](#rode.v1alpha1.BatchCreateOccurrencesResponse) | Create occurrences |
 | AttestPolicy | [AttestPolicyRequest](#rode.v1alpha1.AttestPolicyRequest) | [AttestPolicyResponse](#rode.v1alpha1.AttestPolicyResponse) | Verify that an artifact satisfies a policy |
 | ListResources | [ListResourcesRequest](#rode.v1alpha1.ListResourcesRequest) | [ListResourcesResponse](#rode.v1alpha1.ListResourcesResponse) |  |
+| ListOccurrences | [ListOccurrencesRequest](#rode.v1alpha1.ListOccurrencesRequest) | [ListOccurrencesResponse](#rode.v1alpha1.ListOccurrencesResponse) |  |
 
  
 

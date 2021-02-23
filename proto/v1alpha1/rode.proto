@@ -43,6 +43,11 @@ service Rode {
       get: "/v1alpha1/resources"
     };
   }
+  rpc ListOccurrences(ListOccurrencesRequest) returns (ListOccurrencesResponse) {
+    option (google.api.http) = {
+      get: "/v1alpha1/occurrences"
+    };
+  }
 }
 
 // Request to create occurrences in batch.
@@ -68,5 +73,19 @@ message ListResourcesRequest {
 
 message ListResourcesResponse {
   repeated grafeas.v1beta1.Resource resources = 1;
+  string next_page_token = 2;
+}
+
+message ListOccurrencesRequest {
+  string resource_uri = 1;
+}
+
+// Response for listing occurrences.
+message ListOccurrencesResponse {
+  // The occurrences requested.
+  repeated grafeas.v1beta1.Occurrence occurrences = 1;
+  // The next pagination token in the list response. It should be used as
+  // `page_token` for the following request. An empty value means no more
+  // results.
   string next_page_token = 2;
 }
