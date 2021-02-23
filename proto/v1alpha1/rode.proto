@@ -23,7 +23,7 @@ import "proto/v1alpha1/rode-attest.proto";
 import "proto/v1beta1/grafeas.proto";
 
 service Rode {
-  // Create occurrences 
+  // Create occurrences
   rpc BatchCreateOccurrences(BatchCreateOccurrencesRequest) returns (BatchCreateOccurrencesResponse) {
     option (google.api.http) = {
       post: "/v1alpha1/occurrences:batchCreate"
@@ -84,8 +84,4 @@ message ListOccurrencesRequest {
 message ListOccurrencesResponse {
   // The occurrences requested.
   repeated grafeas.v1beta1.Occurrence occurrences = 1;
-  // The next pagination token in the list response. It should be used as
-  // `page_token` for the following request. An empty value means no more
-  // results.
-  string next_page_token = 2;
 }
