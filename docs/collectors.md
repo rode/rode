@@ -21,7 +21,9 @@ primary responsibilities:
 
 Keeping the responsibilites limited to these tasks make these fairly trivial to
 maintain and reduces the complexity of interacting with many services in a single
-code base.
+code base. However since these collectors are developed independently you can extend
+them as needed. For example if you need to retrieve more data from the service or
+notify other endpoints feel free to integrate this logic into your implementation.
 
 ## Collecting Metadata
 
