@@ -19,7 +19,7 @@ package rode.v1alpha1;
 option go_package = "github.com/rode/rode/proto/v1alpha1";
 
 import "google/api/annotations.proto";
-import "proto/v1alpha1/rode-attest.proto";
+import "proto/v1alpha1/rode-policy.proto";
 import "proto/v1beta1/grafeas.proto";
 
 service Rode {
@@ -31,13 +31,13 @@ service Rode {
     };
   }
   // Verify that an artifact satisfies a policy
-  rpc AttestPolicy(AttestPolicyRequest) returns (AttestPolicyResponse) {
+  rpc EvaluatePolicy(EvaluatePolicyRequest) returns (EvaluatePolicyResponse) {
     option (google.api.http) = {
       post: "/v1alpha1/policies/{policy}:attest"
       body: "*"
     };
   }
-
+  // List resource URI
   rpc ListResources(ListResourcesRequest) returns (ListResourcesResponse) {
     option (google.api.http) = {
       get: "/v1alpha1/resources"

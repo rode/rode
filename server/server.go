@@ -23,6 +23,7 @@ import (
 
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
+	"github.com/rode/rode/opa"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	grafeas_project_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/project_go_proto"
@@ -32,6 +33,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -43,6 +45,7 @@ func NewRodeServer(
 	logger *zap.Logger,
 	grafeasCommon grafeas_proto.GrafeasV1Beta1Client,
 	grafeasProjects grafeas_project_proto.ProjectsClient,
+	opa opa.Client,
 	esClient *elasticsearch.Client,
 	filterer filtering.Filterer,
 ) (pb.RodeServer, error) {
@@ -50,6 +53,7 @@ func NewRodeServer(
 		logger:          logger,
 		grafeasCommon:   grafeasCommon,
 		grafeasProjects: grafeasProjects,
+		opa:             opa,
 		esClient:        esClient,
 		filterer:        filterer,
 	}
@@ -66,6 +70,7 @@ type rodeServer struct {
 	filterer        filtering.Filterer
 	grafeasCommon   grafeas_proto.GrafeasV1Beta1Client
 	grafeasProjects grafeas_project_proto.ProjectsClient
+	opa             opa.Client
 }
 
 func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceRequest *pb.BatchCreateOccurrencesRequest) (*pb.BatchCreateOccurrencesResponse, error) {
@@ -87,27 +92,58 @@ func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceReque
 	}, nil
 }
 
-func (r *rodeServer) AttestPolicy(ctx context.Context, request *pb.AttestPolicyRequest) (*pb.AttestPolicyResponse, error) {
-	log := r.logger.Named("AttestPolicy")
-	log.Debug("received requests")
+func (r *rodeServer) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePolicyRequest) (*pb.EvaluatePolicyResponse, error) {
+	var err error
+	log := r.logger.Named("EvaluatePolicy").With(zap.String("policy", request.Policy), zap.String("resource", request.ResourceURI))
+	log.Debug("evaluate policy request received")
 
 	// check OPA policy has been loaded
+	err = r.opa.InitializePolicy(request.Policy)
+	if err != nil {
+		log.Error("error checking if policy exists", zap.Error(err))
+		return nil, status.Error(codes.Internal, "check if policy exists failed")
+	}
 
 	// fetch occurrences from grafeas
-	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{Filter: fmt.Sprintf("resource.uri = '%s'", request.ResourceURI)})
+	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{Parent: "projects/rode", Filter: fmt.Sprintf(`"resource.uri" == "%s"`, request.ResourceURI)})
 	if err != nil {
 		log.Error("list occurrences failed", zap.Error(err), zap.String("resource", request.ResourceURI))
 		return nil, status.Error(codes.Internal, "list occurrences failed")
 	}
+	log.Debug("Occurrences found", zap.Any("occurrences", listOccurrencesResponse))
 
 	// json encode occurrences. list occurrences response should not generate error
-	_, _ = protojson.Marshal(proto.MessageV2(listOccurrencesResponse))
+	input, _ := protojson.Marshal(proto.MessageV2(listOccurrencesResponse))
 
 	// evalute OPA policy
+	evaluatePolicyResponse, err := r.opa.EvaluatePolicy(request.Policy, input)
+	if err != nil {
+		log.Error("evaluate OPA policy failed")
+		return nil, status.Error(codes.Internal, "evaluate OPA policy failed")
+	}
+	log.Debug("Evalute policy result", zap.Any("policy result", evaluatePolicyResponse))
 
-	// create attestation
+	attestation := &pb.EvaluatePolicyResult{}
+	attestation.Created = timestamppb.Now()
+	attestation.Pass = evaluatePolicyResponse.Result.Pass
+	for _, violation := range evaluatePolicyResponse.Result.Violations {
+		attestation.Violations = append(attestation.Violations, &pb.EvaluatePolicyViolation{
+			Id:          violation.ID,
+			Name:        violation.Name,
+			Description: violation.Description,
+			Message:     violation.Message,
+			Link:        violation.Link,
+			Pass:        violation.Pass,
+		})
+	}
 
-	return &pb.AttestPolicyResponse{}, nil
+	return &pb.EvaluatePolicyResponse{
+		Pass: evaluatePolicyResponse.Result.Pass,
+		Result: []*pb.EvaluatePolicyResult{
+			attestation,
+		},
+		Explanation: *evaluatePolicyResponse.Explanation,
+	}, nil
 }
 
 func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResourcesRequest) (*pb.ListResourcesResponse, error) {
