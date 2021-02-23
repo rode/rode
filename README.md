@@ -1,13 +1,18 @@
 # rode
-Text here, What rode is
+> \rōd\ - a line (as of rope or chain) used to attach an anchor to a boat
+
+**rode** provides the collection, attestation and enforcement of policies in your software supply chain.
 
 ## Why rode?
-Automated Governance...
+Enterprises require a secure and reliable software delivery lifecycle to meet the needs of audit and compliance. This has traditionaly been implemented by applying governance and additional process. **rode** aims to meet this need by enabling **Automated Governance**. Automated Governance allows us to move the existing change approval process left by automating stages in software delivery that may currently exist as manual activities. This is possible by building a codified system of trust and authority for the entire software lifecycle. **rode** facilitates the collection and organization of important software supply chain metadata and provides a method of Automated Governance via **Policy as Code**.
 
 ## rode Architecture
-#### Architecture Image
-### Collectors
-..
+The overall architecture of **rode** is built around bringing together tools built with the needs of governance in mind. The system of **rode** consists of **Collectors**, the **rode** API, **Grafeas**, and **Open Policy Agent**. We have extended the Grafeas storage backend to use **Elasticsearch**. These tools work together to enable Automated Governance.
+
+![Rode Architecture](docs/img/rode-ag-architecture.svg)
+### [Collectors](./docs/collectors.md)
+[Collectors](./docs/collectors.md) package the metadata in the form of an "occurrence". These occurrences represent verifiable, individual software delivery process events. Collectors provide an entrypoint to the **rode** system by helping standardize the way metadata is brought in. They will be "purpose built" to collect metadata from any of the tools you are using in your software delivery toolchain.
+
 ### Grafeas
 ..
 ### Open Policy Agent
