@@ -77,11 +77,14 @@ message ListResourcesResponse {
 }
 
 message ListOccurrencesRequest {
-  string resource_uri = 1;
+  string filter = 1;
+  int32 page_size = 2;
+  string page_token = 3;
 }
 
 // Response for listing occurrences.
 message ListOccurrencesResponse {
   // The occurrences requested.
   repeated grafeas.v1beta1.Occurrence occurrences = 1;
+  string next_page_token = 2;
 }

@@ -208,12 +208,15 @@ func (r *rodeServer) ListOccurrences(ctx context.Context, occurrenceRequest *pb.
 	log := r.logger.Named("ListOccurrences")
 	log.Debug("received request", zap.Any("ListOccurrencesRequest", occurrenceRequest))
 
-	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{Parent: "projects/rode", Filter: fmt.Sprintf(`"resource.uri" == "%s"`, occurrenceRequest.ResourceUri)})
+	requestedFilter := occurrenceRequest.Filter
+
+	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{Parent: "projects/rode", Filter: requestedFilter})
 	if err != nil {
-		log.Error("list occurrences failed", zap.Error(err), zap.String("resource", occurrenceRequest.ResourceUri))
+		log.Error("list occurrences failed", zap.Error(err), zap.String("filter", occurrenceRequest.Filter))
 		return nil, status.Error(codes.Internal, "list occurrences failed")
 	}
 	return &pb.ListOccurrencesResponse{
 		Occurrences: listOccurrencesResponse.GetOccurrences(),
+		NextPageToken: "",
 	}, nil
 }

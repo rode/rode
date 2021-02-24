@@ -152,7 +152,9 @@ Response for creating occurrences in batch.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| resource_uri | [string](#string) |  |  |
+| filter | [string](#string) |  |  |
+| page_size | [int32](#int32) |  |  |
+| page_token | [string](#string) |  |  |
 
 
 
@@ -168,7 +170,7 @@ Response for listing occurrences.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | occurrences | [grafeas.v1beta1.Occurrence](#grafeas.v1beta1.Occurrence) | repeated | The occurrences requested. |
-| next_page_token | [string](#string) |  | The next pagination token in the list response. It should be used as `page_token` for the following request. An empty value means no more results. |
+| next_page_token | [string](#string) |  |  |
 
 
 
