@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/brianvoe/gofakeit/v5"
-	"github.com/brianvoe/gofakeit/v6"
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/elastic/go-elasticsearch/v7/esapi"
 	gomock "github.com/golang/mock/gomock"

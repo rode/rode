@@ -216,7 +216,7 @@ func (r *rodeServer) ListOccurrences(ctx context.Context, occurrenceRequest *pb.
 		return nil, status.Error(codes.Internal, "list occurrences failed")
 	}
 	return &pb.ListOccurrencesResponse{
-		Occurrences: listOccurrencesResponse.GetOccurrences(),
+		Occurrences:   listOccurrencesResponse.GetOccurrences(),
 		NextPageToken: "",
 	}, nil
 }
