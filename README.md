@@ -23,13 +23,22 @@ against artifacts. Information such as an artifact's vulnerabilities, how it was
 that produced the artifact can be fed to a policy in order to determine whether that artifact meets a certain set of
 standards set by your organization.
 
-The primary way that Grafeas adds value to the Rode project is through its models around how artifact metadata should be
+The primary way that Grafeas adds value to the **rode** project is through its models around how artifact metadata should be
 tracked and stored. Over time, we plan to add new types of Occurrences to Grafeas to represent artifact metadata concepts
 that we believe are important, but aren't currently represented in the existing models.
 
 We currently use a [custom backend](https://github.com/rode/grafeas-elasticsearch) for Grafeas that's based on Elasticsearch.
 
+From Grafeas docs:
+> [Grafeas](https://github.com/grafeas/grafeas) is an open-source artifact metadata API that provides a uniform way to audit and govern your software supply chain. Grafeas defines an API spec for managing metadata about software resources, such as container images, Virtual Machine (VM) images, JAR files, and scripts. You can use Grafeas to define and aggregate information about your project's components. Grafeas provides organizations with a central source of truth for tracking and enforcing policies across an ever growing set of software development teams and pipelines. Build, auditing, and compliance tools can use the Grafeas API to store, query, and retrieve comprehensive metadata on software components of all kinds. 
+
 ### Open Policy Agent
+[Open Policy Agent, or OPA](https://www.openpolicyagent.org/docs/latest/) is the open source standard for implementing Policy as Code.
+
+**rode** uses OPA as a means to apply and validate policy via Rego policies stored in source control (Poicy as Code). By using the occurrence and attestation metadata stored in Grafeas as inputs for policy, all resources can be validated as needed. **rode** provides a method to bring the policy and metadata together as a means for enabling Automated Governance.
+
+> The Open Policy Agent (OPA, pronounced “oh-pa”) is an open source, general-purpose policy engine that unifies policy enforcement across the stack. OPA provides a high-level declarative language that lets you specify policy as code and simple APIs to offload policy decision-making from your software. You can use OPA to enforce policies in microservices, Kubernetes, CI/CD pipelines, API gateways, and more.
+
 #### Policy Evaluation
 ..
 
