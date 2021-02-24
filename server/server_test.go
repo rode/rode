@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/brianvoe/gofakeit/v5"
+	"github.com/brianvoe/gofakeit/v6"
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/elastic/go-elasticsearch/v7/esapi"
 	gomock "github.com/golang/mock/gomock"
@@ -269,7 +270,7 @@ var _ = Describe("rode server", func() {
 				grafeasClient.EXPECT().ListOccurrences(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(grafeasListOccurrencesRequest)).Return(grafeasListOccurrencesResponse, nil)
 
 				listOccurrencesRequest := &pb.ListOccurrencesRequest{
-					ResourceUri: uri,
+					Filter: fmt.Sprintf(`"resource.uri" == "%s"`, uri),
 				}
 				response, err := rodeServer.ListOccurrences(context.Background(), listOccurrencesRequest)
 				Expect(err).ToNot(HaveOccurred())
