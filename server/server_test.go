@@ -239,6 +239,64 @@ var _ = Describe("rode server", func() {
 			})
 		})
 
+		When("listing occurrences for a resource", func() {
+			var (
+				randomOccurrence               *grafeas_proto.Occurrence
+				grafeasListOccurrencesRequest  *grafeas_proto.ListOccurrencesRequest
+				grafeasListOccurrencesResponse *grafeas_proto.ListOccurrencesResponse
+				uri                            string
+			)
+
+			BeforeEach(func() {
+				randomOccurrence = createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED)
+
+				uri = randomOccurrence.Resource.Uri
+
+				// expected Grafeas ListOccurrencesRequest request
+				grafeasListOccurrencesRequest = &grafeas_proto.ListOccurrencesRequest{
+					Parent: "projects/rode",
+					Filter: fmt.Sprintf(`"resource.uri" == "%s"`, uri),
+				}
+
+				// mocked Grafeas ListOccurrencesResponse response
+				grafeasListOccurrencesResponse = &grafeas_proto.ListOccurrencesResponse{
+					Occurrences: []*grafeas_proto.Occurrence{
+						randomOccurrence,
+					},
+				}
+
+			})
+
+			It("should list occurrences from grafeas", func() {
+				// ensure Grafeas ListOccurrences is called with expected request and inject response
+				grafeasClient.EXPECT().ListOccurrences(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(grafeasListOccurrencesRequest)).Return(grafeasListOccurrencesResponse, nil)
+
+				listOccurrencesRequest := &pb.ListOccurrencesRequest{
+					Filter: fmt.Sprintf(`"resource.uri" == "%s"`, uri),
+				}
+				response, err := rodeServer.ListOccurrences(context.Background(), listOccurrencesRequest)
+				Expect(err).ToNot(HaveOccurred())
+
+				// check response
+				Expect(response.Occurrences).To(BeEquivalentTo(grafeasListOccurrencesResponse.Occurrences))
+			})
+
+			When("Grafeas returns an error", func() {
+				It("should return an error", func() {
+					grafeasClient.EXPECT().ListOccurrences(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(grafeasListOccurrencesRequest)).Return(nil, fmt.Errorf("error occurred"))
+
+					listOccurrencesRequest := &pb.ListOccurrencesRequest{
+						Filter: fmt.Sprintf(`"resource.uri" == "%s"`, uri),
+					}
+					response, err := rodeServer.ListOccurrences(context.Background(), listOccurrencesRequest)
+					Expect(err).ToNot(BeNil())
+
+					// check response
+					Expect(response).To(BeNil())
+				})
+			})
+		})
+
 		When("policy is evaluated", func() {
 			var (
 				policy                    string

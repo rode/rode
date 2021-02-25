@@ -23,7 +23,7 @@ import "proto/v1alpha1/rode-policy.proto";
 import "proto/v1beta1/grafeas.proto";
 
 service Rode {
-  // Create occurrences 
+  // Create occurrences
   rpc BatchCreateOccurrences(BatchCreateOccurrencesRequest) returns (BatchCreateOccurrencesResponse) {
     option (google.api.http) = {
       post: "/v1alpha1/occurrences:batchCreate"
@@ -41,6 +41,11 @@ service Rode {
   rpc ListResources(ListResourcesRequest) returns (ListResourcesResponse) {
     option (google.api.http) = {
       get: "/v1alpha1/resources"
+    };
+  }
+  rpc ListOccurrences(ListOccurrencesRequest) returns (ListOccurrencesResponse) {
+    option (google.api.http) = {
+      get: "/v1alpha1/occurrences"
     };
   }
 }
@@ -68,5 +73,18 @@ message ListResourcesRequest {
 
 message ListResourcesResponse {
   repeated grafeas.v1beta1.Resource resources = 1;
+  string next_page_token = 2;
+}
+
+message ListOccurrencesRequest {
+  string filter = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+// Response for listing occurrences.
+message ListOccurrencesResponse {
+  // The occurrences requested.
+  repeated grafeas.v1beta1.Occurrence occurrences = 1;
   string next_page_token = 2;
 }
