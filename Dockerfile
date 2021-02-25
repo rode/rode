@@ -19,6 +19,7 @@ COPY protodeps/ protodeps/
 COPY server/ server/
 COPY config/ config/
 COPY auth/ auth/
+COPY opa/ opa/
 
 RUN --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o rode main.go
 

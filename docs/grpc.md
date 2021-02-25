@@ -3,11 +3,11 @@
 
 ## Table of Contents
 
-- [proto/v1alpha1/rode-attest.proto](#proto/v1alpha1/rode-attest.proto)
-    - [AttestPolicyAttestation](#rode.v1alpha1.AttestPolicyAttestation)
-    - [AttestPolicyRequest](#rode.v1alpha1.AttestPolicyRequest)
-    - [AttestPolicyResponse](#rode.v1alpha1.AttestPolicyResponse)
-    - [AttestPolicyViolation](#rode.v1alpha1.AttestPolicyViolation)
+- [proto/v1alpha1/rode-policy.proto](#proto/v1alpha1/rode-policy.proto)
+    - [EvaluatePolicyRequest](#rode.v1alpha1.EvaluatePolicyRequest)
+    - [EvaluatePolicyResponse](#rode.v1alpha1.EvaluatePolicyResponse)
+    - [EvaluatePolicyResult](#rode.v1alpha1.EvaluatePolicyResult)
+    - [EvaluatePolicyViolation](#rode.v1alpha1.EvaluatePolicyViolation)
   
 - [proto/v1alpha1/rode.proto](#proto/v1alpha1/rode.proto)
     - [BatchCreateOccurrencesRequest](#rode.v1alpha1.BatchCreateOccurrencesRequest)
@@ -23,33 +23,16 @@
 
 
 
-<a name="proto/v1alpha1/rode-attest.proto"></a>
+<a name="proto/v1alpha1/rode-policy.proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
-## proto/v1alpha1/rode-attest.proto
+## proto/v1alpha1/rode-policy.proto
 
 
 
-<a name="rode.v1alpha1.AttestPolicyAttestation"></a>
+<a name="rode.v1alpha1.EvaluatePolicyRequest"></a>
 
-### AttestPolicyAttestation
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| allow | [bool](#bool) |  |  |
-| created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
-| violations | [AttestPolicyViolation](#rode.v1alpha1.AttestPolicyViolation) | repeated |  |
-
-
-
-
-
-
-<a name="rode.v1alpha1.AttestPolicyRequest"></a>
-
-### AttestPolicyRequest
+### EvaluatePolicyRequest
 
 
 
@@ -63,26 +46,44 @@
 
 
 
-<a name="rode.v1alpha1.AttestPolicyResponse"></a>
+<a name="rode.v1alpha1.EvaluatePolicyResponse"></a>
 
-### AttestPolicyResponse
+### EvaluatePolicyResponse
 
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| allow | [bool](#bool) |  |  |
+| pass | [bool](#bool) |  |  |
 | changed | [bool](#bool) |  |  |
-| attestations | [AttestPolicyAttestation](#rode.v1alpha1.AttestPolicyAttestation) | repeated |  |
+| result | [EvaluatePolicyResult](#rode.v1alpha1.EvaluatePolicyResult) | repeated |  |
+| explanation | [string](#string) | repeated |  |
 
 
 
 
 
 
-<a name="rode.v1alpha1.AttestPolicyViolation"></a>
+<a name="rode.v1alpha1.EvaluatePolicyResult"></a>
 
-### AttestPolicyViolation
+### EvaluatePolicyResult
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| pass | [bool](#bool) |  |  |
+| created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
+| violations | [EvaluatePolicyViolation](#rode.v1alpha1.EvaluatePolicyViolation) | repeated |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.EvaluatePolicyViolation"></a>
+
+### EvaluatePolicyViolation
 
 
 
@@ -91,7 +92,9 @@
 | id | [string](#string) |  |  |
 | name | [string](#string) |  |  |
 | description | [string](#string) |  |  |
+| message | [string](#string) |  |  |
 | link | [string](#string) |  |  |
+| pass | [bool](#bool) |  |  |
 
 
 
@@ -225,8 +228,8 @@ https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
 | BatchCreateOccurrences | [BatchCreateOccurrencesRequest](#rode.v1alpha1.BatchCreateOccurrencesRequest) | [BatchCreateOccurrencesResponse](#rode.v1alpha1.BatchCreateOccurrencesResponse) | Create occurrences |
-| AttestPolicy | [AttestPolicyRequest](#rode.v1alpha1.AttestPolicyRequest) | [AttestPolicyResponse](#rode.v1alpha1.AttestPolicyResponse) | Verify that an artifact satisfies a policy |
-| ListResources | [ListResourcesRequest](#rode.v1alpha1.ListResourcesRequest) | [ListResourcesResponse](#rode.v1alpha1.ListResourcesResponse) |  |
+| EvaluatePolicy | [EvaluatePolicyRequest](#rode.v1alpha1.EvaluatePolicyRequest) | [EvaluatePolicyResponse](#rode.v1alpha1.EvaluatePolicyResponse) | Verify that an artifact satisfies a policy |
+| ListResources | [ListResourcesRequest](#rode.v1alpha1.ListResourcesRequest) | [ListResourcesResponse](#rode.v1alpha1.ListResourcesResponse) | List resource URI |
 | ListOccurrences | [ListOccurrencesRequest](#rode.v1alpha1.ListOccurrencesRequest) | [ListOccurrencesResponse](#rode.v1alpha1.ListOccurrencesResponse) |  |
 
  

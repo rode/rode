@@ -28,6 +28,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 	"github.com/rode/rode/mocks"
+	"github.com/rode/rode/opa"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	grafeas_common_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/common_go_proto"
 	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
@@ -53,8 +54,9 @@ var _ = Describe("rode server", func() {
 		log                   *zap.Logger
 		rodeServer            pb.RodeServer
 		rodeServerError       error
-		grafeasClient         *mocks.MockGrafeasV1Beta1Client
-		grafeasProjectsClient *mocks.MockProjectsClient
+		grafeasClient         *mocks.MockGrafeasClient
+		grafeasProjectsClient *mocks.MockGrafeasProjectsClient
+		opaClient             *mocks.MockOpaClient
 		esClient              *elasticsearch.Client
 		esTransport           *mockEsTransport
 		mockFilterer          *mocks.MockFilterer
@@ -65,8 +67,9 @@ var _ = Describe("rode server", func() {
 	BeforeEach(func() {
 		log = logger.Named("rode server test")
 		mockCtrl = gomock.NewController(GinkgoT())
-		grafeasClient = mocks.NewMockGrafeasV1Beta1Client(mockCtrl)
-		grafeasProjectsClient = mocks.NewMockProjectsClient(mockCtrl)
+		grafeasClient = mocks.NewMockGrafeasClient(mockCtrl)
+		grafeasProjectsClient = mocks.NewMockGrafeasProjectsClient(mockCtrl)
+		opaClient = mocks.NewMockOpaClient(mockCtrl)
 
 		esTransport = &mockEsTransport{}
 		esClient = &elasticsearch.Client{
@@ -86,7 +89,7 @@ var _ = Describe("rode server", func() {
 				EXPECT().
 				GetProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(getProjectRequest))
 
-			rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, esClient, mockFilterer)
+			rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer)
 		})
 
 		When("the rode project does not exist", func() {
@@ -107,7 +110,7 @@ var _ = Describe("rode server", func() {
 					EXPECT().
 					CreateProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(createProjectRequest))
 
-				rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, esClient, mockFilterer)
+				rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer)
 			})
 
 			When("create project returns error from Grafeas", func() {
@@ -118,7 +121,7 @@ var _ = Describe("rode server", func() {
 				})
 
 				It("should returns error", func() {
-					rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, esClient, mockFilterer)
+					rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer)
 
 					Expect(rodeServerError).To(HaveOccurred())
 					Expect(rodeServerError.Error()).To(ContainSubstring(createProjectError))
@@ -133,7 +136,7 @@ var _ = Describe("rode server", func() {
 				})
 
 				It("should return the Rode server", func() {
-					rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, esClient, mockFilterer)
+					rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer)
 
 					Expect(rodeServer).ToNot(BeNil())
 					Expect(rodeServerError).ToNot(HaveOccurred())
@@ -154,11 +157,11 @@ var _ = Describe("rode server", func() {
 					EXPECT().
 					CreateProject(gomock.Any(), gomock.Any()).MaxTimes(0)
 
-				rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, esClient, mockFilterer)
+				rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer)
 			})
 
 			It("should return the Rode server", func() {
-				rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, esClient, mockFilterer)
+				rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer)
 
 				Expect(rodeServer).ToNot(BeNil())
 				Expect(rodeServerError).To(BeNil())
@@ -174,7 +177,7 @@ var _ = Describe("rode server", func() {
 			})
 
 			It("should return an error", func() {
-				rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, esClient, mockFilterer)
+				rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer)
 
 				Expect(rodeServerError).To(HaveOccurred())
 				Expect(rodeServerError.Error()).To(ContainSubstring(getProjectError))
@@ -189,7 +192,7 @@ var _ = Describe("rode server", func() {
 				GetProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(getProjectRequest)).
 				Return(&grafeas_project_proto.Project{}, nil)
 
-			rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, esClient, mockFilterer)
+			rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer)
 		})
 
 		When("occurrences are created", func() {
@@ -296,40 +299,57 @@ var _ = Describe("rode server", func() {
 
 		When("policy is evaluated", func() {
 			var (
-				resourceURI            string
-				policy                 string
-				listOccurrencesRequest *grafeas_proto.ListOccurrencesRequest
-				attestPolicyRequest    *pb.AttestPolicyRequest
+				policy                    string
+				resourceURI               string
+				listOccurrencesRequest    *grafeas_proto.ListOccurrencesRequest
+				evaluatePolicyRequest     *pb.EvaluatePolicyRequest
+				opaEvaluatePolicyResponse *opa.EvaluatePolicyResponse
 			)
 
 			BeforeEach(func() {
 				resourceURI = gofakeit.URL()
 				policy = gofakeit.Word()
 				listOccurrencesRequest = &grafeas_proto.ListOccurrencesRequest{
-					Filter: fmt.Sprintf("resource.uri = '%s'", resourceURI),
+					Parent: "projects/rode",
+					Filter: fmt.Sprintf(`"resource.uri" == "%s"`, resourceURI),
 				}
-				attestPolicyRequest = &pb.AttestPolicyRequest{
+				evaluatePolicyRequest = &pb.EvaluatePolicyRequest{
 					ResourceURI: resourceURI,
 					Policy:      policy,
+				}
+				opaEvaluatePolicyResponse = &opa.EvaluatePolicyResponse{
+					Result: &opa.EvaluatePolicyResult{
+						Pass: false,
+					},
+					Explanation: &[]string{},
 				}
 			})
 
 			It("should initialize OPA policy", func() {
-				// ignore Grafeas list occurrences call
+				// ignore non test calls
 				grafeasClient.EXPECT().ListOccurrences(gomock.Any(), gomock.Any()).AnyTimes()
+				opaClient.EXPECT().EvaluatePolicy(gomock.Any(), gomock.Any()).AnyTimes().Return(opaEvaluatePolicyResponse, nil)
 
-				// expect OPA initPolicy call
+				// expect OPA initialize policy call
+				opaClient.EXPECT().InitializePolicy(policy).Return(nil)
 
-				_, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
+				_, _ = rodeServer.EvaluatePolicy(context.Background(), evaluatePolicyRequest)
 			})
 
 			When("OPA policy initializes", func() {
 
+				BeforeEach(func() {
+					opaClient.EXPECT().InitializePolicy(gomock.Any()).AnyTimes().Return(nil)
+				})
+
 				It("should list Grafeas occurrences", func() {
+					// ingore non test calls
+					opaClient.EXPECT().EvaluatePolicy(gomock.Any(), gomock.Any()).AnyTimes().Return(opaEvaluatePolicyResponse, nil)
+
 					// expect Grafeas list occurrences call
 					grafeasClient.EXPECT().ListOccurrences(gomock.AssignableToTypeOf(context.Background()), listOccurrencesRequest)
 
-					_, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
+					_, _ = rodeServer.EvaluatePolicy(context.Background(), evaluatePolicyRequest)
 				})
 
 				When("Grafeas list occurrences response is ok", func() {
@@ -343,79 +363,20 @@ var _ = Describe("rode server", func() {
 						}
 						grafeasClient.EXPECT().ListOccurrences(gomock.Any(), gomock.Any()).Return(listOccurrencesResponse, nil)
 
-						// expect evalute OPA policy call
+						opaClient.EXPECT().EvaluatePolicy(gomock.Eq(policy), gomock.Any()).Return(opaEvaluatePolicyResponse, nil)
 
-						_, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
-					})
-
-					When("resource does not have previous attestation occurrence", func() {
-						BeforeEach(func() {
-							// mock Grafeas list occurrences response
-							// mock OPA evalute policy response
-						})
-						It("should create new attestation occurrence", func() {
-							// expect Grafeas create occurrence call
-							// _, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
-						})
-						It("should respond with new attestation occurrence", func() {
-							// expect response state to match OPA policy evaluation
-							// expect response to include new attestation
-							// _, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
-						})
-					})
-
-					When("resource has previous attestation occurrence", func() {
-						BeforeEach(func() {
-							// mock Grafeas list occurrences response
-						})
-						When("OPA policy evaluation is same as previous attestation occurrence", func() {
-							BeforeEach(func() {
-								// mock OPA evalute policy response
-							})
-							It("should not create new attestation occurrence", func() {
-								// expect Grafeas create occurrence to not be called
-								// _, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
-							})
-							It("should respond with previous the previous attestation occurrence", func() {
-								// expect response state to match OPA policy evaluation
-								// expect response to include previous attestation
-								// _, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
-							})
-						})
-
-						When("OPA policy evaluation is different than previous attestation occurrence", func() {
-							BeforeEach(func() {
-								listOccurrencesResponse := &grafeas_proto.ListOccurrencesResponse{
-									Occurrences: []*grafeas_proto.Occurrence{
-										createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED),
-										createRandomOccurrence(grafeas_common_proto.NoteKind_ATTESTATION),
-									},
-								}
-
-								grafeasClient.EXPECT().ListOccurrences(gomock.Any(), gomock.Any()).Return(listOccurrencesResponse, nil)
-								// mock OPA evalute policy response
-							})
-							It("should create new attestation occurrence", func() {
-								// mock Grafeas list occurrences response
-								// expect Grafeas create occurrence call
-								_, _ = rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
-							})
-							It("should respond with new attestation occurrence", func() {
-
-								// expect response state to match OPA policy evaluation
-								// expect response to include new attestation
-								attestPolicyResponse, attestPolicyError := rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
-
-								Expect(attestPolicyResponse).To(Equal(&pb.AttestPolicyResponse{}))
-								Expect(attestPolicyError).ToNot(HaveOccurred())
-							})
-						})
+						_, _ = rodeServer.EvaluatePolicy(context.Background(), evaluatePolicyRequest)
 					})
 
 					When("evalute OPA policy returns error", func() {
 						It("should return error", func() {
-							// _, attestPolicyError := rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
-							// Expect(attestPolicyError).To(HaveOccurred())
+							grafeasClient.EXPECT().ListOccurrences(gomock.Any(), gomock.Any()).Return(&grafeas_proto.ListOccurrencesResponse{Occurrences: []*grafeas_proto.Occurrence{}}, nil)
+
+							opaClient.EXPECT().EvaluatePolicy(gomock.Eq(policy), gomock.Any()).Return(nil, fmt.Errorf("OPA Error"))
+
+							_, evaluatePolicyError := rodeServer.EvaluatePolicy(context.Background(), evaluatePolicyRequest)
+							Expect(evaluatePolicyError).To(HaveOccurred())
+							Expect(evaluatePolicyError.Error()).To(ContainSubstring("evaluate OPA policy failed"))
 						})
 					})
 				})
@@ -425,9 +386,18 @@ var _ = Describe("rode server", func() {
 						// mock Grafeas list occurrences error response
 						grafeasClient.EXPECT().ListOccurrences(gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("elasticsearch error"))
 
-						_, attestPolicyError := rodeServer.AttestPolicy(context.Background(), attestPolicyRequest)
-						Expect(attestPolicyError).To(HaveOccurred())
+						_, evaluatePolicyError := rodeServer.EvaluatePolicy(context.Background(), evaluatePolicyRequest)
+						Expect(evaluatePolicyError).To(HaveOccurred())
 					})
+				})
+			})
+
+			When("OPA policy is not found", func() {
+				It("should return an error", func() {
+					opaClient.EXPECT().InitializePolicy(gomock.Any()).Return(opa.NewClientError("policy not found", opa.OpaClientErrorTypePolicyNotFound, fmt.Errorf("es search result empty")))
+
+					_, evaluatePolicyError := rodeServer.EvaluatePolicy(context.Background(), evaluatePolicyRequest)
+					Expect(evaluatePolicyError).To(HaveOccurred())
 				})
 			})
 		})

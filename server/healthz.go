@@ -41,9 +41,6 @@ func NewHealthzServer(logger *zap.Logger) HealthzServer {
 }
 
 func (h *healthzServer) Check(context.Context, *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
-	log := h.logger.Named("Check")
-	log.Debug("received grpc health check")
-
 	if h.ready {
 		return &grpc_health_v1.HealthCheckResponse{
 			Status: grpc_health_v1.HealthCheckResponse_SERVING,

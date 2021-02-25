@@ -13,31 +13,31 @@ import (
 	reflect "reflect"
 )
 
-// MockProjectsClient is a mock of ProjectsClient interface
-type MockProjectsClient struct {
+// MockGrafeasProjectsClient is a mock of ProjectsClient interface
+type MockGrafeasProjectsClient struct {
 	ctrl     *gomock.Controller
-	recorder *MockProjectsClientMockRecorder
+	recorder *MockGrafeasProjectsClientMockRecorder
 }
 
-// MockProjectsClientMockRecorder is the mock recorder for MockProjectsClient
-type MockProjectsClientMockRecorder struct {
-	mock *MockProjectsClient
+// MockGrafeasProjectsClientMockRecorder is the mock recorder for MockGrafeasProjectsClient
+type MockGrafeasProjectsClientMockRecorder struct {
+	mock *MockGrafeasProjectsClient
 }
 
-// NewMockProjectsClient creates a new mock instance
-func NewMockProjectsClient(ctrl *gomock.Controller) *MockProjectsClient {
-	mock := &MockProjectsClient{ctrl: ctrl}
-	mock.recorder = &MockProjectsClientMockRecorder{mock}
+// NewMockGrafeasProjectsClient creates a new mock instance
+func NewMockGrafeasProjectsClient(ctrl *gomock.Controller) *MockGrafeasProjectsClient {
+	mock := &MockGrafeasProjectsClient{ctrl: ctrl}
+	mock.recorder = &MockGrafeasProjectsClientMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use
-func (m *MockProjectsClient) EXPECT() *MockProjectsClientMockRecorder {
+func (m *MockGrafeasProjectsClient) EXPECT() *MockGrafeasProjectsClientMockRecorder {
 	return m.recorder
 }
 
 // CreateProject mocks base method
-func (m *MockProjectsClient) CreateProject(arg0 context.Context, arg1 *project_go_proto.CreateProjectRequest, arg2 ...grpc.CallOption) (*project_go_proto.Project, error) {
+func (m *MockGrafeasProjectsClient) CreateProject(arg0 context.Context, arg1 *project_go_proto.CreateProjectRequest, arg2 ...grpc.CallOption) (*project_go_proto.Project, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -50,14 +50,14 @@ func (m *MockProjectsClient) CreateProject(arg0 context.Context, arg1 *project_g
 }
 
 // CreateProject indicates an expected call of CreateProject
-func (mr *MockProjectsClientMockRecorder) CreateProject(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *MockGrafeasProjectsClientMockRecorder) CreateProject(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateProject", reflect.TypeOf((*MockProjectsClient)(nil).CreateProject), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateProject", reflect.TypeOf((*MockGrafeasProjectsClient)(nil).CreateProject), varargs...)
 }
 
 // DeleteProject mocks base method
-func (m *MockProjectsClient) DeleteProject(arg0 context.Context, arg1 *project_go_proto.DeleteProjectRequest, arg2 ...grpc.CallOption) (*emptypb.Empty, error) {
+func (m *MockGrafeasProjectsClient) DeleteProject(arg0 context.Context, arg1 *project_go_proto.DeleteProjectRequest, arg2 ...grpc.CallOption) (*emptypb.Empty, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -70,14 +70,14 @@ func (m *MockProjectsClient) DeleteProject(arg0 context.Context, arg1 *project_g
 }
 
 // DeleteProject indicates an expected call of DeleteProject
-func (mr *MockProjectsClientMockRecorder) DeleteProject(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *MockGrafeasProjectsClientMockRecorder) DeleteProject(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteProject", reflect.TypeOf((*MockProjectsClient)(nil).DeleteProject), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteProject", reflect.TypeOf((*MockGrafeasProjectsClient)(nil).DeleteProject), varargs...)
 }
 
 // GetProject mocks base method
-func (m *MockProjectsClient) GetProject(arg0 context.Context, arg1 *project_go_proto.GetProjectRequest, arg2 ...grpc.CallOption) (*project_go_proto.Project, error) {
+func (m *MockGrafeasProjectsClient) GetProject(arg0 context.Context, arg1 *project_go_proto.GetProjectRequest, arg2 ...grpc.CallOption) (*project_go_proto.Project, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -90,14 +90,14 @@ func (m *MockProjectsClient) GetProject(arg0 context.Context, arg1 *project_go_p
 }
 
 // GetProject indicates an expected call of GetProject
-func (mr *MockProjectsClientMockRecorder) GetProject(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *MockGrafeasProjectsClientMockRecorder) GetProject(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProject", reflect.TypeOf((*MockProjectsClient)(nil).GetProject), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProject", reflect.TypeOf((*MockGrafeasProjectsClient)(nil).GetProject), varargs...)
 }
 
 // ListProjects mocks base method
-func (m *MockProjectsClient) ListProjects(arg0 context.Context, arg1 *project_go_proto.ListProjectsRequest, arg2 ...grpc.CallOption) (*project_go_proto.ListProjectsResponse, error) {
+func (m *MockGrafeasProjectsClient) ListProjects(arg0 context.Context, arg1 *project_go_proto.ListProjectsRequest, arg2 ...grpc.CallOption) (*project_go_proto.ListProjectsResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{arg0, arg1}
 	for _, a := range arg2 {
@@ -110,8 +110,8 @@ func (m *MockProjectsClient) ListProjects(arg0 context.Context, arg1 *project_go
 }
 
 // ListProjects indicates an expected call of ListProjects
-func (mr *MockProjectsClientMockRecorder) ListProjects(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
+func (mr *MockGrafeasProjectsClientMockRecorder) ListProjects(arg0, arg1 interface{}, arg2 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{arg0, arg1}, arg2...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListProjects", reflect.TypeOf((*MockProjectsClient)(nil).ListProjects), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListProjects", reflect.TypeOf((*MockGrafeasProjectsClient)(nil).ListProjects), varargs...)
 }

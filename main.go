@@ -33,6 +33,7 @@ import (
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	"github.com/rode/rode/auth"
 	"github.com/rode/rode/config"
+	"github.com/rode/rode/opa"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	grafeas_project_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/project_go_proto"
@@ -59,11 +60,6 @@ func main() {
 		logger.Fatal("failed to listen", zap.Error(err))
 	}
 
-	grafeasClientCommon, grafeasClientProjects, err := createGrafeasClients(c.Grafeas.Host)
-	if err != nil {
-		logger.Fatal("failed to connect to grafeas", zap.String("grafeas host", c.Grafeas.Host), zap.Error(err))
-	}
-
 	authenticator := auth.NewAuthenticator(c.Auth)
 	s := grpc.NewServer(
 		grpc.StreamInterceptor(
@@ -77,9 +73,15 @@ func main() {
 		reflection.Register(s)
 	}
 
+	grafeasClientCommon, grafeasClientProjects, err := createGrafeasClients(c.Grafeas.Host)
+	if err != nil {
+		logger.Fatal("failed to connect to grafeas", zap.String("grafeas host", c.Grafeas.Host), zap.Error(err))
+	}
+	opaClient := opa.NewClient(logger.Named("opa"), c.Opa.Host, c.Debug)
+
 	esClient, err := createESClient(logger, c.Elasticsearch.Host, c.Elasticsearch.Username, c.Elasticsearch.Password)
 
-	rodeServer, err := server.NewRodeServer(logger.Named("rode"), grafeasClientCommon, grafeasClientProjects, esClient, filtering.NewFilterer())
+	rodeServer, err := server.NewRodeServer(logger.Named("rode"), grafeasClientCommon, grafeasClientProjects, opaClient, esClient, filtering.NewFilterer())
 	if err != nil {
 		logger.Fatal("failed to create Rode server", zap.Error(err))
 	}

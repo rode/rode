@@ -39,11 +39,6 @@ profiles:
       namespace: default 
       port: 8080
       localPort: 8080
-    - resourceType: service
-      resourceName: grpc-swagger
-      namespace: default
-      port: 8080
-      localPort: 8081
     patches:
       - op: add
         path: /deploy/helm/releases/0/namespace
@@ -84,3 +79,16 @@ profiles:
           chartPath: tools/grpc-swagger/chart
           artifactOverrides:
             image.name: grpc-swagger
+  - name: demo
+    patches:
+      - op: add
+        path: /deploy/helm/releases/0/namespace
+        value: rode-demo
+      - op: add
+        path: /deploy/helm/releases/0/overrides
+        value: 
+          grafeas:
+            enabled: false
+          grafeasHost: "grafeas-server.rode-demo-grafeas.svc.cluster.local:8080"
+          opaHost: "rode-opa.rode-demo.svc.cluster.local:8181"
+          debug: true

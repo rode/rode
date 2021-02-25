@@ -26,12 +26,17 @@ type Config struct {
 	Auth          *AuthConfig
 	Elasticsearch *ElasticsearchConfig
 	Grafeas       *GrafeasConfig
+	Opa           *OpaConfig
 	GrpcPort      int
 	HttpPort      int
 	Debug         bool
 }
 
 type GrafeasConfig struct {
+	Host string
+}
+
+type OpaConfig struct {
 	Host string
 }
 
@@ -67,6 +72,7 @@ func Build(name string, args []string) (*Config, error) {
 		},
 		Elasticsearch: &ElasticsearchConfig{},
 		Grafeas:       &GrafeasConfig{},
+		Opa:           &OpaConfig{},
 	}
 
 	flags.StringVar(&conf.Auth.Basic.Username, "basic-auth-username", "", "when set, basic auth will be enabled for all endpoints, using the provided username. --basic-auth-password must also be set")
@@ -78,6 +84,7 @@ func Build(name string, args []string) (*Config, error) {
 	flags.IntVar(&conf.HttpPort, "http-port", 50052, "the port that the rode HTTP API server should listen on")
 	flags.BoolVar(&conf.Debug, "debug", false, "when set, debug mode will be enabled")
 	flags.StringVar(&conf.Grafeas.Host, "grafeas-host", "localhost:8080", "the host to use to connect to grafeas")
+	flags.StringVar(&conf.Opa.Host, "opa-host", "http://localhost:8181", "the host to use to connect to Open Policy Agent")
 
 	flags.StringVar(&conf.Elasticsearch.Host, "elasticsearch-host", "http://elasticsearch-master:9200", "the Elasticsearch endpoint used by Grafeas")
 	flags.StringVar(&conf.Elasticsearch.Username, "elasticsearch-username", "", "username for the Grafeas Elasticsearch instance")
