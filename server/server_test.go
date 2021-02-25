@@ -277,6 +277,21 @@ var _ = Describe("rode server", func() {
 				// check response
 				Expect(response.Occurrences).To(BeEquivalentTo(grafeasListOccurrencesResponse.Occurrences))
 			})
+
+			When("Grafeas returns an error", func() {
+				It("should return an error", func() {
+					grafeasClient.EXPECT().ListOccurrences(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(grafeasListOccurrencesRequest)).Return(nil, fmt.Errorf("error occurred"))
+
+					listOccurrencesRequest := &pb.ListOccurrencesRequest{
+						Filter: fmt.Sprintf(`"resource.uri" == "%s"`, uri),
+					}
+					response, err := rodeServer.ListOccurrences(context.Background(), listOccurrencesRequest)
+					Expect(err).ToNot(BeNil())
+
+					// check response
+					Expect(response).To(BeNil())
+				})
+			})
 		})
 
 		When("policy is evaluated", func() {
