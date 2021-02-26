@@ -1,4 +1,7 @@
 # rode
+
+[![Join the chat at https://gitter.im/rode/rode](https://badges.gitter.im/rode/rode.svg)](https://gitter.im/rode/rode?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 > \rōd\ - a line (as of rope or chain) used to attach an anchor to a boat
 
 **rode** provides the collection, attestation and enforcement of policies in your software supply chain.
