@@ -80,6 +80,9 @@ func main() {
 	opaClient := opa.NewClient(logger.Named("opa"), c.Opa.Host, c.Debug)
 
 	esClient, err := createESClient(logger, c.Elasticsearch.Host, c.Elasticsearch.Username, c.Elasticsearch.Password)
+	if err != nil {
+		logger.Fatal("failed to create Elasticsearch client", zap.Error(err))
+	}
 
 	rodeServer, err := server.NewRodeServer(logger.Named("rode"), grafeasClientCommon, grafeasClientProjects, opaClient, esClient, filtering.NewFilterer())
 	if err != nil {
