@@ -48,6 +48,17 @@ service Rode {
       get: "/v1alpha1/occurrences"
     };
   }
+  rpc CreatePolicy(PolicyEntity) returns (Policy) {
+    option (google.api.http) = {
+      post: "/v1alpha1/policies"
+      body: "*"
+    };
+  }
+  rpc GetPolicy(GetPolicyRequest) returns (Policy) {
+    option (google.api.http) = {
+      get: "/v1alpha1/policies/{id}"
+    };
+  }
 }
 
 // Request to create occurrences in batch.

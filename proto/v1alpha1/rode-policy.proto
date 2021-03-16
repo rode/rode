@@ -46,3 +46,24 @@ message EvaluatePolicyViolation {
   string link = 5;
   bool pass = 6;
 }
+
+message GetPolicyRequest {
+  string id = 1;
+}
+
+message PolicyEntity {
+  string name = 1;
+  string description = 2;
+  // The rego code for the policy represented as a string
+  string rego_content = 3;
+  // The location of the policy stored in source control
+  string source_path = 4;
+}
+
+message Policy {
+  // Unique autogenerate id
+  string id = 1;
+  // The auto incremented version of the policy. This will auto increment on all updates
+  int32 version = 2;
+  PolicyEntity policy = 3;
+}

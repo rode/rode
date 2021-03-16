@@ -8,6 +8,9 @@
     - [EvaluatePolicyResponse](#rode.v1alpha1.EvaluatePolicyResponse)
     - [EvaluatePolicyResult](#rode.v1alpha1.EvaluatePolicyResult)
     - [EvaluatePolicyViolation](#rode.v1alpha1.EvaluatePolicyViolation)
+    - [GetPolicyRequest](#rode.v1alpha1.GetPolicyRequest)
+    - [Policy](#rode.v1alpha1.Policy)
+    - [PolicyEntity](#rode.v1alpha1.PolicyEntity)
   
 - [proto/v1alpha1/rode.proto](#proto/v1alpha1/rode.proto)
     - [BatchCreateOccurrencesRequest](#rode.v1alpha1.BatchCreateOccurrencesRequest)
@@ -95,6 +98,56 @@
 | message | [string](#string) |  |  |
 | link | [string](#string) |  |  |
 | pass | [bool](#bool) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.GetPolicyRequest"></a>
+
+### GetPolicyRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.Policy"></a>
+
+### Policy
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  | Unique autogenerate id |
+| version | [int32](#int32) |  | The auto incremented version of the policy. This will auto increment on all updates |
+| policy | [PolicyEntity](#rode.v1alpha1.PolicyEntity) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.PolicyEntity"></a>
+
+### PolicyEntity
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| name | [string](#string) |  |  |
+| description | [string](#string) |  |  |
+| rego_content | [string](#string) |  | The rego code for the policy represented as a string |
+| source_path | [string](#string) |  | The location of the policy stored in source control |
 
 
 
@@ -231,6 +284,8 @@ https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576
 | EvaluatePolicy | [EvaluatePolicyRequest](#rode.v1alpha1.EvaluatePolicyRequest) | [EvaluatePolicyResponse](#rode.v1alpha1.EvaluatePolicyResponse) | Verify that an artifact satisfies a policy |
 | ListResources | [ListResourcesRequest](#rode.v1alpha1.ListResourcesRequest) | [ListResourcesResponse](#rode.v1alpha1.ListResourcesResponse) | List resource URI |
 | ListOccurrences | [ListOccurrencesRequest](#rode.v1alpha1.ListOccurrencesRequest) | [ListOccurrencesResponse](#rode.v1alpha1.ListOccurrencesResponse) |  |
+| CreatePolicy | [PolicyEntity](#rode.v1alpha1.PolicyEntity) | [Policy](#rode.v1alpha1.Policy) |  |
+| GetPolicy | [GetPolicyRequest](#rode.v1alpha1.GetPolicyRequest) | [Policy](#rode.v1alpha1.Policy) |  |
 
  
 

@@ -22,6 +22,7 @@ import (
 	"io"
 
 	"github.com/elastic/go-elasticsearch/v7"
+	"github.com/google/uuid"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 	"github.com/rode/rode/opa"
 	pb "github.com/rode/rode/proto/v1alpha1"
@@ -38,6 +39,7 @@ import (
 
 const (
 	rodeElasticsearchOccurrencesIndex = "grafeas-v1beta1-rode-occurrences"
+	rodeElasticsearchPoliciesIndex    = "grafeas-v1beta1-rode-policies"
 )
 
 // NewRodeServer constructor for rodeServer
@@ -60,6 +62,9 @@ func NewRodeServer(
 	if err := rodeServer.initialize(context.Background()); err != nil {
 		return nil, fmt.Errorf("failed to initialize rode server: %s", err)
 	}
+
+	// Create an index for policy storage
+	rodeServer.esClient.Indices.Create(rodeElasticsearchPoliciesIndex)
 	return rodeServer, nil
 }
 
@@ -255,4 +260,97 @@ func (r *rodeServer) ListOccurrences(ctx context.Context, occurrenceRequest *pb.
 		Occurrences:   listOccurrencesResponse.GetOccurrences(),
 		NextPageToken: "",
 	}, nil
+}
+
+func (r *rodeServer) CreatePolicy(ctx context.Context, policyEntity *pb.PolicyEntity) (*pb.Policy, error) {
+	// TODO check if already exists or if need to create a unique name
+
+	log := r.logger.Named("CreatePolicy")
+
+	policy := &pb.Policy{
+		Id:      uuid.New().String(),
+		Version: 1,
+		Policy:  policyEntity,
+	}
+	str, err := protojson.MarshalOptions{EmitUnpopulated: true}.Marshal(proto.MessageV2(policy))
+	if err != nil {
+		return nil, createError(log, fmt.Sprintf("error marshalling %T to json", policy), err)
+	}
+	res, err := r.esClient.Index(
+		rodeElasticsearchPoliciesIndex,
+		bytes.NewReader(str),
+		r.esClient.Index.WithContext(ctx),
+	)
+
+	if err != nil {
+		return nil, createError(log, "error sending request to elasticsearch", err)
+	}
+
+	if res.IsError() {
+		return nil, createError(log, "error indexing document in elasticsearch", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
+	}
+	return policy, nil
+}
+
+func (r *rodeServer) GetPolicy(ctx context.Context, getPolicyRequest *pb.GetPolicyRequest) (*pb.Policy, error) {
+	log := r.logger.Named("GetPolicy")
+
+	// queryString := fmt.Sprintf("\"id\"==\"%s\"", getPolicyRequest.Id)
+	// parsedQuery, err := r.filterer.ParseExpression(queryString)
+
+	search := &esSearch{
+		Query: &filtering.Query{
+			Term: &filtering.Term{
+				"id.keyword": getPolicyRequest.Id,
+			},
+		},
+	}
+	policy := &pb.Policy{}
+	encodedBody, requestJson := encodeRequest(search)
+	res, err := r.esClient.Search(
+		r.esClient.Search.WithContext(ctx),
+		r.esClient.Search.WithIndex(rodeElasticsearchPoliciesIndex),
+		r.esClient.Search.WithBody(encodedBody),
+	)
+	log = log.With(zap.String("request", requestJson))
+
+	if err != nil {
+		return nil, createError(log, "error sending request to elasticsearch", err)
+	}
+	if res.IsError() {
+		return nil, createError(log, "error searching elasticsearch for document", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
+	}
+
+	var searchResults esSearchResponse
+	if err := decodeResponse(res.Body, &searchResults); err != nil {
+		return nil, createError(log, "error unmarshalling elasticsearch response", err)
+	}
+
+	if searchResults.Hits.Total.Value == 0 {
+		log.Debug("document not found", zap.Any("search", search))
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("%T not found", policy))
+	}
+	protojson.Unmarshal(searchResults.Hits.Hits[0].Source, proto.MessageV2(policy))
+
+	return policy, nil
+
+}
+
+// func (r *rodeServer) DeletePolicy(ctx context.Context, occurrenceRequest *pb.ListOccurrencesRequest) (*pb.ListOccurrencesResponse, error) {
+
+// }
+
+// // Determine method for field masks
+// func (r *rodeServer) UpdatePolicy(ctx context.Context, occurrenceRequest *pb.ListOccurrencesRequest) (*pb.ListOccurrencesResponse, error) {
+
+// }
+
+func createError(log *zap.Logger, message string, err error, fields ...zap.Field) error {
+	if err == nil {
+		log.Error(message, fields...)
+		return status.Errorf(codes.Internal, "%s", message)
+	}
+
+	log.Error(message, append(fields, zap.Error(err))...)
+	return status.Errorf(codes.Internal, "%s: %s", message, err)
 }
