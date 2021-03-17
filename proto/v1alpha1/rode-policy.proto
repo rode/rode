@@ -51,6 +51,18 @@ message GetPolicyRequest {
   string id = 1;
 }
 
+message DeletePolicyRequest {
+  string id = 1;
+}
+
+message ListPoliciesRequest {
+  string filter = 1;
+}
+
+message ListPoliciesResponse {
+  repeated Policy policies = 1;
+}
+
 message PolicyEntity {
   string name = 1;
   string description = 2;

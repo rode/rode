@@ -4,11 +4,14 @@
 ## Table of Contents
 
 - [proto/v1alpha1/rode-policy.proto](#proto/v1alpha1/rode-policy.proto)
+    - [DeletePolicyRequest](#rode.v1alpha1.DeletePolicyRequest)
     - [EvaluatePolicyRequest](#rode.v1alpha1.EvaluatePolicyRequest)
     - [EvaluatePolicyResponse](#rode.v1alpha1.EvaluatePolicyResponse)
     - [EvaluatePolicyResult](#rode.v1alpha1.EvaluatePolicyResult)
     - [EvaluatePolicyViolation](#rode.v1alpha1.EvaluatePolicyViolation)
     - [GetPolicyRequest](#rode.v1alpha1.GetPolicyRequest)
+    - [ListPoliciesRequest](#rode.v1alpha1.ListPoliciesRequest)
+    - [ListPoliciesResponse](#rode.v1alpha1.ListPoliciesResponse)
     - [Policy](#rode.v1alpha1.Policy)
     - [PolicyEntity](#rode.v1alpha1.PolicyEntity)
   
@@ -30,6 +33,21 @@
 <p align="right"><a href="#top">Top</a></p>
 
 ## proto/v1alpha1/rode-policy.proto
+
+
+
+<a name="rode.v1alpha1.DeletePolicyRequest"></a>
+
+### DeletePolicyRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+
+
+
 
 
 
@@ -113,6 +131,36 @@
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | id | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ListPoliciesRequest"></a>
+
+### ListPoliciesRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| filter | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ListPoliciesResponse"></a>
+
+### ListPoliciesResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| policies | [Policy](#rode.v1alpha1.Policy) | repeated |  |
 
 
 
@@ -286,6 +334,8 @@ https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576
 | ListOccurrences | [ListOccurrencesRequest](#rode.v1alpha1.ListOccurrencesRequest) | [ListOccurrencesResponse](#rode.v1alpha1.ListOccurrencesResponse) |  |
 | CreatePolicy | [PolicyEntity](#rode.v1alpha1.PolicyEntity) | [Policy](#rode.v1alpha1.Policy) |  |
 | GetPolicy | [GetPolicyRequest](#rode.v1alpha1.GetPolicyRequest) | [Policy](#rode.v1alpha1.Policy) |  |
+| DeletePolicy | [DeletePolicyRequest](#rode.v1alpha1.DeletePolicyRequest) | [.google.protobuf.Empty](#google.protobuf.Empty) |  |
+| ListPolicies | [ListPoliciesRequest](#rode.v1alpha1.ListPoliciesRequest) | [ListPoliciesResponse](#rode.v1alpha1.ListPoliciesResponse) |  |
 
  
 

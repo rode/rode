@@ -19,8 +19,10 @@ package rode.v1alpha1;
 option go_package = "github.com/rode/rode/proto/v1alpha1";
 
 import "google/api/annotations.proto";
+import "google/api/client.proto";
 import "proto/v1alpha1/rode-policy.proto";
 import "proto/v1beta1/grafeas.proto";
+import "google/protobuf/empty.proto";
 
 service Rode {
   // Create occurrences
@@ -58,6 +60,17 @@ service Rode {
     option (google.api.http) = {
       get: "/v1alpha1/policies/{id}"
     };
+  }
+  rpc DeletePolicy(DeletePolicyRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/v1alpha1/policies/{id}"
+    };
+  }
+  rpc ListPolicies(ListPoliciesRequest) returns (ListPoliciesResponse) {
+    option (google.api.http) = {
+      get: "/v1alpha1/policies"
+    };
+    option (google.api.method_signature) = "filter";
   }
 }
 
