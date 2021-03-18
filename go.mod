@@ -9,6 +9,7 @@ require (
 	github.com/elastic/go-elasticsearch/v7 v7.11.0
 	github.com/golang/mock v1.4.4
 	github.com/golang/protobuf v1.4.3
+	github.com/google/uuid v1.1.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.2
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.2.0
 	github.com/jarcoal/httpmock v1.0.6

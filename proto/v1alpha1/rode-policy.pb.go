@@ -316,6 +316,332 @@ func (x *EvaluatePolicyViolation) GetPass() bool {
 	return false
 }
 
+type GetPolicyRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+}
+
+func (x *GetPolicyRequest) Reset() {
+	*x = GetPolicyRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetPolicyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPolicyRequest) ProtoMessage() {}
+
+func (x *GetPolicyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPolicyRequest.ProtoReflect.Descriptor instead.
+func (*GetPolicyRequest) Descriptor() ([]byte, []int) {
+	return file_proto_v1alpha1_rode_policy_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *GetPolicyRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type DeletePolicyRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+}
+
+func (x *DeletePolicyRequest) Reset() {
+	*x = DeletePolicyRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[5]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *DeletePolicyRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeletePolicyRequest) ProtoMessage() {}
+
+func (x *DeletePolicyRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[5]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeletePolicyRequest.ProtoReflect.Descriptor instead.
+func (*DeletePolicyRequest) Descriptor() ([]byte, []int) {
+	return file_proto_v1alpha1_rode_policy_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *DeletePolicyRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type ListPoliciesRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Filter string `protobuf:"bytes,1,opt,name=filter,proto3" json:"filter,omitempty"`
+}
+
+func (x *ListPoliciesRequest) Reset() {
+	*x = ListPoliciesRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[6]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ListPoliciesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPoliciesRequest) ProtoMessage() {}
+
+func (x *ListPoliciesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[6]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPoliciesRequest.ProtoReflect.Descriptor instead.
+func (*ListPoliciesRequest) Descriptor() ([]byte, []int) {
+	return file_proto_v1alpha1_rode_policy_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ListPoliciesRequest) GetFilter() string {
+	if x != nil {
+		return x.Filter
+	}
+	return ""
+}
+
+type ListPoliciesResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Policies []*Policy `protobuf:"bytes,1,rep,name=policies,proto3" json:"policies,omitempty"`
+}
+
+func (x *ListPoliciesResponse) Reset() {
+	*x = ListPoliciesResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[7]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ListPoliciesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPoliciesResponse) ProtoMessage() {}
+
+func (x *ListPoliciesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[7]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPoliciesResponse.ProtoReflect.Descriptor instead.
+func (*ListPoliciesResponse) Descriptor() ([]byte, []int) {
+	return file_proto_v1alpha1_rode_policy_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ListPoliciesResponse) GetPolicies() []*Policy {
+	if x != nil {
+		return x.Policies
+	}
+	return nil
+}
+
+type PolicyEntity struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Name        string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Description string `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
+	// The rego code for the policy represented as a string
+	RegoContent string `protobuf:"bytes,3,opt,name=rego_content,json=regoContent,proto3" json:"rego_content,omitempty"`
+	// The location of the policy stored in source control
+	SourcePath string `protobuf:"bytes,4,opt,name=source_path,json=sourcePath,proto3" json:"source_path,omitempty"`
+}
+
+func (x *PolicyEntity) Reset() {
+	*x = PolicyEntity{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[8]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *PolicyEntity) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PolicyEntity) ProtoMessage() {}
+
+func (x *PolicyEntity) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[8]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PolicyEntity.ProtoReflect.Descriptor instead.
+func (*PolicyEntity) Descriptor() ([]byte, []int) {
+	return file_proto_v1alpha1_rode_policy_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *PolicyEntity) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *PolicyEntity) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *PolicyEntity) GetRegoContent() string {
+	if x != nil {
+		return x.RegoContent
+	}
+	return ""
+}
+
+func (x *PolicyEntity) GetSourcePath() string {
+	if x != nil {
+		return x.SourcePath
+	}
+	return ""
+}
+
+type Policy struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// Unique autogenerate id
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// The auto incremented version of the policy. This will auto increment on all updates
+	Version int32         `protobuf:"varint,2,opt,name=version,proto3" json:"version,omitempty"`
+	Policy  *PolicyEntity `protobuf:"bytes,3,opt,name=policy,proto3" json:"policy,omitempty"`
+}
+
+func (x *Policy) Reset() {
+	*x = Policy{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[9]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Policy) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Policy) ProtoMessage() {}
+
+func (x *Policy) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[9]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Policy.ProtoReflect.Descriptor instead.
+func (*Policy) Descriptor() ([]byte, []int) {
+	return file_proto_v1alpha1_rode_policy_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *Policy) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Policy) GetVersion() int32 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *Policy) GetPolicy() *PolicyEntity {
+	if x != nil {
+		return x.Policy
+	}
+	return nil
+}
+
 var File_proto_v1alpha1_rode_policy_proto protoreflect.FileDescriptor
 
 var file_proto_v1alpha1_rode_policy_proto_rawDesc = []byte{
@@ -360,10 +686,38 @@ var file_proto_v1alpha1_rode_policy_proto_rawDesc = []byte{
 	0x73, 0x73, 0x61, 0x67, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x6d, 0x65, 0x73,
 	0x73, 0x61, 0x67, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x6c, 0x69, 0x6e, 0x6b, 0x18, 0x05, 0x20, 0x01,
 	0x28, 0x09, 0x52, 0x04, 0x6c, 0x69, 0x6e, 0x6b, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x61, 0x73, 0x73,
-	0x18, 0x06, 0x20, 0x01, 0x28, 0x08, 0x52, 0x04, 0x70, 0x61, 0x73, 0x73, 0x42, 0x25, 0x5a, 0x23,
-	0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x72, 0x6f, 0x64, 0x65, 0x2f,
-	0x72, 0x6f, 0x64, 0x65, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x76, 0x31, 0x61, 0x6c, 0x70,
-	0x68, 0x61, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x18, 0x06, 0x20, 0x01, 0x28, 0x08, 0x52, 0x04, 0x70, 0x61, 0x73, 0x73, 0x22, 0x22, 0x0a, 0x10,
+	0x47, 0x65, 0x74, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64,
+	0x22, 0x25, 0x0a, 0x13, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79,
+	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x22, 0x2d, 0x0a, 0x13, 0x4c, 0x69, 0x73, 0x74, 0x50,
+	0x6f, 0x6c, 0x69, 0x63, 0x69, 0x65, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x16,
+	0x0a, 0x06, 0x66, 0x69, 0x6c, 0x74, 0x65, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06,
+	0x66, 0x69, 0x6c, 0x74, 0x65, 0x72, 0x22, 0x49, 0x0a, 0x14, 0x4c, 0x69, 0x73, 0x74, 0x50, 0x6f,
+	0x6c, 0x69, 0x63, 0x69, 0x65, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x31,
+	0x0a, 0x08, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x69, 0x65, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b,
+	0x32, 0x15, 0x2e, 0x72, 0x6f, 0x64, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31,
+	0x2e, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x08, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x69, 0x65,
+	0x73, 0x22, 0x88, 0x01, 0x0a, 0x0c, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x45, 0x6e, 0x74, 0x69,
+	0x74, 0x79, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x20, 0x0a, 0x0b, 0x64, 0x65, 0x73, 0x63, 0x72, 0x69,
+	0x70, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x64, 0x65, 0x73,
+	0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x21, 0x0a, 0x0c, 0x72, 0x65, 0x67, 0x6f,
+	0x5f, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b,
+	0x72, 0x65, 0x67, 0x6f, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x12, 0x1f, 0x0a, 0x0b, 0x73,
+	0x6f, 0x75, 0x72, 0x63, 0x65, 0x5f, 0x70, 0x61, 0x74, 0x68, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x0a, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x50, 0x61, 0x74, 0x68, 0x22, 0x67, 0x0a, 0x06,
+	0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x18, 0x0a, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f,
+	0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e,
+	0x12, 0x33, 0x0a, 0x06, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x1b, 0x2e, 0x72, 0x6f, 0x64, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31,
+	0x2e, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x45, 0x6e, 0x74, 0x69, 0x74, 0x79, 0x52, 0x06, 0x70,
+	0x6f, 0x6c, 0x69, 0x63, 0x79, 0x42, 0x25, 0x5a, 0x23, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e,
+	0x63, 0x6f, 0x6d, 0x2f, 0x72, 0x6f, 0x64, 0x65, 0x2f, 0x72, 0x6f, 0x64, 0x65, 0x2f, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x2f, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x62, 0x06, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -378,23 +732,31 @@ func file_proto_v1alpha1_rode_policy_proto_rawDescGZIP() []byte {
 	return file_proto_v1alpha1_rode_policy_proto_rawDescData
 }
 
-var file_proto_v1alpha1_rode_policy_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_proto_v1alpha1_rode_policy_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_proto_v1alpha1_rode_policy_proto_goTypes = []interface{}{
 	(*EvaluatePolicyRequest)(nil),   // 0: rode.v1alpha1.EvaluatePolicyRequest
 	(*EvaluatePolicyResponse)(nil),  // 1: rode.v1alpha1.EvaluatePolicyResponse
 	(*EvaluatePolicyResult)(nil),    // 2: rode.v1alpha1.EvaluatePolicyResult
 	(*EvaluatePolicyViolation)(nil), // 3: rode.v1alpha1.EvaluatePolicyViolation
-	(*timestamp.Timestamp)(nil),     // 4: google.protobuf.Timestamp
+	(*GetPolicyRequest)(nil),        // 4: rode.v1alpha1.GetPolicyRequest
+	(*DeletePolicyRequest)(nil),     // 5: rode.v1alpha1.DeletePolicyRequest
+	(*ListPoliciesRequest)(nil),     // 6: rode.v1alpha1.ListPoliciesRequest
+	(*ListPoliciesResponse)(nil),    // 7: rode.v1alpha1.ListPoliciesResponse
+	(*PolicyEntity)(nil),            // 8: rode.v1alpha1.PolicyEntity
+	(*Policy)(nil),                  // 9: rode.v1alpha1.Policy
+	(*timestamp.Timestamp)(nil),     // 10: google.protobuf.Timestamp
 }
 var file_proto_v1alpha1_rode_policy_proto_depIdxs = []int32{
-	2, // 0: rode.v1alpha1.EvaluatePolicyResponse.result:type_name -> rode.v1alpha1.EvaluatePolicyResult
-	4, // 1: rode.v1alpha1.EvaluatePolicyResult.created:type_name -> google.protobuf.Timestamp
-	3, // 2: rode.v1alpha1.EvaluatePolicyResult.violations:type_name -> rode.v1alpha1.EvaluatePolicyViolation
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	2,  // 0: rode.v1alpha1.EvaluatePolicyResponse.result:type_name -> rode.v1alpha1.EvaluatePolicyResult
+	10, // 1: rode.v1alpha1.EvaluatePolicyResult.created:type_name -> google.protobuf.Timestamp
+	3,  // 2: rode.v1alpha1.EvaluatePolicyResult.violations:type_name -> rode.v1alpha1.EvaluatePolicyViolation
+	9,  // 3: rode.v1alpha1.ListPoliciesResponse.policies:type_name -> rode.v1alpha1.Policy
+	8,  // 4: rode.v1alpha1.Policy.policy:type_name -> rode.v1alpha1.PolicyEntity
+	5,  // [5:5] is the sub-list for method output_type
+	5,  // [5:5] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_proto_v1alpha1_rode_policy_proto_init() }
@@ -451,6 +813,78 @@ func file_proto_v1alpha1_rode_policy_proto_init() {
 				return nil
 			}
 		}
+		file_proto_v1alpha1_rode_policy_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetPolicyRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_v1alpha1_rode_policy_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*DeletePolicyRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_v1alpha1_rode_policy_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ListPoliciesRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_v1alpha1_rode_policy_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ListPoliciesResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_v1alpha1_rode_policy_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*PolicyEntity); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_v1alpha1_rode_policy_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Policy); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -458,7 +892,7 @@ func file_proto_v1alpha1_rode_policy_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_proto_v1alpha1_rode_policy_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -22,6 +22,7 @@ import (
 	"io"
 
 	"github.com/elastic/go-elasticsearch/v7"
+	"github.com/google/uuid"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 	"github.com/rode/rode/opa"
 	pb "github.com/rode/rode/proto/v1alpha1"
@@ -33,11 +34,13 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
 	rodeElasticsearchOccurrencesIndex = "grafeas-v1beta1-rode-occurrences"
+	rodeElasticsearchPoliciesIndex    = "rode-v1alpha1-policies"
 )
 
 // NewRodeServer constructor for rodeServer
@@ -60,6 +63,7 @@ func NewRodeServer(
 	if err := rodeServer.initialize(context.Background()); err != nil {
 		return nil, fmt.Errorf("failed to initialize rode server: %s", err)
 	}
+
 	return rodeServer, nil
 }
 
@@ -236,6 +240,8 @@ func (r *rodeServer) initialize(ctx context.Context) error {
 			return err
 		}
 	}
+	// Create an index for policy storage
+	r.esClient.Indices.Create(rodeElasticsearchPoliciesIndex)
 
 	return nil
 }
@@ -255,4 +261,189 @@ func (r *rodeServer) ListOccurrences(ctx context.Context, occurrenceRequest *pb.
 		Occurrences:   listOccurrencesResponse.GetOccurrences(),
 		NextPageToken: "",
 	}, nil
+}
+
+func (r *rodeServer) CreatePolicy(ctx context.Context, policyEntity *pb.PolicyEntity) (*pb.Policy, error) {
+	// TODO maybe check if it already exists (if we think a unique name is required)
+
+	log := r.logger.Named("CreatePolicy")
+	// Name fields is a requirement
+	if len(policyEntity.Name) == 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "policy name not provided")
+	}
+
+	// CheckPolicy call will go here
+
+	policy := &pb.Policy{
+		Id:      uuid.New().String(),
+		Version: 1,
+		Policy:  policyEntity,
+	}
+	str, err := protojson.MarshalOptions{EmitUnpopulated: true}.Marshal(proto.MessageV2(policy))
+	if err != nil {
+		return nil, createError(log, fmt.Sprintf("error marshalling %T to json", policy), err)
+	}
+	res, err := r.esClient.Index(
+		rodeElasticsearchPoliciesIndex,
+		bytes.NewReader(str),
+		r.esClient.Index.WithContext(ctx),
+	)
+
+	if err != nil {
+		return nil, createError(log, "error sending request to elasticsearch", err)
+	}
+
+	if res.IsError() {
+		return nil, createError(log, "error indexing document in elasticsearch", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
+	}
+	return policy, nil
+}
+
+func (r *rodeServer) GetPolicy(ctx context.Context, getPolicyRequest *pb.GetPolicyRequest) (*pb.Policy, error) {
+	log := r.logger.Named("GetPolicy")
+
+	search := &esSearch{
+		Query: &filtering.Query{
+			Term: &filtering.Term{
+				"id.keyword": getPolicyRequest.Id,
+			},
+		},
+	}
+
+	policy := &pb.Policy{}
+	encodedBody, requestJson := encodeRequest(search)
+	res, err := r.esClient.Search(
+		r.esClient.Search.WithContext(ctx),
+		r.esClient.Search.WithIndex(rodeElasticsearchPoliciesIndex),
+		r.esClient.Search.WithBody(encodedBody),
+	)
+	log = log.With(zap.String("request", requestJson))
+
+	if err != nil {
+		return nil, createError(log, "error sending request to elasticsearch", err)
+	}
+	if res.IsError() {
+		return nil, createError(log, "error searching elasticsearch for document", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
+	}
+
+	var searchResults esSearchResponse
+	if err := decodeResponse(res.Body, &searchResults); err != nil {
+		return nil, createError(log, "error unmarshalling elasticsearch response", err)
+	}
+
+	if searchResults.Hits.Total.Value == 0 {
+		log.Debug("document not found", zap.Any("search", search))
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("%T not found", policy))
+	}
+	protojson.Unmarshal(searchResults.Hits.Hits[0].Source, proto.MessageV2(policy))
+
+	return policy, nil
+
+}
+
+func (r *rodeServer) DeletePolicy(ctx context.Context, deletePolicyRequest *pb.DeletePolicyRequest) (*emptypb.Empty, error) {
+	log := r.logger.Named("DeletePolicy")
+
+	search := &esSearch{
+		Query: &filtering.Query{
+			Term: &filtering.Term{
+				"id.keyword": deletePolicyRequest.Id,
+			},
+		},
+	}
+
+	encodedBody, requestJSON := encodeRequest(search)
+	log.Debug("es request payload", zap.Any("payload", requestJSON))
+
+	res, err := r.esClient.DeleteByQuery(
+		[]string{rodeElasticsearchPoliciesIndex},
+		encodedBody,
+		r.esClient.DeleteByQuery.WithContext(ctx),
+	)
+	if err != nil {
+		return nil, createError(log, "error sending request to elasticsearch", err)
+	}
+	if res.IsError() {
+		return nil, createError(log, "received unexpected response from elasticsearch", nil)
+	}
+
+	var deletedResults esDeleteResponse
+	if err = decodeResponse(res.Body, &deletedResults); err != nil {
+		return nil, createError(log, "error unmarshalling elasticsearch response", err)
+	}
+
+	if deletedResults.Deleted == 0 {
+		return nil, createError(log, "elasticsearch returned zero deleted documents", nil, zap.Any("response", deletedResults))
+	}
+
+	return &emptypb.Empty{}, nil
+}
+
+func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.ListPoliciesRequest) (*pb.ListPoliciesResponse, error) {
+	log := r.logger.Named("List Policies")
+
+	// filtering logic
+
+	// encodedBody, requestJSON := encodeRequest(search)
+	// log.Debug("es request payload", zap.Any("payload", requestJSON))
+	var policies []*pb.Policy
+	res, err := r.esClient.Search(
+		r.esClient.Search.WithContext(ctx),
+		r.esClient.Search.WithIndex(rodeElasticsearchPoliciesIndex),
+	)
+	//log = log.With(zap.String("request", requestJson))
+
+	if err != nil {
+		return nil, createError(log, "error sending request to elasticsearch", err)
+	}
+	if res.IsError() {
+		return nil, createError(log, "error searching elasticsearch for document", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
+	}
+
+	var searchResults esSearchResponse
+	if err := decodeResponse(res.Body, &searchResults); err != nil {
+		return nil, createError(log, "error unmarshalling elasticsearch response", err)
+	}
+
+	if searchResults.Hits.Total.Value == 0 {
+		log.Debug("document not found", zap.Any("search", "filter replace here"))
+		return &pb.ListPoliciesResponse{}, nil
+	}
+
+	for _, hit := range searchResults.Hits.Hits {
+		hitLogger := log.With(zap.String("policy raw", string(hit.Source)))
+
+		policy := &pb.Policy{}
+		err := protojson.Unmarshal(hit.Source, proto.MessageV2(policy))
+		if err != nil {
+			log.Error("failed to convert _doc to policy", zap.Error(err))
+			return nil, createError(hitLogger, "error converting _doc to policy", err)
+		}
+
+		hitLogger.Debug("policy hit", zap.Any("policy", policy))
+
+		policies = append(policies, policy)
+	}
+
+	return &pb.ListPoliciesResponse{Policies: policies}, nil
+}
+
+// // Determine method for field masks
+// func (r *rodeServer) UpdatePolicy(ctx context.Context, occurrenceRequest *pb.ListOccurrencesRequest) (*pb.ListOccurrencesResponse, error) {
+
+// }
+
+// createError is a helper function that allows you to easily log an error and return a gRPC formatted error.
+func createError(log *zap.Logger, message string, err error, fields ...zap.Field) error {
+	if err == nil {
+		log.Error(message, fields...)
+		return status.Errorf(codes.Internal, "%s", message)
+	}
+
+	log.Error(message, append(fields, zap.Error(err))...)
+	return status.Errorf(codes.Internal, "%s: %s", message, err)
+}
+
+type esDeleteResponse struct {
+	Deleted int `json:"deleted"`
 }

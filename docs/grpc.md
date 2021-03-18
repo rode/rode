@@ -4,10 +4,16 @@
 ## Table of Contents
 
 - [proto/v1alpha1/rode-policy.proto](#proto/v1alpha1/rode-policy.proto)
+    - [DeletePolicyRequest](#rode.v1alpha1.DeletePolicyRequest)
     - [EvaluatePolicyRequest](#rode.v1alpha1.EvaluatePolicyRequest)
     - [EvaluatePolicyResponse](#rode.v1alpha1.EvaluatePolicyResponse)
     - [EvaluatePolicyResult](#rode.v1alpha1.EvaluatePolicyResult)
     - [EvaluatePolicyViolation](#rode.v1alpha1.EvaluatePolicyViolation)
+    - [GetPolicyRequest](#rode.v1alpha1.GetPolicyRequest)
+    - [ListPoliciesRequest](#rode.v1alpha1.ListPoliciesRequest)
+    - [ListPoliciesResponse](#rode.v1alpha1.ListPoliciesResponse)
+    - [Policy](#rode.v1alpha1.Policy)
+    - [PolicyEntity](#rode.v1alpha1.PolicyEntity)
   
 - [proto/v1alpha1/rode.proto](#proto/v1alpha1/rode.proto)
     - [BatchCreateOccurrencesRequest](#rode.v1alpha1.BatchCreateOccurrencesRequest)
@@ -27,6 +33,21 @@
 <p align="right"><a href="#top">Top</a></p>
 
 ## proto/v1alpha1/rode-policy.proto
+
+
+
+<a name="rode.v1alpha1.DeletePolicyRequest"></a>
+
+### DeletePolicyRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+
+
+
 
 
 
@@ -95,6 +116,86 @@
 | message | [string](#string) |  |  |
 | link | [string](#string) |  |  |
 | pass | [bool](#bool) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.GetPolicyRequest"></a>
+
+### GetPolicyRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ListPoliciesRequest"></a>
+
+### ListPoliciesRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| filter | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ListPoliciesResponse"></a>
+
+### ListPoliciesResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| policies | [Policy](#rode.v1alpha1.Policy) | repeated |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.Policy"></a>
+
+### Policy
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  | Unique autogenerate id |
+| version | [int32](#int32) |  | The auto incremented version of the policy. This will auto increment on all updates |
+| policy | [PolicyEntity](#rode.v1alpha1.PolicyEntity) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.PolicyEntity"></a>
+
+### PolicyEntity
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| name | [string](#string) |  |  |
+| description | [string](#string) |  |  |
+| rego_content | [string](#string) |  | The rego code for the policy represented as a string |
+| source_path | [string](#string) |  | The location of the policy stored in source control |
 
 
 
@@ -231,6 +332,10 @@ https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576
 | EvaluatePolicy | [EvaluatePolicyRequest](#rode.v1alpha1.EvaluatePolicyRequest) | [EvaluatePolicyResponse](#rode.v1alpha1.EvaluatePolicyResponse) | Verify that an artifact satisfies a policy |
 | ListResources | [ListResourcesRequest](#rode.v1alpha1.ListResourcesRequest) | [ListResourcesResponse](#rode.v1alpha1.ListResourcesResponse) | List resource URI |
 | ListOccurrences | [ListOccurrencesRequest](#rode.v1alpha1.ListOccurrencesRequest) | [ListOccurrencesResponse](#rode.v1alpha1.ListOccurrencesResponse) |  |
+| CreatePolicy | [PolicyEntity](#rode.v1alpha1.PolicyEntity) | [Policy](#rode.v1alpha1.Policy) |  |
+| GetPolicy | [GetPolicyRequest](#rode.v1alpha1.GetPolicyRequest) | [Policy](#rode.v1alpha1.Policy) |  |
+| DeletePolicy | [DeletePolicyRequest](#rode.v1alpha1.DeletePolicyRequest) | [.google.protobuf.Empty](#google.protobuf.Empty) |  |
+| ListPolicies | [ListPoliciesRequest](#rode.v1alpha1.ListPoliciesRequest) | [ListPoliciesResponse](#rode.v1alpha1.ListPoliciesResponse) |  |
 
  
 
