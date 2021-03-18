@@ -527,6 +527,28 @@ var _ = Describe("rode server", func() {
 				})
 			})
 		})
+		When("creating a policy without a name", func() {
+			var (
+				policyEntity   *pb.PolicyEntity
+				policyResponse *pb.Policy
+				err            error
+			)
+
+			BeforeEach(func() {
+				policyEntity = &pb.PolicyEntity{
+					Name: "",
+				}
+
+				policyResponse, err = rodeServer.CreatePolicy(context.Background(), policyEntity)
+			})
+
+			It("should throw a Bad Request Error", func() {
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(BeEquivalentTo(status.Errorf(codes.InvalidArgument, "policy name not provided")))
+				Expect(policyResponse).To(BeNil())
+			})
+		})
+
 		When("creating a policy", func() {
 			var (
 				policyEntity   *pb.PolicyEntity

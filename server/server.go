@@ -267,6 +267,12 @@ func (r *rodeServer) CreatePolicy(ctx context.Context, policyEntity *pb.PolicyEn
 	// TODO maybe check if it already exists (if we think a unique name is required)
 
 	log := r.logger.Named("CreatePolicy")
+	// Name fields is a requirement
+	if len(policyEntity.Name) == 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "policy name not provided")
+	}
+
+	// CheckPolicy call will go here
 
 	policy := &pb.Policy{
 		Id:      uuid.New().String(),
