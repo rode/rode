@@ -83,7 +83,7 @@ var _ = Describe("rode server", func() {
 		esTransport.preparedHttpResponses = []*http.Response{
 			{
 				StatusCode: http.StatusOK,
-				Body:       structToJsonBody(createEsIndexResponse("grafeas-v1beta1-rode-policies")),
+				Body:       structToJsonBody(createEsIndexResponse("rode-v1alpha1-policies")),
 			},
 		}
 	})
@@ -545,7 +545,7 @@ var _ = Describe("rode server", func() {
 			})
 
 			It("should have a correct url path", func() {
-				Expect(esTransport.receivedHttpRequests[1].URL.Path).To(Equal("/grafeas-v1beta1-rode-policies/_doc"))
+				Expect(esTransport.receivedHttpRequests[1].URL.Path).To(Equal("/rode-v1alpha1-policies/_doc"))
 			})
 			It("should match the policy entity", func() {
 				Expect(err).To(Not(HaveOccurred()))

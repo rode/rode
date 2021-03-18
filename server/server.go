@@ -40,7 +40,7 @@ import (
 
 const (
 	rodeElasticsearchOccurrencesIndex = "grafeas-v1beta1-rode-occurrences"
-	rodeElasticsearchPoliciesIndex    = "grafeas-v1beta1-rode-policies"
+	rodeElasticsearchPoliciesIndex    = "rode-v1alpha1-policies"
 )
 
 // NewRodeServer constructor for rodeServer
