@@ -401,7 +401,7 @@ func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.L
 
 	if searchResults.Hits.Total.Value == 0 {
 		log.Debug("document not found", zap.Any("search", "filter replace here"))
-		return nil, status.Error(codes.NotFound, fmt.Sprintf("%T not found", "filter not found"))
+		return &pb.ListPoliciesResponse{}, nil
 	}
 
 	for _, hit := range searchResults.Hits.Hits {

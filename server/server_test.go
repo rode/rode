@@ -657,9 +657,10 @@ var _ = Describe("rode server", func() {
 		})
 		When("attempting to list an empty policy index", func() {
 			var (
-				listRequest  *pb.ListPoliciesRequest
-				policiesList []*pb.Policy
-				err          error
+				listRequest          *pb.ListPoliciesRequest
+				policiesList         []*pb.Policy
+				listPoliciesResponse *pb.ListPoliciesResponse
+				err                  error
 			)
 			BeforeEach(func() {
 				listRequest = &pb.ListPoliciesRequest{}
@@ -669,10 +670,13 @@ var _ = Describe("rode server", func() {
 						Body:       createEsSearchResponseForPolicy(policiesList),
 					},
 				}
-				_, err = rodeServer.ListPolicies(context.Background(), listRequest)
+				listPoliciesResponse, err = rodeServer.ListPolicies(context.Background(), listRequest)
 			})
 			It("should return an error", func() {
-				Expect(err).To(HaveOccurred())
+				Expect(err).To(Not(HaveOccurred()))
+			})
+			It("should return an empty list", func() {
+				Expect(len(listPoliciesResponse.Policies)).To(Equal(0))
 			})
 
 		})
