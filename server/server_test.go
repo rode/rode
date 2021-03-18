@@ -19,6 +19,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
+
 	"github.com/brianvoe/gofakeit/v5"
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/elastic/go-elasticsearch/v7/esapi"
@@ -37,6 +39,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"io"
@@ -77,6 +80,12 @@ var _ = Describe("rode server", func() {
 			API:       esapi.New(esTransport),
 		}
 		mockFilterer = mocks.NewMockFilterer(mockCtrl)
+		esTransport.preparedHttpResponses = []*http.Response{
+			{
+				StatusCode: http.StatusOK,
+				Body:       structToJsonBody(createEsIndexResponse("grafeas-v1beta1-rode-policies")),
+			},
+		}
 	})
 
 	AfterEach(func() {
@@ -432,20 +441,20 @@ var _ = Describe("rode server", func() {
 				})
 
 				It("should query the Rode occurrences index", func() {
-					actualRequest := esTransport.receivedHttpRequests[0]
+					actualRequest := esTransport.receivedHttpRequests[1]
 
 					Expect(actualRequest.URL.Path).To(Equal("/grafeas-v1beta1-rode-occurrences/_search"))
 				})
 
 				It("should take the first 1000 matches", func() {
-					actualRequest := esTransport.receivedHttpRequests[0]
+					actualRequest := esTransport.receivedHttpRequests[1]
 					query := actualRequest.URL.Query()
 
 					Expect(query.Get("size")).To(Equal("1000"))
 				})
 
 				It("should collapse fields on resource.uri", func() {
-					actualRequest := esTransport.receivedHttpRequests[0]
+					actualRequest := esTransport.receivedHttpRequests[1]
 					search := readEsSearchResponse(actualRequest)
 
 					Expect(search.Collapse.Field).To(Equal("resource.uri"))
@@ -493,7 +502,7 @@ var _ = Describe("rode server", func() {
 					_, err := rodeServer.ListResources(context.Background(), request)
 					Expect(err).To(BeNil())
 
-					actualRequest := esTransport.receivedHttpRequests[0]
+					actualRequest := esTransport.receivedHttpRequests[1]
 					search := readEsSearchResponse(actualRequest)
 
 					Expect(search.Query).To(Equal(expectedQuery))
@@ -518,6 +527,177 @@ var _ = Describe("rode server", func() {
 				})
 			})
 		})
+		When("creating a policy", func() {
+			var (
+				policyEntity   *pb.PolicyEntity
+				policyResponse *pb.Policy
+				err            error
+			)
+
+			BeforeEach(func() {
+				policyEntity = createRandomPolicyEntity()
+				esTransport.preparedHttpResponses = []*http.Response{
+					{
+						StatusCode: http.StatusOK,
+					},
+				}
+				policyResponse, err = rodeServer.CreatePolicy(context.Background(), policyEntity)
+			})
+
+			It("should have a correct url path", func() {
+				Expect(esTransport.receivedHttpRequests[1].URL.Path).To(Equal("/grafeas-v1beta1-rode-policies/_doc"))
+			})
+			It("should match the policy entity", func() {
+				Expect(err).To(Not(HaveOccurred()))
+				Expect(policyResponse.Policy).To(BeEquivalentTo(policyEntity))
+			})
+			When("attemtpting to retrieve the same policy", func() {
+				var (
+					getResponse *pb.Policy
+					err         error
+				)
+				BeforeEach(func() {
+
+					esTransport.preparedHttpResponses = []*http.Response{
+						{
+							StatusCode: http.StatusOK,
+							Body:       createEsSearchResponseForPolicy([]*pb.Policy{policyResponse}),
+						},
+					}
+					getResponse, err = rodeServer.GetPolicy(context.Background(), &pb.GetPolicyRequest{Id: policyResponse.Id})
+				})
+				It("should not return an error", func() {
+					Expect(err).To(Not(HaveOccurred()))
+				})
+				It("should have the same id as the one originally created", func() {
+					Expect(getResponse.Id).To(Equal(policyResponse.Id))
+				})
+			})
+
+			When("attempting to delete the same policy", func() {
+				var deleteResponse *emptypb.Empty
+
+				BeforeEach(func() {
+					esTransport.preparedHttpResponses = []*http.Response{
+						{
+							StatusCode: http.StatusOK,
+							Body:       structToJsonBody(createEsDeleteDocResponse()),
+						},
+					}
+					deleteResponse, err = rodeServer.DeletePolicy(context.Background(), &pb.DeletePolicyRequest{Id: policyResponse.Id})
+				})
+				It("should not return an error", func() {
+					Expect(err).To(Not(HaveOccurred()))
+				})
+				It("should have returned an empty response", func() {
+					Expect(deleteResponse).To(BeEquivalentTo(&emptypb.Empty{}))
+				})
+			})
+		})
+		When("creating multiple policies sequentially", func() {
+			var (
+				policyEntityOne   *pb.PolicyEntity
+				policyEntityTwo   *pb.PolicyEntity
+				policyResponseOne *pb.Policy
+				policyResponseTwo *pb.Policy
+				err               error
+			)
+
+			BeforeEach(func() {
+				policyEntityOne = createRandomPolicyEntity()
+				policyEntityTwo = createRandomPolicyEntity()
+				esTransport.preparedHttpResponses = []*http.Response{
+					{
+						StatusCode: http.StatusOK,
+					},
+					{
+						StatusCode: http.StatusOK,
+					},
+				}
+				policyResponseOne, err = rodeServer.CreatePolicy(context.Background(), policyEntityOne)
+				policyResponseTwo, err = rodeServer.CreatePolicy(context.Background(), policyEntityTwo)
+			})
+			It("should not return an error", func() {
+				Expect(err).To(Not(HaveOccurred()))
+			})
+			It("should have created two different policies", func() {
+				Expect(policyResponseOne.Id).To(Not(Equal(policyResponseTwo.Id)))
+			})
+
+			When("attemtping to list the policies", func() {
+				var (
+					listRequest  *pb.ListPoliciesRequest
+					listResponse *pb.ListPoliciesResponse
+					policiesList []*pb.Policy
+					err          error
+				)
+				BeforeEach(func() {
+					policiesList = append(policiesList, policyResponseOne)
+					policiesList = append(policiesList, policyResponseOne)
+					listRequest = &pb.ListPoliciesRequest{}
+					esTransport.preparedHttpResponses = []*http.Response{
+						{
+							StatusCode: http.StatusOK,
+							Body:       createEsSearchResponseForPolicy(policiesList),
+						},
+						{
+							StatusCode: http.StatusOK,
+							Body:       createEsSearchResponseForPolicy(policiesList),
+						},
+					}
+					listResponse, err = rodeServer.ListPolicies(context.Background(), listRequest)
+				})
+				It("should not return an error", func() {
+					Expect(err).To(Not(HaveOccurred()))
+				})
+				It("should have created two different policies", func() {
+					Expect(len(listResponse.Policies)).To((Equal(4)))
+				})
+			})
+		})
+		When("attempting to list an empty policy index", func() {
+			var (
+				listRequest  *pb.ListPoliciesRequest
+				policiesList []*pb.Policy
+				err          error
+			)
+			BeforeEach(func() {
+				listRequest = &pb.ListPoliciesRequest{}
+				esTransport.preparedHttpResponses = []*http.Response{
+					{
+						StatusCode: http.StatusOK,
+						Body:       createEsSearchResponseForPolicy(policiesList),
+					},
+				}
+				_, err = rodeServer.ListPolicies(context.Background(), listRequest)
+			})
+			It("should return an error", func() {
+				Expect(err).To(HaveOccurred())
+			})
+
+		})
+		When("attempting to list policies and elasticsearch is unreachable", func() {
+			var (
+				listRequest  *pb.ListPoliciesRequest
+				policiesList []*pb.Policy
+				err          error
+			)
+			BeforeEach(func() {
+				listRequest = &pb.ListPoliciesRequest{}
+				esTransport.preparedHttpResponses = []*http.Response{
+					{
+						StatusCode: http.StatusInternalServerError,
+						Body:       createEsSearchResponseForPolicy(policiesList),
+					},
+				}
+				_, err = rodeServer.ListPolicies(context.Background(), listRequest)
+			})
+			It("should return an error", func() {
+				Expect(err).To(HaveOccurred())
+			})
+
+		})
+
 	})
 })
 
@@ -534,6 +714,68 @@ func createRandomOccurrence(kind grafeas_common_proto.NoteKind) *grafeas_proto.O
 		UpdateTime:  timestamppb.New(gofakeit.Date()),
 		Details:     nil,
 	}
+}
+
+func createEsIndexResponse(index string) *esIndexResponse {
+	return &esIndexResponse{
+		Acknowledged:       true,
+		ShardsAcknowledged: true,
+		Index:              index,
+	}
+}
+
+type esIndexResponse struct {
+	Acknowledged       bool   `json:"acknowledged"`
+	ShardsAcknowledged bool   `json:"shards_acknowledged"`
+	Index              string `json:"index"`
+}
+
+func createEsDeleteDocResponse() *esDeleteDocResponse {
+	return &esDeleteDocResponse{
+		Took:             int(gofakeit.Int16()),
+		TimedOut:         false,
+		Total:            int(gofakeit.Int16()),
+		Deleted:          int(gofakeit.Int16()),
+		Batches:          int(gofakeit.Int16()),
+		VersionConflicts: int(gofakeit.Int16()),
+		Noops:            int(gofakeit.Int16()),
+		Retries: struct {
+			Bulk   int "json:\"bulk\""
+			Search int "json:\"search\""
+		}{
+			Bulk:   int(gofakeit.Int16()),
+			Search: int(gofakeit.Int16()),
+		},
+		ThrottledMillis:      int(gofakeit.Int16()),
+		RequestsPerSecond:    gofakeit.Float64(),
+		ThrottledUntilMillis: int(gofakeit.Int16()),
+		Failures:             nil,
+	}
+}
+
+type esDeleteDocResponse struct {
+	Took             int  `json:"took"`
+	TimedOut         bool `json:"timed_out"`
+	Total            int  `json:"total"`
+	Deleted          int  `json:"deleted"`
+	Batches          int  `json:"batches"`
+	VersionConflicts int  `json:"version_conflicts"`
+	Noops            int  `json:"noops"`
+	Retries          struct {
+		Bulk   int `json:"bulk"`
+		Search int `json:"search"`
+	} `json:"retries"`
+	ThrottledMillis      int           `json:"throttled_millis"`
+	RequestsPerSecond    float64       `json:"requests_per_second"`
+	ThrottledUntilMillis int           `json:"throttled_until_millis"`
+	Failures             []interface{} `json:"failures"`
+}
+
+func structToJsonBody(i interface{}) io.ReadCloser {
+	b, err := json.Marshal(i)
+	Expect(err).ToNot(HaveOccurred())
+
+	return ioutil.NopCloser(strings.NewReader(string(b)))
 }
 
 func createEsSearchResponse(occurrences []*grafeas_proto.Occurrence) io.ReadCloser {
@@ -564,6 +806,37 @@ func createEsSearchResponse(occurrences []*grafeas_proto.Occurrence) io.ReadClos
 	return ioutil.NopCloser(bytes.NewReader(responseBody))
 }
 
+func createEsSearchResponseForPolicy(occurrences []*pb.Policy) io.ReadCloser {
+	var occurrenceHits []*esSearchResponseHit
+
+	for _, occurrence := range occurrences {
+		source, err := protojson.Marshal(proto.MessageV2(occurrence))
+		Expect(err).To(BeNil())
+
+		response := &esSearchResponseHit{
+			ID:     gofakeit.UUID(),
+			Source: source,
+		}
+
+		occurrenceHits = append(occurrenceHits, response)
+	}
+
+	response := &esSearchResponse{
+		Hits: &esSearchResponseHits{
+			Total: &esSearchResponseTotal{
+				Value: len(occurrences),
+			},
+			Hits: occurrenceHits,
+		},
+		Took: gofakeit.Number(1, 10),
+	}
+
+	responseBody, err := json.Marshal(response)
+	Expect(err).To(BeNil())
+
+	return ioutil.NopCloser(bytes.NewReader(responseBody))
+}
+
 func readEsSearchResponse(request *http.Request) *esSearch {
 	requestBody, err := ioutil.ReadAll(request.Body)
 	Expect(err).To(BeNil())
@@ -573,4 +846,13 @@ func readEsSearchResponse(request *http.Request) *esSearch {
 	Expect(err).To(BeNil())
 
 	return search
+}
+
+func createRandomPolicyEntity() *pb.PolicyEntity {
+	return &pb.PolicyEntity{
+		Name:        gofakeit.LetterN(10),
+		Description: gofakeit.LetterN(50),
+		RegoContent: gofakeit.LetterN(500),
+		SourcePath:  gofakeit.URL(),
+	}
 }

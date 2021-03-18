@@ -64,8 +64,6 @@ func NewRodeServer(
 		return nil, fmt.Errorf("failed to initialize rode server: %s", err)
 	}
 
-	// Create an index for policy storage
-	rodeServer.esClient.Indices.Create(rodeElasticsearchPoliciesIndex)
 	return rodeServer, nil
 }
 
@@ -242,6 +240,8 @@ func (r *rodeServer) initialize(ctx context.Context) error {
 			return err
 		}
 	}
+	// Create an index for policy storage
+	r.esClient.Indices.Create(rodeElasticsearchPoliciesIndex)
 
 	return nil
 }
