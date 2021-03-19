@@ -51,6 +51,27 @@ var _ = Describe("rode server", func() {
 	const (
 		createProjectError = "CREATE_PROJECT_ERROR"
 		getProjectError    = "GET_PROJECT_ERROR"
+		goodPolicy         = `
+		package play
+		default hello = false
+		hello {
+			m := input.message
+			m == "world"
+		}`
+		unparseablePolicy = `
+		package play
+		default hello = false
+		hello 
+			m := input.message
+			m == "world"
+		}`
+		uncompilablePolicy = `
+		package play
+		default hello = false
+		hello {
+			m := input.message
+			m2 == "world"
+		}`
 	)
 
 	var (
@@ -557,7 +578,7 @@ var _ = Describe("rode server", func() {
 			)
 
 			BeforeEach(func() {
-				policyEntity = createRandomPolicyEntity()
+				policyEntity = createRandomPolicyEntity(goodPolicy)
 				esTransport.preparedHttpResponses = []*http.Response{
 					{
 						StatusCode: http.StatusOK,
@@ -626,8 +647,8 @@ var _ = Describe("rode server", func() {
 			)
 
 			BeforeEach(func() {
-				policyEntityOne = createRandomPolicyEntity()
-				policyEntityTwo = createRandomPolicyEntity()
+				policyEntityOne = createRandomPolicyEntity(goodPolicy)
+				policyEntityTwo = createRandomPolicyEntity(goodPolicy)
 				esTransport.preparedHttpResponses = []*http.Response{
 					{
 						StatusCode: http.StatusOK,
@@ -723,7 +744,82 @@ var _ = Describe("rode server", func() {
 			})
 
 		})
+		When("creating an unparseable policy", func() {
+			var (
+				policyEntity   *pb.PolicyEntity
+				policyResponse *pb.Policy
+				err            error
+			)
 
+			BeforeEach(func() {
+				policyEntity = createRandomPolicyEntity(unparseablePolicy)
+				policyResponse, err = rodeServer.CreatePolicy(context.Background(), policyEntity)
+			})
+
+			It("should throw a compilation error", func() {
+				Expect(policyResponse).To(BeNil())
+				Expect(err).To(HaveOccurred())
+			})
+		})
+		When("validating a good policy", func() {
+			var (
+				validatePolicyRequest  *pb.ValidatePolicyRequest
+				validatePolicyResponse *pb.ValidatePolicyResponse
+				err                    error
+			)
+
+			BeforeEach(func() {
+				validatePolicyRequest = &pb.ValidatePolicyRequest{Policy: goodPolicy}
+				validatePolicyResponse, err = rodeServer.ValidatePolicy(context.Background(), validatePolicyRequest)
+			})
+
+			It("should not throw an error", func() {
+				Expect(err).To(Not(HaveOccurred()))
+			})
+			It("should return a successful compilation", func() {
+				Expect(validatePolicyResponse.Compile).To(BeTrue())
+			})
+			It("should return an empty error array", func() {
+				Expect(validatePolicyResponse.Errors).To(BeEmpty())
+			})
+		})
+		When("validating an empty policy", func() {
+			var (
+				validatePolicyRequest *pb.ValidatePolicyRequest
+				err                   error
+			)
+
+			BeforeEach(func() {
+				validatePolicyRequest = &pb.ValidatePolicyRequest{Policy: ""}
+				_, err = rodeServer.ValidatePolicy(context.Background(), validatePolicyRequest)
+			})
+
+			It("should throw an error", func() {
+				Expect(err).To(HaveOccurred())
+			})
+		})
+		When("validating an uncompilable policy", func() {
+			var (
+				validatePolicyRequest  *pb.ValidatePolicyRequest
+				validatePolicyResponse *pb.ValidatePolicyResponse
+				err                    error
+			)
+
+			BeforeEach(func() {
+				validatePolicyRequest = &pb.ValidatePolicyRequest{Policy: uncompilablePolicy}
+				validatePolicyResponse, err = rodeServer.ValidatePolicy(context.Background(), validatePolicyRequest)
+			})
+
+			It("should not throw an error", func() {
+				Expect(err).To(Not(HaveOccurred()))
+			})
+			It("should return an unsuccessful compilation", func() {
+				Expect(validatePolicyResponse.Compile).To(BeFalse())
+			})
+			It("should not return an empty error array", func() {
+				Expect(len(validatePolicyResponse.Errors)).To(Not(Equal(0)))
+			})
+		})
 	})
 })
 
@@ -874,11 +970,11 @@ func readEsSearchResponse(request *http.Request) *esSearch {
 	return search
 }
 
-func createRandomPolicyEntity() *pb.PolicyEntity {
+func createRandomPolicyEntity(policy string) *pb.PolicyEntity {
 	return &pb.PolicyEntity{
 		Name:        gofakeit.LetterN(10),
 		Description: gofakeit.LetterN(50),
-		RegoContent: gofakeit.LetterN(500),
+		RegoContent: policy,
 		SourcePath:  gofakeit.URL(),
 	}
 }

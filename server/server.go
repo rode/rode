@@ -30,6 +30,7 @@ import (
 	grafeas_project_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/project_go_proto"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/open-policy-agent/opa/ast"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -263,6 +264,54 @@ func (r *rodeServer) ListOccurrences(ctx context.Context, occurrenceRequest *pb.
 	}, nil
 }
 
+func (r *rodeServer) ValidatePolicy(ctx context.Context, policy *pb.ValidatePolicyRequest) (*pb.ValidatePolicyResponse, error) {
+	log := r.logger.Named("ValidatePolicy")
+
+	if len(policy.Policy) == 0 {
+		return nil, createError(log, "empty policy passed in", nil)
+	}
+
+	// Generate the AST
+	mod, err := ast.ParseModule("validate_module", string(policy.Policy))
+	if err != nil {
+		log.Debug("failed to parse the policy", zap.Any("policy", err))
+		return &pb.ValidatePolicyResponse{
+			Policy:  policy.Policy,
+			Compile: false,
+			Errors:  []string{err.Error()},
+		}, nil
+	}
+
+	// Create a new compiler instance and compile the module. Should this be moved to initialize function?
+	c := ast.NewCompiler()
+
+	mods := map[string]*ast.Module{
+		"validate_module": mod,
+	}
+
+	if c.Compile(mods); c.Failed() {
+		log.Debug("compilation error", zap.Any("payload", c.Errors))
+		length := len(c.Errors)
+		errorsList := make([]string, length)
+
+		for i, _ := range c.Errors {
+			errorsList = append(errorsList, c.Errors[i].Error())
+		}
+		return &pb.ValidatePolicyResponse{
+			Policy:  policy.Policy,
+			Compile: false,
+			Errors:  errorsList,
+		}, nil
+	}
+	log.Debug("compilation successful")
+
+	return &pb.ValidatePolicyResponse{
+		Policy:  policy.Policy,
+		Compile: true,
+		Errors:  nil,
+	}, nil
+}
+
 func (r *rodeServer) CreatePolicy(ctx context.Context, policyEntity *pb.PolicyEntity) (*pb.Policy, error) {
 	// TODO maybe check if it already exists (if we think a unique name is required)
 
@@ -272,7 +321,11 @@ func (r *rodeServer) CreatePolicy(ctx context.Context, policyEntity *pb.PolicyEn
 		return nil, status.Errorf(codes.InvalidArgument, "policy name not provided")
 	}
 
-	// CheckPolicy call will go here
+	// CheckPolicy before writing to elastic
+	result, err := r.ValidatePolicy(ctx, &pb.ValidatePolicyRequest{Policy: policyEntity.RegoContent})
+	if (err != nil) || !result.Compile {
+		return nil, createError(log, "failed to compile the provided policy", err)
+	}
 
 	policy := &pb.Policy{
 		Id:      uuid.New().String(),
@@ -382,16 +435,13 @@ func (r *rodeServer) DeletePolicy(ctx context.Context, deletePolicyRequest *pb.D
 func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.ListPoliciesRequest) (*pb.ListPoliciesResponse, error) {
 	log := r.logger.Named("List Policies")
 
-	// filtering logic
+	// filtering logic here
 
-	// encodedBody, requestJSON := encodeRequest(search)
-	// log.Debug("es request payload", zap.Any("payload", requestJSON))
 	var policies []*pb.Policy
 	res, err := r.esClient.Search(
 		r.esClient.Search.WithContext(ctx),
 		r.esClient.Search.WithIndex(rodeElasticsearchPoliciesIndex),
 	)
-	//log = log.With(zap.String("request", requestJson))
 
 	if err != nil {
 		return nil, createError(log, "error sending request to elasticsearch", err)

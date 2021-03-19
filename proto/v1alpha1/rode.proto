@@ -72,6 +72,12 @@ service Rode {
     };
     option (google.api.method_signature) = "filter";
   }
+  rpc ValidatePolicy(ValidatePolicyRequest) returns (ValidatePolicyResponse) {
+    option (google.api.http) = {
+      post: "/v1alpha1/policies/validate"
+      body: "*"
+    };
+  }
 }
 
 // Request to create occurrences in batch.
