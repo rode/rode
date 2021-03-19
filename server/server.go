@@ -42,6 +42,7 @@ import (
 const (
 	rodeElasticsearchOccurrencesIndex = "grafeas-v1beta1-rode-occurrences"
 	rodeElasticsearchPoliciesIndex    = "rode-v1alpha1-policies"
+	maxPageSize                       = 1000
 )
 
 // NewRodeServer constructor for rodeServer
@@ -177,7 +178,7 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 		r.esClient.Search.WithContext(ctx),
 		r.esClient.Search.WithIndex(rodeElasticsearchOccurrencesIndex),
 		r.esClient.Search.WithBody(encodedBody),
-		r.esClient.Search.WithSize(1000),
+		r.esClient.Search.WithSize(maxPageSize),
 	)
 
 	if err != nil {
@@ -369,6 +370,7 @@ func (r *rodeServer) GetPolicy(ctx context.Context, getPolicyRequest *pb.GetPoli
 		r.esClient.Search.WithContext(ctx),
 		r.esClient.Search.WithIndex(rodeElasticsearchPoliciesIndex),
 		r.esClient.Search.WithBody(encodedBody),
+		r.esClient.Search.WithSize(maxPageSize),
 	)
 	log = log.With(zap.String("request", requestJson))
 
@@ -441,6 +443,7 @@ func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.L
 	res, err := r.esClient.Search(
 		r.esClient.Search.WithContext(ctx),
 		r.esClient.Search.WithIndex(rodeElasticsearchPoliciesIndex),
+		r.esClient.Search.WithSize(maxPageSize),
 	)
 
 	if err != nil {
