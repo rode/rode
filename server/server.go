@@ -39,7 +39,7 @@ import (
 )
 
 const (
-	rodeElasticsearchOccurrencesIndex = "grafeas-v1beta1-rode-occurrences"
+	rodeElasticsearchOccurrencesAlias = "grafeas-rode-occurrences"
 	rodeElasticsearchPoliciesIndex    = "rode-v1alpha1-policies"
 )
 
@@ -174,7 +174,7 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 	log.Debug("es request payload", zap.Any("payload", requestJSON))
 	res, err := r.esClient.Search(
 		r.esClient.Search.WithContext(ctx),
-		r.esClient.Search.WithIndex(rodeElasticsearchOccurrencesIndex),
+		r.esClient.Search.WithIndex(rodeElasticsearchOccurrencesAlias),
 		r.esClient.Search.WithBody(encodedBody),
 		r.esClient.Search.WithSize(1000),
 	)
