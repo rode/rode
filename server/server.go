@@ -295,7 +295,7 @@ func (r *rodeServer) ValidatePolicy(ctx context.Context, policy *pb.ValidatePoli
 		length := len(c.Errors)
 		errorsList := make([]string, length)
 
-		for i, _ := range c.Errors {
+		for i := range c.Errors {
 			errorsList = append(errorsList, c.Errors[i].Error())
 		}
 		return &pb.ValidatePolicyResponse{
