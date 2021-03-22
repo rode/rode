@@ -443,7 +443,7 @@ var _ = Describe("rode server", func() {
 				It("should query the Rode occurrences index", func() {
 					actualRequest := esTransport.receivedHttpRequests[1]
 
-					Expect(actualRequest.URL.Path).To(Equal("/grafeas-v1beta1-rode-occurrences/_search"))
+					Expect(actualRequest.URL.Path).To(Equal("/grafeas-rode-occurrences/_search"))
 				})
 
 				It("should take the first 1000 matches", func() {
