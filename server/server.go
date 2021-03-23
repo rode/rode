@@ -325,7 +325,13 @@ func (r *rodeServer) CreatePolicy(ctx context.Context, policyEntity *pb.PolicyEn
 	// CheckPolicy before writing to elastic
 	result, err := r.ValidatePolicy(ctx, &pb.ValidatePolicyRequest{Policy: policyEntity.RegoContent})
 	if (err != nil) || !result.Compile {
-		return nil, createError(log, "failed to compile the provided policy", err)
+		message := &pb.ValidatePolicyResponse{
+			Policy:  policyEntity.RegoContent,
+			Compile: false,
+			Errors:  result.Errors,
+		}
+		s, _ := status.New(codes.Internal, "failed to compile the provided policy").WithDetails(message)
+		return nil, s.Err()
 	}
 
 	policy := &pb.Policy{
