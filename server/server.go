@@ -276,14 +276,16 @@ func (r *rodeServer) ValidatePolicy(ctx context.Context, policy *pb.ValidatePoli
 	mod, err := ast.ParseModule("validate_module", string(policy.Policy))
 	if err != nil {
 		log.Debug("failed to parse the policy", zap.Any("policy", err))
-		return &pb.ValidatePolicyResponse{
+		message := &pb.ValidatePolicyResponse{
 			Policy:  policy.Policy,
 			Compile: false,
 			Errors:  []string{err.Error()},
-		}, nil
+		}
+		s, _ := status.New(codes.InvalidArgument, "failed to parse the policy").WithDetails(message)
+		return message, s.Err()
 	}
 
-	// Create a new compiler instance and compile the module. Should this be moved to initialize function?
+	// Create a new compiler instance and compile the module
 	c := ast.NewCompiler()
 
 	mods := map[string]*ast.Module{
@@ -298,11 +300,15 @@ func (r *rodeServer) ValidatePolicy(ctx context.Context, policy *pb.ValidatePoli
 		for i := range c.Errors {
 			errorsList = append(errorsList, c.Errors[i].Error())
 		}
-		return &pb.ValidatePolicyResponse{
+
+		message := &pb.ValidatePolicyResponse{
 			Policy:  policy.Policy,
 			Compile: false,
 			Errors:  errorsList,
-		}, nil
+		}
+		s, _ := status.New(codes.InvalidArgument, "failed to compile the policy").WithDetails(message)
+		return message, s.Err()
+
 	}
 	log.Debug("compilation successful")
 
@@ -317,7 +323,7 @@ func (r *rodeServer) CreatePolicy(ctx context.Context, policyEntity *pb.PolicyEn
 	// TODO maybe check if it already exists (if we think a unique name is required)
 
 	log := r.logger.Named("CreatePolicy")
-	// Name fields is a requirement
+	// Name field is a requirement
 	if len(policyEntity.Name) == 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "policy name not provided")
 	}
@@ -330,7 +336,7 @@ func (r *rodeServer) CreatePolicy(ctx context.Context, policyEntity *pb.PolicyEn
 			Compile: false,
 			Errors:  result.Errors,
 		}
-		s, _ := status.New(codes.Internal, "failed to compile the provided policy").WithDetails(message)
+		s, _ := status.New(codes.InvalidArgument, "failed to compile the provided policy").WithDetails(message)
 		return nil, s.Err()
 	}
 

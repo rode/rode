@@ -810,8 +810,8 @@ var _ = Describe("rode server", func() {
 				validatePolicyResponse, err = rodeServer.ValidatePolicy(context.Background(), validatePolicyRequest)
 			})
 
-			It("should not throw an error", func() {
-				Expect(err).To(Not(HaveOccurred()))
+			It("should throw an error", func() {
+				Expect(err).To(HaveOccurred())
 			})
 			It("should return an unsuccessful compilation", func() {
 				Expect(validatePolicyResponse.Compile).To(BeFalse())

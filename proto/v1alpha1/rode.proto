@@ -74,7 +74,7 @@ service Rode {
   }
   rpc ValidatePolicy(ValidatePolicyRequest) returns (ValidatePolicyResponse) {
     option (google.api.http) = {
-      post: "/v1alpha1/policies/validate"
+      post: "/v1alpha1/policies:validate"
       body: "*"
     };
   }
