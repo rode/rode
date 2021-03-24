@@ -16,6 +16,7 @@ require (
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.3
+	github.com/open-policy-agent/opa v0.27.1
 	github.com/pquerna/cachecontrol v0.0.0-20201205024021-ac21108117ac // indirect
 	github.com/rode/grafeas-elasticsearch v0.4.0
 	go.uber.org/zap v1.16.0

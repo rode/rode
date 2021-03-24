@@ -14,6 +14,8 @@
     - [ListPoliciesResponse](#rode.v1alpha1.ListPoliciesResponse)
     - [Policy](#rode.v1alpha1.Policy)
     - [PolicyEntity](#rode.v1alpha1.PolicyEntity)
+    - [ValidatePolicyRequest](#rode.v1alpha1.ValidatePolicyRequest)
+    - [ValidatePolicyResponse](#rode.v1alpha1.ValidatePolicyResponse)
   
 - [proto/v1alpha1/rode.proto](#proto/v1alpha1/rode.proto)
     - [BatchCreateOccurrencesRequest](#rode.v1alpha1.BatchCreateOccurrencesRequest)
@@ -201,6 +203,38 @@
 
 
 
+
+<a name="rode.v1alpha1.ValidatePolicyRequest"></a>
+
+### ValidatePolicyRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| policy | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ValidatePolicyResponse"></a>
+
+### ValidatePolicyResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| policy | [string](#string) |  |  |
+| compile | [bool](#bool) |  |  |
+| errors | [string](#string) | repeated |  |
+
+
+
+
+
  
 
  
@@ -336,6 +370,7 @@ https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576
 | GetPolicy | [GetPolicyRequest](#rode.v1alpha1.GetPolicyRequest) | [Policy](#rode.v1alpha1.Policy) |  |
 | DeletePolicy | [DeletePolicyRequest](#rode.v1alpha1.DeletePolicyRequest) | [.google.protobuf.Empty](#google.protobuf.Empty) |  |
 | ListPolicies | [ListPoliciesRequest](#rode.v1alpha1.ListPoliciesRequest) | [ListPoliciesResponse](#rode.v1alpha1.ListPoliciesResponse) |  |
+| ValidatePolicy | [ValidatePolicyRequest](#rode.v1alpha1.ValidatePolicyRequest) | [ValidatePolicyResponse](#rode.v1alpha1.ValidatePolicyResponse) |  |
 
  
 

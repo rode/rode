@@ -47,6 +47,16 @@ message EvaluatePolicyViolation {
   bool pass = 6;
 }
 
+message ValidatePolicyRequest {
+  string policy = 1;
+}
+
+message ValidatePolicyResponse {
+  string policy = 1;
+  bool compile = 2;
+  repeated string errors = 3;
+}
+
 message GetPolicyRequest {
   string id = 1;
 }
