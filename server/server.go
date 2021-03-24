@@ -265,6 +265,23 @@ func (r *rodeServer) ListOccurrences(ctx context.Context, occurrenceRequest *pb.
 	}, nil
 }
 
+func (r *rodeServer) UpdateOccurrence(ctx context.Context, occurrenceRequest *pb.UpdateOccurrenceRequest) (*grafeas_proto.Occurrence, error) {
+	log := r.logger.Named("UpdateOccurrence")
+	log.Debug("received request", zap.Any("UpdateOccurrenceRequest", occurrenceRequest))
+
+	name := fmt.Sprintf("projects/rode/occurrences/%s", occurrenceRequest.Id)
+
+	UpdateOccurrenceResponse, err := r.grafeasCommon.UpdateOccurrence(ctx, &grafeas_proto.UpdateOccurrenceRequest{
+		Name:       name,
+		Occurrence: occurrenceRequest.Occurrence,
+		UpdateMask: occurrenceRequest.UpdateMask})
+	if err != nil {
+		log.Error("update occurrences failed", zap.Error(err))
+		return nil, status.Error(codes.Internal, "update occurrences failed")
+	}
+	return UpdateOccurrenceResponse, nil
+}
+
 func (r *rodeServer) ValidatePolicy(ctx context.Context, policy *pb.ValidatePolicyRequest) (*pb.ValidatePolicyResponse, error) {
 	log := r.logger.Named("ValidatePolicy")
 

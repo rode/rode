@@ -5,6 +5,7 @@ package v1alpha1
 import (
 	context "context"
 	empty "github.com/golang/protobuf/ptypes/empty"
+	grafeas_go_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -25,6 +26,7 @@ type RodeClient interface {
 	// List resource URI
 	ListResources(ctx context.Context, in *ListResourcesRequest, opts ...grpc.CallOption) (*ListResourcesResponse, error)
 	ListOccurrences(ctx context.Context, in *ListOccurrencesRequest, opts ...grpc.CallOption) (*ListOccurrencesResponse, error)
+	UpdateOccurrence(ctx context.Context, in *UpdateOccurrenceRequest, opts ...grpc.CallOption) (*grafeas_go_proto.Occurrence, error)
 	CreatePolicy(ctx context.Context, in *PolicyEntity, opts ...grpc.CallOption) (*Policy, error)
 	GetPolicy(ctx context.Context, in *GetPolicyRequest, opts ...grpc.CallOption) (*Policy, error)
 	DeletePolicy(ctx context.Context, in *DeletePolicyRequest, opts ...grpc.CallOption) (*empty.Empty, error)
@@ -70,6 +72,15 @@ func (c *rodeClient) ListResources(ctx context.Context, in *ListResourcesRequest
 func (c *rodeClient) ListOccurrences(ctx context.Context, in *ListOccurrencesRequest, opts ...grpc.CallOption) (*ListOccurrencesResponse, error) {
 	out := new(ListOccurrencesResponse)
 	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/ListOccurrences", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rodeClient) UpdateOccurrence(ctx context.Context, in *UpdateOccurrenceRequest, opts ...grpc.CallOption) (*grafeas_go_proto.Occurrence, error) {
+	out := new(grafeas_go_proto.Occurrence)
+	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/UpdateOccurrence", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -132,6 +143,7 @@ type RodeServer interface {
 	// List resource URI
 	ListResources(context.Context, *ListResourcesRequest) (*ListResourcesResponse, error)
 	ListOccurrences(context.Context, *ListOccurrencesRequest) (*ListOccurrencesResponse, error)
+	UpdateOccurrence(context.Context, *UpdateOccurrenceRequest) (*grafeas_go_proto.Occurrence, error)
 	CreatePolicy(context.Context, *PolicyEntity) (*Policy, error)
 	GetPolicy(context.Context, *GetPolicyRequest) (*Policy, error)
 	DeletePolicy(context.Context, *DeletePolicyRequest) (*empty.Empty, error)
@@ -155,6 +167,9 @@ func (UnimplementedRodeServer) ListResources(context.Context, *ListResourcesRequ
 }
 func (UnimplementedRodeServer) ListOccurrences(context.Context, *ListOccurrencesRequest) (*ListOccurrencesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListOccurrences not implemented")
+}
+func (UnimplementedRodeServer) UpdateOccurrence(context.Context, *UpdateOccurrenceRequest) (*grafeas_go_proto.Occurrence, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateOccurrence not implemented")
 }
 func (UnimplementedRodeServer) CreatePolicy(context.Context, *PolicyEntity) (*Policy, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreatePolicy not implemented")
@@ -252,6 +267,24 @@ func _Rode_ListOccurrences_Handler(srv interface{}, ctx context.Context, dec fun
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(RodeServer).ListOccurrences(ctx, req.(*ListOccurrencesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rode_UpdateOccurrence_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateOccurrenceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RodeServer).UpdateOccurrence(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rode.v1alpha1.Rode/UpdateOccurrence",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RodeServer).UpdateOccurrence(ctx, req.(*UpdateOccurrenceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -365,6 +398,10 @@ var _Rode_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListOccurrences",
 			Handler:    _Rode_ListOccurrences_Handler,
+		},
+		{
+			MethodName: "UpdateOccurrence",
+			Handler:    _Rode_UpdateOccurrence_Handler,
 		},
 		{
 			MethodName: "CreatePolicy",

@@ -24,6 +24,7 @@
     - [ListOccurrencesResponse](#rode.v1alpha1.ListOccurrencesResponse)
     - [ListResourcesRequest](#rode.v1alpha1.ListResourcesRequest)
     - [ListResourcesResponse](#rode.v1alpha1.ListResourcesResponse)
+    - [UpdateOccurrenceRequest](#rode.v1alpha1.UpdateOccurrenceRequest)
   
     - [Rode](#rode.v1alpha1.Rode)
   
@@ -348,6 +349,23 @@ https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576
 
 
 
+
+<a name="rode.v1alpha1.UpdateOccurrenceRequest"></a>
+
+### UpdateOccurrenceRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| occurrence | [grafeas.v1beta1.Occurrence](#grafeas.v1beta1.Occurrence) |  |  |
+| update_mask | [google.protobuf.FieldMask](#google.protobuf.FieldMask) |  |  |
+
+
+
+
+
  
 
  
@@ -366,6 +384,7 @@ https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576
 | EvaluatePolicy | [EvaluatePolicyRequest](#rode.v1alpha1.EvaluatePolicyRequest) | [EvaluatePolicyResponse](#rode.v1alpha1.EvaluatePolicyResponse) | Verify that an artifact satisfies a policy |
 | ListResources | [ListResourcesRequest](#rode.v1alpha1.ListResourcesRequest) | [ListResourcesResponse](#rode.v1alpha1.ListResourcesResponse) | List resource URI |
 | ListOccurrences | [ListOccurrencesRequest](#rode.v1alpha1.ListOccurrencesRequest) | [ListOccurrencesResponse](#rode.v1alpha1.ListOccurrencesResponse) |  |
+| UpdateOccurrence | [UpdateOccurrenceRequest](#rode.v1alpha1.UpdateOccurrenceRequest) | [.grafeas.v1beta1.Occurrence](#grafeas.v1beta1.Occurrence) |  |
 | CreatePolicy | [PolicyEntity](#rode.v1alpha1.PolicyEntity) | [Policy](#rode.v1alpha1.Policy) |  |
 | GetPolicy | [GetPolicyRequest](#rode.v1alpha1.GetPolicyRequest) | [Policy](#rode.v1alpha1.Policy) |  |
 | DeletePolicy | [DeletePolicyRequest](#rode.v1alpha1.DeletePolicyRequest) | [.google.protobuf.Empty](#google.protobuf.Empty) |  |
