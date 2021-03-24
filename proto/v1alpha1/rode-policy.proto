@@ -19,6 +19,7 @@ package rode.v1alpha1;
 option go_package = "github.com/rode/rode/proto/v1alpha1";
 
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/field_mask.proto";
 
 message EvaluatePolicyRequest {
   string policy = 1;
@@ -73,6 +74,16 @@ message ListPoliciesResponse {
   repeated Policy policies = 1;
 }
 
+message UpdatePolicyRequest {
+  // the auto-generate id of the occurrence
+  string id = 1;
+  
+  PolicyEntity policy = 2;
+
+  // The fields to update.
+  google.protobuf.FieldMask update_mask = 3;
+}
+
 message PolicyEntity {
   string name = 1;
   string description = 2;
@@ -85,7 +96,5 @@ message PolicyEntity {
 message Policy {
   // Unique autogenerate id
   string id = 1;
-  // The auto incremented version of the policy. This will auto increment on all updates
-  int32 version = 2;
   PolicyEntity policy = 3;
 }

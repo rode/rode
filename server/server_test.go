@@ -40,6 +40,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"io"
@@ -820,6 +821,57 @@ var _ = Describe("rode server", func() {
 				Expect(len(validatePolicyResponse.Errors)).To(Not(Equal(0)))
 			})
 		})
+
+		When("updating the name of a policy", func() {
+			var (
+				createPolicyRequest  *pb.PolicyEntity
+				createPolicyResponse *pb.Policy
+				updatePolicyRequest  *pb.UpdatePolicyRequest
+				updatePolicyResponse *pb.Policy
+				err                  error
+				initialPolicyName    string
+			)
+
+			BeforeEach(func() {
+				esTransport.preparedHttpResponses = []*http.Response{
+					{
+						StatusCode: http.StatusOK,
+					},
+				}
+
+				createPolicyRequest = createRandomPolicyEntity(goodPolicy)
+				createPolicyResponse, _ = rodeServer.CreatePolicy(context.Background(), createPolicyRequest)
+				esTransport.preparedHttpResponses = []*http.Response{
+					{
+						StatusCode: http.StatusOK,
+						Body:       createEsSearchResponseForPolicy([]*pb.Policy{createPolicyResponse}),
+					},
+					{
+						StatusCode: http.StatusOK,
+					},
+				}
+
+				initialPolicyName = createPolicyResponse.Policy.Name
+				updatePolicyRequest = &pb.UpdatePolicyRequest{
+					Id: createPolicyResponse.Id,
+					Policy: &pb.PolicyEntity{
+						Name: "random name",
+					},
+					UpdateMask: &fieldmaskpb.FieldMask{
+						Paths: []string{"name"},
+					},
+				}
+				updatePolicyResponse, err = rodeServer.UpdatePolicy(context.Background(), updatePolicyRequest)
+			})
+
+			It("should not throw an error", func() {
+				Expect(err).To(Not(HaveOccurred()))
+			})
+			It("should now have a new policy name", func() {
+				Expect(initialPolicyName).To(Not(Equal(updatePolicyResponse.Policy.Name)))
+			})
+		})
+
 	})
 })
 

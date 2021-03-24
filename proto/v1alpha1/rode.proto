@@ -78,6 +78,13 @@ service Rode {
       body: "*"
     };
   }
+  rpc UpdatePolicy(UpdatePolicyRequest) returns (Policy) {
+    option (google.api.http) = {
+      patch: "/v1alpha1/policies/{id}"
+      body: "policy"
+    };
+    option (google.api.method_signature) = "id,update_mask";
+  }
 }
 
 // Request to create occurrences in batch.
