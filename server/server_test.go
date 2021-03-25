@@ -681,7 +681,7 @@ var _ = Describe("rode server", func() {
 					policiesList = append(policiesList, policyResponseOne)
 					policiesList = append(policiesList, policyResponseOne)
 
-					filter = `name=="abc`
+					filter = `name=="abc"`
 					expectedQuery := &filtering.Query{
 						Term: &filtering.Term{
 							"name": "abc",
