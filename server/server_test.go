@@ -397,7 +397,7 @@ var _ = Describe("rode server", func() {
 					Expect(ok).To(BeTrue(), "Expected error to be a gRPC status")
 
 					Expect(s.Code()).To(Equal(codes.InvalidArgument))
-					Expect(s.Message()).To(ContainSubstring("Occurrence name does match"))
+					Expect(s.Message()).To(ContainSubstring("Occurrence name does not contain the occurrence id"))
 				})
 			})
 		})
