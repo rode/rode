@@ -966,16 +966,6 @@ var _ = Describe("rode server", func() {
 
 		})
 
-			It("should throw an error", func() {
-				Expect(err).To(HaveOccurred())
-			})
-			It("should return an unsuccessful compilation", func() {
-				Expect(validatePolicyResponse.Compile).To(BeFalse())
-			})
-			It("should not return an empty error array", func() {
-				Expect(len(validatePolicyResponse.Errors)).To(Not(Equal(0)))
-			})
-		})
 	})
 })
 
