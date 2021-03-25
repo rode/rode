@@ -668,7 +668,7 @@ var _ = Describe("rode server", func() {
 				Expect(policyResponseOne.Id).To(Not(Equal(policyResponseTwo.Id)))
 			})
 
-			When("attemtping to list the policies", func() {
+			When("attempting to list the policies", func() {
 				var (
 					listRequest   *pb.ListPoliciesRequest
 					listResponse  *pb.ListPoliciesResponse
@@ -681,7 +681,7 @@ var _ = Describe("rode server", func() {
 					policiesList = append(policiesList, policyResponseOne)
 					policiesList = append(policiesList, policyResponseOne)
 
-					filter = `name=="abc`
+					filter = `name=="abc"`
 					expectedQuery := &filtering.Query{
 						Term: &filtering.Term{
 							"name": "abc",
@@ -707,7 +707,13 @@ var _ = Describe("rode server", func() {
 					Expect(err).To(Not(HaveOccurred()))
 				})
 				It("should have listed 4 different policies", func() {
-					Expect(len(listResponse.Policies)).To((Equal(4)))
+					Expect(listResponse.Policies).To(HaveLen(4))
+				})
+				It("should have generated a filter query", func() {
+					actualRequest := esTransport.receivedHttpRequests[1]
+					search := readEsSearchResponse(actualRequest)
+
+					Expect(search.Query).To(Equal(expectedQuery))
 				})
 				It("should have generated a filter query", func() {
 					actualRequest := esTransport.receivedHttpRequests[1]
