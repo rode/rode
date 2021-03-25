@@ -668,7 +668,7 @@ var _ = Describe("rode server", func() {
 				Expect(policyResponseOne.Id).To(Not(Equal(policyResponseTwo.Id)))
 			})
 
-			When("attemtping to list the policies", func() {
+			When("attempting to list the policies", func() {
 				var (
 					listRequest   *pb.ListPoliciesRequest
 					listResponse  *pb.ListPoliciesResponse
