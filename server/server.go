@@ -272,19 +272,22 @@ func (r *rodeServer) UpdateOccurrence(ctx context.Context, occurrenceRequest *pb
 	name := fmt.Sprintf("projects/rode/occurrences/%s", occurrenceRequest.Id)
 
 	if occurrenceRequest.Occurrence.Name != name {
-		log.Error("occurrence name received does not match", zap.String("occurrence name", occurrenceRequest.Occurrence.Name))
-		return nil, status.Error(codes.InvalidArgument, "Occurrence name does match")
+		log.Error("Occurrence name does not contain the occurrence id", zap.String("occurrenceName", occurrenceRequest.Occurrence.Name), zap.String("id", occurrenceRequest.Id))
+		return nil, status.Error(codes.InvalidArgument, "Occurrence name does not contain the occurrence id")
 	}
 
-	UpdateOccurrenceResponse, err := r.grafeasCommon.UpdateOccurrence(ctx, &grafeas_proto.UpdateOccurrenceRequest{
+	updatedOccurrence, err := r.grafeasCommon.UpdateOccurrence(ctx, &grafeas_proto.UpdateOccurrenceRequest{
 		Name:       name,
 		Occurrence: occurrenceRequest.Occurrence,
-		UpdateMask: occurrenceRequest.UpdateMask})
+		UpdateMask: occurrenceRequest.UpdateMask,
+	})
+
 	if err != nil {
 		log.Error("update occurrences failed", zap.Error(err))
 		return nil, status.Error(codes.Internal, "update occurrences failed")
 	}
-	return UpdateOccurrenceResponse, nil
+
+	return updatedOccurrence, nil
 }
 
 func (r *rodeServer) ValidatePolicy(ctx context.Context, policy *pb.ValidatePolicyRequest) (*pb.ValidatePolicyResponse, error) {
