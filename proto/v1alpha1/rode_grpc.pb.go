@@ -30,6 +30,7 @@ type RodeClient interface {
 	DeletePolicy(ctx context.Context, in *DeletePolicyRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	ListPolicies(ctx context.Context, in *ListPoliciesRequest, opts ...grpc.CallOption) (*ListPoliciesResponse, error)
 	ValidatePolicy(ctx context.Context, in *ValidatePolicyRequest, opts ...grpc.CallOption) (*ValidatePolicyResponse, error)
+	UpdatePolicy(ctx context.Context, in *UpdatePolicyRequest, opts ...grpc.CallOption) (*Policy, error)
 }
 
 type rodeClient struct {
@@ -121,6 +122,15 @@ func (c *rodeClient) ValidatePolicy(ctx context.Context, in *ValidatePolicyReque
 	return out, nil
 }
 
+func (c *rodeClient) UpdatePolicy(ctx context.Context, in *UpdatePolicyRequest, opts ...grpc.CallOption) (*Policy, error) {
+	out := new(Policy)
+	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/UpdatePolicy", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RodeServer is the server API for Rode service.
 // All implementations must embed UnimplementedRodeServer
 // for forward compatibility
@@ -137,6 +147,7 @@ type RodeServer interface {
 	DeletePolicy(context.Context, *DeletePolicyRequest) (*empty.Empty, error)
 	ListPolicies(context.Context, *ListPoliciesRequest) (*ListPoliciesResponse, error)
 	ValidatePolicy(context.Context, *ValidatePolicyRequest) (*ValidatePolicyResponse, error)
+	UpdatePolicy(context.Context, *UpdatePolicyRequest) (*Policy, error)
 	mustEmbedUnimplementedRodeServer()
 }
 
@@ -170,6 +181,9 @@ func (UnimplementedRodeServer) ListPolicies(context.Context, *ListPoliciesReques
 }
 func (UnimplementedRodeServer) ValidatePolicy(context.Context, *ValidatePolicyRequest) (*ValidatePolicyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ValidatePolicy not implemented")
+}
+func (UnimplementedRodeServer) UpdatePolicy(context.Context, *UpdatePolicyRequest) (*Policy, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdatePolicy not implemented")
 }
 func (UnimplementedRodeServer) mustEmbedUnimplementedRodeServer() {}
 
@@ -346,6 +360,24 @@ func _Rode_ValidatePolicy_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Rode_UpdatePolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdatePolicyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RodeServer).UpdatePolicy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rode.v1alpha1.Rode/UpdatePolicy",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RodeServer).UpdatePolicy(ctx, req.(*UpdatePolicyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Rode_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "rode.v1alpha1.Rode",
 	HandlerType: (*RodeServer)(nil),
@@ -385,6 +417,10 @@ var _Rode_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ValidatePolicy",
 			Handler:    _Rode_ValidatePolicy_Handler,
+		},
+		{
+			MethodName: "UpdatePolicy",
+			Handler:    _Rode_UpdatePolicy_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
