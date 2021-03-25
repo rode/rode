@@ -19,6 +19,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"net/http"
 	"strings"
 
 	"github.com/brianvoe/gofakeit/v5"
@@ -36,17 +39,12 @@ import (
 	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	grafeas_project_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/project_go_proto"
-	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
-
-	"io"
-	"io/ioutil"
-	"net/http"
 )
 
 var _ = Describe("rode server", func() {
@@ -77,7 +75,6 @@ var _ = Describe("rode server", func() {
 	)
 
 	var (
-		log                   *zap.Logger
 		rodeServer            pb.RodeServer
 		rodeServerError       error
 		grafeasClient         *mocks.MockGrafeasClient
@@ -91,7 +88,6 @@ var _ = Describe("rode server", func() {
 	)
 
 	BeforeEach(func() {
-		log = logger.Named("rode server test")
 		mockCtrl = gomock.NewController(GinkgoT())
 		grafeasClient = mocks.NewMockGrafeasClient(mockCtrl)
 		grafeasProjectsClient = mocks.NewMockGrafeasProjectsClient(mockCtrl)
@@ -121,7 +117,7 @@ var _ = Describe("rode server", func() {
 				EXPECT().
 				GetProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(getProjectRequest))
 
-			rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer)
+			rodeServer, rodeServerError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer)
 		})
 
 		When("the rode project does not exist", func() {
@@ -142,7 +138,7 @@ var _ = Describe("rode server", func() {
 					EXPECT().
 					CreateProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(createProjectRequest))
 
-				rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer)
+				rodeServer, rodeServerError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer)
 			})
 
 			When("create project returns error from Grafeas", func() {
@@ -153,7 +149,7 @@ var _ = Describe("rode server", func() {
 				})
 
 				It("should returns error", func() {
-					rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer)
+					rodeServer, rodeServerError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer)
 
 					Expect(rodeServerError).To(HaveOccurred())
 					Expect(rodeServerError.Error()).To(ContainSubstring(createProjectError))
@@ -168,7 +164,7 @@ var _ = Describe("rode server", func() {
 				})
 
 				It("should return the Rode server", func() {
-					rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer)
+					rodeServer, rodeServerError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer)
 
 					Expect(rodeServer).ToNot(BeNil())
 					Expect(rodeServerError).ToNot(HaveOccurred())
@@ -189,11 +185,11 @@ var _ = Describe("rode server", func() {
 					EXPECT().
 					CreateProject(gomock.Any(), gomock.Any()).MaxTimes(0)
 
-				rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer)
+				rodeServer, rodeServerError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer)
 			})
 
 			It("should return the Rode server", func() {
-				rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer)
+				rodeServer, rodeServerError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer)
 
 				Expect(rodeServer).ToNot(BeNil())
 				Expect(rodeServerError).To(BeNil())
@@ -209,7 +205,7 @@ var _ = Describe("rode server", func() {
 			})
 
 			It("should return an error", func() {
-				rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer)
+				rodeServer, rodeServerError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer)
 
 				Expect(rodeServerError).To(HaveOccurred())
 				Expect(rodeServerError.Error()).To(ContainSubstring(getProjectError))
@@ -224,7 +220,7 @@ var _ = Describe("rode server", func() {
 				GetProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(getProjectRequest)).
 				Return(&grafeas_project_proto.Project{}, nil)
 
-			rodeServer, rodeServerError = NewRodeServer(log, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer)
+			rodeServer, rodeServerError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer)
 		})
 
 		When("occurrences are created", func() {
@@ -329,18 +325,21 @@ var _ = Describe("rode server", func() {
 			})
 		})
 
-		FWhen("Occurrence is updated", func() {
+		Describe("UpdateOccurrence", func() {
 			var (
-				randomOccurrence                *grafeas_proto.Occurrence
-				updateOccurrenceRequest         *pb.UpdateOccurrenceRequest
-				grafeasUpdateOccurrenceResponse *grafeas_proto.Occurrence
-				grafeasUpdateOccurrenceRequest  *grafeas_proto.UpdateOccurrenceRequest
+				actualError             error
+				response                *grafeas_go_proto.Occurrence
+				randomOccurrence        *grafeas_proto.Occurrence
+				updateOccurrenceRequest *pb.UpdateOccurrenceRequest
+				expectedResponse        *grafeas_proto.Occurrence
+				grafeasUpdateRequest    *grafeas_proto.UpdateOccurrenceRequest
 			)
 
 			BeforeEach(func() {
 				randomOccurrence = createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED)
 				occurrenceId := gofakeit.UUID()
-				randomOccurrence.Name = fmt.Sprintf("projects/rode/occurrences/%s", occurrenceId)
+				occurrenceName := fmt.Sprintf("projects/rode/occurrences/%s", occurrenceId)
+				randomOccurrence.Name = occurrenceName
 				updateOccurrenceRequest = &pb.UpdateOccurrenceRequest{
 					Id:         occurrenceId,
 					Occurrence: randomOccurrence,
@@ -348,45 +347,48 @@ var _ = Describe("rode server", func() {
 						Paths: []string{gofakeit.Word()},
 					},
 				}
-				grafeasUpdateOccurrenceResponse = createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED)
 
-			})
-
-			It("should return the updated occurrence", func() {
-
-				grafeasUpdateOccurrenceRequest = &grafeas_go_proto.UpdateOccurrenceRequest{
-					Name:       fmt.Sprintf("projects/rode/occurrences/%s", updateOccurrenceRequest.Id),
+				grafeasUpdateRequest = &grafeas_go_proto.UpdateOccurrenceRequest{
+					Name:       occurrenceName,
 					Occurrence: randomOccurrence,
 					UpdateMask: updateOccurrenceRequest.UpdateMask,
 				}
-				grafeasClient.EXPECT().UpdateOccurrence(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(grafeasUpdateOccurrenceRequest)).Return(grafeasUpdateOccurrenceResponse, nil)
-				response, err := rodeServer.UpdateOccurrence(context.Background(), updateOccurrenceRequest)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(response).To(Equal(grafeasUpdateOccurrenceResponse))
+
+				expectedResponse = createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED)
+			})
+
+			JustBeforeEach(func() {
+				response, actualError = rodeServer.UpdateOccurrence(context.Background(), updateOccurrenceRequest)
+			})
+
+			When("the occurrence is successfully updated", func() {
+				BeforeEach(func() {
+					grafeasClient.EXPECT().UpdateOccurrence(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(grafeasUpdateRequest)).Return(expectedResponse, nil)
+				})
+
+				It("should return the updated occurrence", func() {
+					Expect(actualError).ToNot(HaveOccurred())
+					Expect(response).To(Equal(expectedResponse))
+				})
 			})
 
 			When("Grafeas returns an error", func() {
+				BeforeEach(func() {
+					grafeasClient.EXPECT().UpdateOccurrence(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(grafeasUpdateRequest)).Return(nil, fmt.Errorf("error occurred"))
+				})
+
 				It("should return an error", func() {
-					grafeasUpdateOccurrenceRequest = &grafeas_go_proto.UpdateOccurrenceRequest{
-						Name:       fmt.Sprintf("projects/rode/occurrences/%s", updateOccurrenceRequest.Id),
-						Occurrence: randomOccurrence,
-						UpdateMask: updateOccurrenceRequest.UpdateMask,
-					}
-					grafeasClient.EXPECT().UpdateOccurrence(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(grafeasUpdateOccurrenceRequest)).Return(nil, fmt.Errorf("error occurred"))
-					response, err := rodeServer.UpdateOccurrence(context.Background(), updateOccurrenceRequest)
-					Expect(err).ToNot(BeNil())
+					Expect(actualError).To(HaveOccurred())
 					Expect(response).To(BeNil())
 				})
 			})
 
-			When("the Id in the UpdateOccurrenceRequest doesn't match the Id in the Name", func() {
-				var actualError error
+			When("the occurrence name doesn't contain the occurrence id", func() {
 				BeforeEach(func() {
-					_, actualError = rodeServer.UpdateOccurrence(context.Background(), updateOccurrenceRequest)
+					updateOccurrenceRequest.Id = gofakeit.UUID()
 				})
 
 				It("should return an error", func() {
-					updateOccurrenceRequest.Id = gofakeit.UUID()
 					Expect(actualError).ToNot(BeNil())
 				})
 
