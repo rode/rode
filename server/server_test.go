@@ -707,7 +707,7 @@ var _ = Describe("rode server", func() {
 					Expect(err).To(Not(HaveOccurred()))
 				})
 				It("should have listed 4 different policies", func() {
-					Expect(len(listResponse.Policies)).To((Equal(4)))
+					Expect(listResponse.Policies).To(HaveLen(4))
 				})
 				It("should have generated a filter query", func() {
 					actualRequest := esTransport.receivedHttpRequests[1]
