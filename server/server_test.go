@@ -465,7 +465,7 @@ var _ = Describe("rode server", func() {
 				It("should query the Rode occurrences index", func() {
 					actualRequest := esTransport.receivedHttpRequests[1]
 
-					Expect(actualRequest.URL.Path).To(Equal("/grafeas-v1beta1-rode-occurrences/_search"))
+					Expect(actualRequest.URL.Path).To(Equal("/grafeas-rode-occurrences/_search"))
 				})
 
 				It("should take the first 1000 matches", func() {
@@ -966,6 +966,16 @@ var _ = Describe("rode server", func() {
 
 		})
 
+			It("should throw an error", func() {
+				Expect(err).To(HaveOccurred())
+			})
+			It("should return an unsuccessful compilation", func() {
+				Expect(validatePolicyResponse.Compile).To(BeFalse())
+			})
+			It("should not return an empty error array", func() {
+				Expect(len(validatePolicyResponse.Errors)).To(Not(Equal(0)))
+			})
+		})
 	})
 })
 
