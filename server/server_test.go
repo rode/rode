@@ -953,7 +953,7 @@ var _ = Describe("rode server", func() {
 							RegoContent: uncompilablePolicy,
 						},
 						UpdateMask: &fieldmaskpb.FieldMask{
-							Paths: []string{"regoContent"},
+							Paths: []string{"rego_content"},
 						},
 					}
 					updatePolicyResponse, err = rodeServer.UpdatePolicy(context.Background(), updatePolicyRequest)
