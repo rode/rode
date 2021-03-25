@@ -33,6 +33,7 @@ import (
 	"github.com/rode/rode/opa"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	grafeas_common_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/common_go_proto"
+	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	grafeas_project_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/project_go_proto"
 	"go.uber.org/zap"
@@ -40,6 +41,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"io"
@@ -323,6 +325,75 @@ var _ = Describe("rode server", func() {
 
 					// check response
 					Expect(response).To(BeNil())
+				})
+			})
+		})
+
+		When("Occurrence is updated", func() {
+			var (
+				randomOccurrence                *grafeas_proto.Occurrence
+				updateOccurrenceRequest         *pb.UpdateOccurrenceRequest
+				grafeasUpdateOccurrenceResponse *grafeas_proto.Occurrence
+				grafeasUpdateOccurrenceRequest  *grafeas_proto.UpdateOccurrenceRequest
+			)
+
+			BeforeEach(func() {
+				randomOccurrence = createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED)
+
+				updateOccurrenceRequest = &pb.UpdateOccurrenceRequest{
+					Id:         gofakeit.UUID(),
+					Occurrence: randomOccurrence,
+					UpdateMask: &fieldmaskpb.FieldMask{
+						Paths: []string{gofakeit.Word()},
+					},
+				}
+				grafeasUpdateOccurrenceResponse = createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED)
+
+			})
+
+			It("should return the updated occurrence", func() {
+				grafeasUpdateOccurrenceRequest = &grafeas_go_proto.UpdateOccurrenceRequest{
+					Name:       fmt.Sprintf("projects/rode/occurrences/%s", updateOccurrenceRequest.Id),
+					Occurrence: randomOccurrence,
+					UpdateMask: updateOccurrenceRequest.UpdateMask,
+				}
+				grafeasClient.EXPECT().UpdateOccurrence(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(grafeasUpdateOccurrenceRequest)).Return(grafeasUpdateOccurrenceResponse, nil)
+				response, err := rodeServer.UpdateOccurrence(context.Background(), updateOccurrenceRequest)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(response).To(Equal(grafeasUpdateOccurrenceResponse))
+			})
+
+			When("Grafeas returns an error", func() {
+				It("should return an error", func() {
+					grafeasUpdateOccurrenceRequest = &grafeas_go_proto.UpdateOccurrenceRequest{
+						Name:       fmt.Sprintf("projects/rode/occurrences/%s", updateOccurrenceRequest.Id),
+						Occurrence: randomOccurrence,
+						UpdateMask: updateOccurrenceRequest.UpdateMask,
+					}
+					grafeasClient.EXPECT().UpdateOccurrence(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(grafeasUpdateOccurrenceRequest)).Return(nil, fmt.Errorf("error occurred"))
+					response, err := rodeServer.UpdateOccurrence(context.Background(), updateOccurrenceRequest)
+					Expect(err).ToNot(BeNil())
+					Expect(response).To(BeNil())
+				})
+			})
+
+			When("the Id in the UpdateOccurrenceRequest doesn't match the Id in the Name", func() {
+				var actualError error
+				BeforeEach(func() {
+					_, actualError = rodeServer.UpdateOccurrence(context.Background(), updateOccurrenceRequest)
+				})
+
+				It("should return an error", func() {
+					updateOccurrenceRequest.Id = gofakeit.UUID()
+					Expect(actualError).ToNot(BeNil())
+				})
+
+				It("should return a status code of invalid argument", func() {
+					s, ok := status.FromError(actualError)
+					Expect(ok).To(BeTrue(), "Expected error to be a gRPC status")
+
+					Expect(s.Code()).To(Equal(codes.InvalidArgument))
+					Expect(s.Message()).To(ContainSubstring("update occurrence failed"))
 				})
 			})
 		})
