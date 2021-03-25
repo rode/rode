@@ -273,7 +273,7 @@ func (r *rodeServer) UpdateOccurrence(ctx context.Context, occurrenceRequest *pb
 
 	if occurrenceRequest.Occurrence.Name != name {
 		log.Error("occurrence name received does not match", zap.String("occurrence name", occurrenceRequest.Occurrence.Name))
-		return nil, status.Error(codes.InvalidArgument, "update occurrence failed")
+		return nil, status.Error(codes.InvalidArgument, "Occurrence name does match")
 	}
 
 	UpdateOccurrenceResponse, err := r.grafeasCommon.UpdateOccurrence(ctx, &grafeas_proto.UpdateOccurrenceRequest{

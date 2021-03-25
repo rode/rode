@@ -329,7 +329,7 @@ var _ = Describe("rode server", func() {
 			})
 		})
 
-		When("Occurrence is updated", func() {
+		FWhen("Occurrence is updated", func() {
 			var (
 				randomOccurrence                *grafeas_proto.Occurrence
 				updateOccurrenceRequest         *pb.UpdateOccurrenceRequest
@@ -339,9 +339,10 @@ var _ = Describe("rode server", func() {
 
 			BeforeEach(func() {
 				randomOccurrence = createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED)
-
+				occurrenceId := gofakeit.UUID()
+				randomOccurrence.Name = fmt.Sprintf("projects/rode/occurrences/%s", occurrenceId)
 				updateOccurrenceRequest = &pb.UpdateOccurrenceRequest{
-					Id:         gofakeit.UUID(),
+					Id:         occurrenceId,
 					Occurrence: randomOccurrence,
 					UpdateMask: &fieldmaskpb.FieldMask{
 						Paths: []string{gofakeit.Word()},
@@ -352,6 +353,7 @@ var _ = Describe("rode server", func() {
 			})
 
 			It("should return the updated occurrence", func() {
+
 				grafeasUpdateOccurrenceRequest = &grafeas_go_proto.UpdateOccurrenceRequest{
 					Name:       fmt.Sprintf("projects/rode/occurrences/%s", updateOccurrenceRequest.Id),
 					Occurrence: randomOccurrence,
@@ -393,7 +395,7 @@ var _ = Describe("rode server", func() {
 					Expect(ok).To(BeTrue(), "Expected error to be a gRPC status")
 
 					Expect(s.Code()).To(Equal(codes.InvalidArgument))
-					Expect(s.Message()).To(ContainSubstring("update occurrence failed"))
+					Expect(s.Message()).To(ContainSubstring("Occurrence name does match"))
 				})
 			})
 		})
