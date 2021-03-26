@@ -742,17 +742,27 @@ var _ = Describe("rode server", func() {
 				Expect(policyResponseOne.Id).To(Not(Equal(policyResponseTwo.Id)))
 			})
 
-			When("attemtping to list the policies", func() {
+			When("attempting to list the policies", func() {
 				var (
-					listRequest  *pb.ListPoliciesRequest
-					listResponse *pb.ListPoliciesResponse
-					policiesList []*pb.Policy
-					err          error
+					listRequest   *pb.ListPoliciesRequest
+					listResponse  *pb.ListPoliciesResponse
+					policiesList  []*pb.Policy
+					err           error
+					filter        string
+					expectedQuery *filtering.Query
 				)
 				BeforeEach(func() {
 					policiesList = append(policiesList, policyResponseOne)
 					policiesList = append(policiesList, policyResponseOne)
-					listRequest = &pb.ListPoliciesRequest{}
+
+					filter = `name=="abc"`
+					expectedQuery := &filtering.Query{
+						Term: &filtering.Term{
+							"name": "abc",
+						},
+					}
+
+					listRequest = &pb.ListPoliciesRequest{Filter: filter}
 					esTransport.preparedHttpResponses = []*http.Response{
 						{
 							StatusCode: http.StatusOK,
@@ -763,13 +773,21 @@ var _ = Describe("rode server", func() {
 							Body:       createEsSearchResponseForPolicy(policiesList),
 						},
 					}
+
+					mockFilterer.EXPECT().ParseExpression(gomock.Any()).Return(expectedQuery, nil)
 					listResponse, err = rodeServer.ListPolicies(context.Background(), listRequest)
 				})
 				It("should not return an error", func() {
 					Expect(err).To(Not(HaveOccurred()))
 				})
-				It("should have created two different policies", func() {
-					Expect(len(listResponse.Policies)).To((Equal(4)))
+				It("should have listed 4 different policies", func() {
+					Expect(listResponse.Policies).To(HaveLen(4))
+				})
+				It("should have generated a filter query", func() {
+					actualRequest := esTransport.receivedHttpRequests[1]
+					search := readEsSearchResponse(actualRequest)
+
+					Expect(search.Query).To(Equal(expectedQuery))
 				})
 			})
 		})
@@ -895,6 +913,133 @@ var _ = Describe("rode server", func() {
 				Expect(len(validatePolicyResponse.Errors)).To(Not(Equal(0)))
 			})
 		})
+
+		When("updating the name of a policy", func() {
+			var (
+				createPolicyRequest  *pb.PolicyEntity
+				createPolicyResponse *pb.Policy
+				updatePolicyRequest  *pb.UpdatePolicyRequest
+				updatePolicyResponse *pb.Policy
+				err                  error
+				initialPolicyName    string
+			)
+
+			BeforeEach(func() {
+				esTransport.preparedHttpResponses = []*http.Response{
+					{
+						StatusCode: http.StatusOK,
+					},
+				}
+
+				createPolicyRequest = createRandomPolicyEntity(goodPolicy)
+				createPolicyResponse, _ = rodeServer.CreatePolicy(context.Background(), createPolicyRequest)
+				esTransport.preparedHttpResponses = []*http.Response{
+					{
+						StatusCode: http.StatusOK,
+						Body:       createEsSearchResponseForPolicy([]*pb.Policy{createPolicyResponse}),
+					},
+					{
+						StatusCode: http.StatusOK,
+					},
+				}
+
+				initialPolicyName = createPolicyResponse.Policy.Name
+				updatePolicyRequest = &pb.UpdatePolicyRequest{
+					Id: createPolicyResponse.Id,
+					Policy: &pb.PolicyEntity{
+						Name: "random name",
+					},
+					UpdateMask: &fieldmaskpb.FieldMask{
+						Paths: []string{"name"},
+					},
+				}
+				updatePolicyResponse, err = rodeServer.UpdatePolicy(context.Background(), updatePolicyRequest)
+			})
+
+			It("should not throw an error", func() {
+				Expect(err).To(Not(HaveOccurred()))
+			})
+			It("should now have a new policy name", func() {
+				Expect(initialPolicyName).To(Not(Equal(updatePolicyResponse.Policy.Name)))
+			})
+			When("the original policy does not exist", func() {
+				BeforeEach(func() {
+					esTransport.preparedHttpResponses = []*http.Response{
+						{
+							StatusCode: http.StatusOK,
+							Body:       createEsSearchResponseForPolicy([]*pb.Policy{}),
+						},
+						{
+							StatusCode: http.StatusOK,
+						},
+					}
+					updatePolicyRequest = &pb.UpdatePolicyRequest{
+						Id: gofakeit.LetterN(10),
+						Policy: &pb.PolicyEntity{
+							Name: "random name",
+						},
+						UpdateMask: &fieldmaskpb.FieldMask{
+							Paths: []string{"name"},
+						},
+					}
+					updatePolicyResponse, err = rodeServer.UpdatePolicy(context.Background(), updatePolicyRequest)
+				})
+				It("should throw an error", func() {
+					Expect(err).To(HaveOccurred())
+				})
+			})
+		})
+
+		When("updating the rego content of a policy", func() {
+			var (
+				createPolicyRequest  *pb.PolicyEntity
+				createPolicyResponse *pb.Policy
+				updatePolicyRequest  *pb.UpdatePolicyRequest
+				updatePolicyResponse *pb.Policy
+				err                  error
+			)
+
+			BeforeEach(func() {
+				esTransport.preparedHttpResponses = []*http.Response{
+					{
+						StatusCode: http.StatusOK,
+					},
+				}
+
+				createPolicyRequest = createRandomPolicyEntity(goodPolicy)
+				createPolicyResponse, _ = rodeServer.CreatePolicy(context.Background(), createPolicyRequest)
+				esTransport.preparedHttpResponses = []*http.Response{
+					{
+						StatusCode: http.StatusOK,
+						Body:       createEsSearchResponseForPolicy([]*pb.Policy{createPolicyResponse}),
+					},
+					{
+						StatusCode: http.StatusOK,
+					},
+				}
+
+			})
+			When("the policy does not compile", func() {
+				BeforeEach(func() {
+					updatePolicyRequest = &pb.UpdatePolicyRequest{
+						Id: createPolicyResponse.Id,
+						Policy: &pb.PolicyEntity{
+							RegoContent: uncompilablePolicy,
+						},
+						UpdateMask: &fieldmaskpb.FieldMask{
+							Paths: []string{"regoContent"},
+						},
+					}
+					updatePolicyResponse, err = rodeServer.UpdatePolicy(context.Background(), updatePolicyRequest)
+				})
+				It("should throw an error ", func() {
+					Expect(err).To(HaveOccurred())
+					Expect(updatePolicyResponse).To(BeNil())
+				})
+			})
+
+		})
+
 	})
 })
 

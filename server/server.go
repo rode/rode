@@ -22,7 +22,9 @@ import (
 	"io"
 
 	"github.com/elastic/go-elasticsearch/v7"
+	"github.com/gogo/protobuf/protoc-gen-gogo/generator"
 	"github.com/google/uuid"
+	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 	"github.com/rode/rode/opa"
 	pb "github.com/rode/rode/proto/v1alpha1"
@@ -30,6 +32,7 @@ import (
 	grafeas_project_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/project_go_proto"
 
 	"github.com/golang/protobuf/proto"
+	fieldmask_utils "github.com/mennanov/fieldmask-utils"
 	"github.com/open-policy-agent/opa/ast"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -366,9 +369,8 @@ func (r *rodeServer) CreatePolicy(ctx context.Context, policyEntity *pb.PolicyEn
 	}
 
 	policy := &pb.Policy{
-		Id:      uuid.New().String(),
-		Version: 1,
-		Policy:  policyEntity,
+		Id:     uuid.New().String(),
+		Policy: policyEntity,
 	}
 	str, err := protojson.MarshalOptions{EmitUnpopulated: true}.Marshal(proto.MessageV2(policy))
 	if err != nil {
@@ -402,32 +404,11 @@ func (r *rodeServer) GetPolicy(ctx context.Context, getPolicyRequest *pb.GetPoli
 	}
 
 	policy := &pb.Policy{}
-	encodedBody, requestJson := encodeRequest(search)
-	res, err := r.esClient.Search(
-		r.esClient.Search.WithContext(ctx),
-		r.esClient.Search.WithIndex(rodeElasticsearchPoliciesIndex),
-		r.esClient.Search.WithBody(encodedBody),
-		r.esClient.Search.WithSize(maxPageSize),
-	)
-	log = log.With(zap.String("request", requestJson))
 
+	_, err := r.genericGet(ctx, log, search, rodeElasticsearchPoliciesIndex, policy)
 	if err != nil {
-		return nil, createError(log, "error sending request to elasticsearch", err)
+		return nil, err
 	}
-	if res.IsError() {
-		return nil, createError(log, "error searching elasticsearch for document", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
-	}
-
-	var searchResults esSearchResponse
-	if err := decodeResponse(res.Body, &searchResults); err != nil {
-		return nil, createError(log, "error unmarshalling elasticsearch response", err)
-	}
-
-	if searchResults.Hits.Total.Value == 0 {
-		log.Debug("document not found", zap.Any("search", search))
-		return nil, status.Error(codes.NotFound, fmt.Sprintf("%T not found", policy))
-	}
-	protojson.Unmarshal(searchResults.Hits.Hits[0].Source, proto.MessageV2(policy))
 
 	return policy, nil
 
@@ -474,12 +455,25 @@ func (r *rodeServer) DeletePolicy(ctx context.Context, deletePolicyRequest *pb.D
 func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.ListPoliciesRequest) (*pb.ListPoliciesResponse, error) {
 	log := r.logger.Named("List Policies")
 
-	// filtering logic here
+	body := &esSearch{}
+	if listPoliciesRequest.Filter != "" {
+		log = log.With(zap.String("filter", listPoliciesRequest.Filter))
+		filterQuery, err := r.filterer.ParseExpression(listPoliciesRequest.Filter)
+		if err != nil {
+			return nil, createError(log, "error while parsing filter expression", err)
+		}
+
+		body.Query = filterQuery
+	}
+	encodedBody, requestJson := esutil.EncodeRequest(body)
+	log = log.With(zap.String("request", requestJson))
+	log.Debug("performing search")
 
 	var policies []*pb.Policy
 	res, err := r.esClient.Search(
 		r.esClient.Search.WithContext(ctx),
 		r.esClient.Search.WithIndex(rodeElasticsearchPoliciesIndex),
+		r.esClient.Search.WithBody(encodedBody),
 		r.esClient.Search.WithSize(maxPageSize),
 	)
 
@@ -518,10 +512,91 @@ func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.L
 	return &pb.ListPoliciesResponse{Policies: policies}, nil
 }
 
-// // Determine method for field masks
-// func (r *rodeServer) UpdatePolicy(ctx context.Context, occurrenceRequest *pb.ListOccurrencesRequest) (*pb.ListOccurrencesResponse, error) {
+// UpdatePolicy will update only the fields provided by the user
+func (r *rodeServer) UpdatePolicy(ctx context.Context, updatePolicyRequest *pb.UpdatePolicyRequest) (*pb.Policy, error) {
+	log := r.logger.Named("Update Policy")
 
-// }
+	// check if the policy exists
+	search := &esSearch{
+		Query: &filtering.Query{
+			Term: &filtering.Term{
+				"id.keyword": updatePolicyRequest.Id,
+			},
+		},
+	}
+
+	policy := &pb.Policy{}
+	targetDocumentID, err := r.genericGet(ctx, log, search, rodeElasticsearchPoliciesIndex, policy)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Debug("field masks", zap.Any("response", updatePolicyRequest.UpdateMask.Paths))
+	// if one of the fields being updated is the rego policy, revalidate the policy
+	if contains(updatePolicyRequest.UpdateMask.Paths, "regoContent") {
+		_, err = r.ValidatePolicy(ctx, &pb.ValidatePolicyRequest{Policy: updatePolicyRequest.Policy.RegoContent})
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	m, err := fieldmask_utils.MaskFromPaths(updatePolicyRequest.UpdateMask.Paths, generator.CamelCase)
+	if err != nil {
+		log.Info("errors while mapping masks", zap.Any("errors", err))
+		return policy, err
+	}
+	fieldmask_utils.StructToStruct(m, updatePolicyRequest.Policy, policy.Policy)
+
+	str, err := protojson.MarshalOptions{EmitUnpopulated: true}.Marshal(proto.MessageV2(policy))
+	if err != nil {
+		return nil, createError(log, fmt.Sprintf("error marshalling %T to json", policy), err)
+	}
+
+	res, err := r.esClient.Index(
+		rodeElasticsearchPoliciesIndex,
+		bytes.NewReader(str),
+		r.esClient.Index.WithDocumentID(targetDocumentID),
+		r.esClient.Index.WithContext(ctx),
+	)
+	if err != nil {
+		return nil, createError(log, "error sending request to elasticsearch", err)
+	}
+
+	if res.IsError() {
+		return nil, createError(log, "error indexing document in elasticsearch", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
+	}
+
+	return policy, nil
+}
+
+func (r *rodeServer) genericGet(ctx context.Context, log *zap.Logger, search *esSearch, index string, protoMessage interface{}) (string, error) {
+	encodedBody, requestJson := esutil.EncodeRequest(search)
+	log = log.With(zap.String("request", requestJson))
+
+	res, err := r.esClient.Search(
+		r.esClient.Search.WithContext(ctx),
+		r.esClient.Search.WithIndex(index),
+		r.esClient.Search.WithBody(encodedBody),
+	)
+	if err != nil {
+		return "", createError(log, "error sending request to elasticsearch", err)
+	}
+	if res.IsError() {
+		return "", createError(log, "error searching elasticsearch for document", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
+	}
+
+	var searchResults esSearchResponse
+	if err := esutil.DecodeResponse(res.Body, &searchResults); err != nil {
+		return "", createError(log, "error unmarshalling elasticsearch response", err)
+	}
+
+	if searchResults.Hits.Total.Value == 0 {
+		log.Debug("document not found", zap.Any("search", search))
+		return "", status.Error(codes.NotFound, fmt.Sprintf("%T not found", protoMessage))
+	}
+
+	return searchResults.Hits.Hits[0].ID, protojson.Unmarshal(searchResults.Hits.Hits[0].Source, proto.MessageV2(protoMessage))
+}
 
 // createError is a helper function that allows you to easily log an error and return a gRPC formatted error.
 func createError(log *zap.Logger, message string, err error, fields ...zap.Field) error {
@@ -536,4 +611,27 @@ func createError(log *zap.Logger, message string, err error, fields ...zap.Field
 
 type esDeleteResponse struct {
 	Deleted int `json:"deleted"`
+}
+
+type esIndexDocResponse struct {
+	Id      string           `json:"_id"`
+	Result  string           `json:"result"`
+	Version int              `json:"_version"`
+	Status  int              `json:"status"`
+	Error   *esIndexDocError `json:"error,omitempty"`
+}
+
+type esIndexDocError struct {
+	Type   string `json:"type"`
+	Reason string `json:"reason"`
+}
+
+// contains returns a boolean describing whether or not a string slice contains a particular string
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
 }

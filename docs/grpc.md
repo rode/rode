@@ -14,6 +14,7 @@
     - [ListPoliciesResponse](#rode.v1alpha1.ListPoliciesResponse)
     - [Policy](#rode.v1alpha1.Policy)
     - [PolicyEntity](#rode.v1alpha1.PolicyEntity)
+    - [UpdatePolicyRequest](#rode.v1alpha1.UpdatePolicyRequest)
     - [ValidatePolicyRequest](#rode.v1alpha1.ValidatePolicyRequest)
     - [ValidatePolicyResponse](#rode.v1alpha1.ValidatePolicyResponse)
   
@@ -179,7 +180,6 @@
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | id | [string](#string) |  | Unique autogenerate id |
-| version | [int32](#int32) |  | The auto incremented version of the policy. This will auto increment on all updates |
 | policy | [PolicyEntity](#rode.v1alpha1.PolicyEntity) |  |  |
 
 
@@ -199,6 +199,23 @@
 | description | [string](#string) |  |  |
 | rego_content | [string](#string) |  | The rego code for the policy represented as a string |
 | source_path | [string](#string) |  | The location of the policy stored in source control |
+
+
+
+
+
+
+<a name="rode.v1alpha1.UpdatePolicyRequest"></a>
+
+### UpdatePolicyRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  | the auto-generate id of the occurrence |
+| policy | [PolicyEntity](#rode.v1alpha1.PolicyEntity) |  |  |
+| update_mask | [google.protobuf.FieldMask](#google.protobuf.FieldMask) |  | The fields to update. |
 
 
 
@@ -390,6 +407,7 @@ https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576
 | DeletePolicy | [DeletePolicyRequest](#rode.v1alpha1.DeletePolicyRequest) | [.google.protobuf.Empty](#google.protobuf.Empty) |  |
 | ListPolicies | [ListPoliciesRequest](#rode.v1alpha1.ListPoliciesRequest) | [ListPoliciesResponse](#rode.v1alpha1.ListPoliciesResponse) |  |
 | ValidatePolicy | [ValidatePolicyRequest](#rode.v1alpha1.ValidatePolicyRequest) | [ValidatePolicyResponse](#rode.v1alpha1.ValidatePolicyResponse) |  |
+| UpdatePolicy | [UpdatePolicyRequest](#rode.v1alpha1.UpdatePolicyRequest) | [Policy](#rode.v1alpha1.Policy) |  |
 
  
 
