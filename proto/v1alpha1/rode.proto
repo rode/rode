@@ -23,6 +23,7 @@ import "google/api/client.proto";
 import "proto/v1alpha1/rode-policy.proto";
 import "proto/v1beta1/grafeas.proto";
 import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
 
 service Rode {
   // Create occurrences
@@ -49,6 +50,13 @@ service Rode {
     option (google.api.http) = {
       get: "/v1alpha1/occurrences"
     };
+  }
+  rpc UpdateOccurrence(UpdateOccurrenceRequest) returns (grafeas.v1beta1.Occurrence) {
+    option (google.api.http) = {
+      patch: "/v1alpha1/occurrences/{id}"
+      body: "occurrence"
+    };
+    option (google.api.method_signature) = "name,occurrence,update_mask";
   }
   rpc CreatePolicy(PolicyEntity) returns (Policy) {
     option (google.api.http) = {
@@ -124,4 +132,10 @@ message ListOccurrencesResponse {
   // The occurrences requested.
   repeated grafeas.v1beta1.Occurrence occurrences = 1;
   string next_page_token = 2;
+}
+
+message UpdateOccurrenceRequest {
+  string id = 1;
+  grafeas.v1beta1.Occurrence occurrence = 2;
+  google.protobuf.FieldMask update_mask = 3;
 }
