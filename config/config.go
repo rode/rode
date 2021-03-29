@@ -19,6 +19,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+
 	"github.com/coreos/go-oidc"
 )
 
@@ -60,7 +61,32 @@ type ElasticsearchConfig struct {
 	Host     string
 	Username string
 	Password string
+	Refresh  RefreshOption
 }
+
+func (c ElasticsearchConfig) IsValid() (e error) {
+	switch c.Refresh {
+	case RefreshTrue, RefreshWaitFor, RefreshFalse:
+		break
+	default:
+		return fmt.Errorf("invalid refresh option %s. valid options are \"true\", \"false\", \"wait_for\"", c.Refresh)
+	}
+
+	return nil
+}
+
+// RefreshOption is based on https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-refresh.html
+type RefreshOption string
+
+func (r RefreshOption) String() string {
+	return string(r)
+}
+
+const (
+	RefreshTrue    = "true"
+	RefreshWaitFor = "wait_for"
+	RefreshFalse   = "false"
+)
 
 func Build(name string, args []string) (*Config, error) {
 	flags := flag.NewFlagSet(name, flag.ContinueOnError)
@@ -89,12 +115,18 @@ func Build(name string, args []string) (*Config, error) {
 	flags.StringVar(&conf.Elasticsearch.Host, "elasticsearch-host", "http://elasticsearch-master:9200", "the Elasticsearch endpoint used by Grafeas")
 	flags.StringVar(&conf.Elasticsearch.Username, "elasticsearch-username", "", "username for the Grafeas Elasticsearch instance")
 	flags.StringVar(&conf.Elasticsearch.Password, "elasticsearch-password", "", "password for the Grafeas Elasticsearch instance")
+	var elasticsearchRefresh string
+	flags.StringVar(&elasticsearchRefresh, "elasticsearch-refresh", "true", "refresh controls when changes made by a request are made visible to search. Options are \"true\", \"false\", \"wait_for\"")
 
 	err := flags.Parse(args)
 	if err != nil {
 		return nil, err
 	}
 
+	conf.Elasticsearch.Refresh = RefreshOption(elasticsearchRefresh)
+	if conf.Elasticsearch.IsValid() != nil {
+		return nil, conf.Elasticsearch.IsValid()
+	}
 	if (conf.Auth.Basic.Username != "" && conf.Auth.Basic.Password == "") || (conf.Auth.Basic.Username == "" && conf.Auth.Basic.Password != "") {
 		return nil, errors.New("when using basic auth, both --basic-auth-username and --basic-auth-password must be set")
 	}
