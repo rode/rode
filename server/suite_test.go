@@ -32,7 +32,7 @@ func TestAPIs(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	logger, _ = zap.NewDevelopment()
+	logger = zap.NewNop()
 	gofakeit.Seed(time.Now().UnixNano())
 })
 
