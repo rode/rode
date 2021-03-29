@@ -5,3 +5,4 @@ rode
 coverage.txt
 .DS_Store
 .vscode/
+__debug_bin

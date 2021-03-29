@@ -508,7 +508,7 @@ func (r *rodeServer) UpdatePolicy(ctx context.Context, updatePolicyRequest *pb.U
 
 	log.Debug("field masks", zap.Any("response", updatePolicyRequest.UpdateMask.Paths))
 	// if one of the fields being updated is the rego policy, revalidate the policy
-	if contains(updatePolicyRequest.UpdateMask.Paths, "regoContent") {
+	if contains(updatePolicyRequest.UpdateMask.Paths, "rego_content") {
 		_, err = r.ValidatePolicy(ctx, &pb.ValidatePolicyRequest{Policy: updatePolicyRequest.Policy.RegoContent})
 	}
 	if err != nil {

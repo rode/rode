@@ -715,6 +715,12 @@ var _ = Describe("rode server", func() {
 
 					Expect(search.Query).To(Equal(expectedQuery))
 				})
+				It("should have generated a filter query", func() {
+					actualRequest := esTransport.receivedHttpRequests[1]
+					search := readEsSearchResponse(actualRequest)
+
+					Expect(search.Query).To(Equal(expectedQuery))
+				})
 			})
 		})
 		When("attempting to list an empty policy index", func() {
@@ -953,7 +959,7 @@ var _ = Describe("rode server", func() {
 							RegoContent: uncompilablePolicy,
 						},
 						UpdateMask: &fieldmaskpb.FieldMask{
-							Paths: []string{"regoContent"},
+							Paths: []string{"rego_content"},
 						},
 					}
 					updatePolicyResponse, err = rodeServer.UpdatePolicy(context.Background(), updatePolicyRequest)
