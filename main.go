@@ -85,7 +85,7 @@ func main() {
 		logger.Fatal("failed to create Elasticsearch client", zap.Error(err))
 	}
 
-	rodeServer, err := server.NewRodeServer(logger.Named("rode"), grafeasClientCommon, grafeasClientProjects, opaClient, esClient, filtering.NewFilterer(), c.Elasticsearch.Refresh)
+	rodeServer, err := server.NewRodeServer(logger.Named("rode"), grafeasClientCommon, grafeasClientProjects, opaClient, esClient, filtering.NewFilterer(), c.Elasticsearch)
 	if err != nil {
 		logger.Fatal("failed to create Rode server", zap.Error(err))
 	}

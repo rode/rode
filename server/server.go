@@ -57,16 +57,16 @@ func NewRodeServer(
 	opa opa.Client,
 	esClient *elasticsearch.Client,
 	filterer filtering.Filterer,
-	elasticsearchRefresh config.RefreshOption,
+	elasticsearchConfig *config.ElasticsearchConfig,
 ) (pb.RodeServer, error) {
 	rodeServer := &rodeServer{
-		logger:               logger,
-		grafeasCommon:        grafeasCommon,
-		grafeasProjects:      grafeasProjects,
-		opa:                  opa,
-		esClient:             esClient,
-		filterer:             filterer,
-		elasticsearchRefresh: elasticsearchRefresh,
+		logger:              logger,
+		grafeasCommon:       grafeasCommon,
+		grafeasProjects:     grafeasProjects,
+		opa:                 opa,
+		esClient:            esClient,
+		filterer:            filterer,
+		elasticsearchConfig: elasticsearchConfig,
 	}
 	if err := rodeServer.initialize(context.Background()); err != nil {
 		return nil, fmt.Errorf("failed to initialize rode server: %s", err)
@@ -77,13 +77,13 @@ func NewRodeServer(
 
 type rodeServer struct {
 	pb.UnimplementedRodeServer
-	logger               *zap.Logger
-	esClient             *elasticsearch.Client
-	filterer             filtering.Filterer
-	grafeasCommon        grafeas_proto.GrafeasV1Beta1Client
-	grafeasProjects      grafeas_project_proto.ProjectsClient
-	opa                  opa.Client
-	elasticsearchRefresh config.RefreshOption
+	logger              *zap.Logger
+	esClient            *elasticsearch.Client
+	filterer            filtering.Filterer
+	grafeasCommon       grafeas_proto.GrafeasV1Beta1Client
+	grafeasProjects     grafeas_project_proto.ProjectsClient
+	opa                 opa.Client
+	elasticsearchConfig *config.ElasticsearchConfig
 }
 
 func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceRequest *pb.BatchCreateOccurrencesRequest) (*pb.BatchCreateOccurrencesResponse, error) {
@@ -384,7 +384,7 @@ func (r *rodeServer) CreatePolicy(ctx context.Context, policyEntity *pb.PolicyEn
 		rodeElasticsearchPoliciesIndex,
 		bytes.NewReader(str),
 		r.esClient.Index.WithContext(ctx),
-		r.esClient.Index.WithRefresh(r.elasticsearchRefresh.String()),
+		r.esClient.Index.WithRefresh(string(r.elasticsearchConfig.Refresh.String())),
 	)
 
 	if err != nil {
@@ -437,7 +437,7 @@ func (r *rodeServer) DeletePolicy(ctx context.Context, deletePolicyRequest *pb.D
 		[]string{rodeElasticsearchPoliciesIndex},
 		encodedBody,
 		r.esClient.DeleteByQuery.WithContext(ctx),
-		r.esClient.DeleteByQuery.WithRefresh(withRefreshBool(r.elasticsearchRefresh)),
+		r.esClient.DeleteByQuery.WithRefresh(withRefreshBool(r.elasticsearchConfig.Refresh)),
 	)
 	if err != nil {
 		return nil, createError(log, "error sending request to elasticsearch", err)
@@ -563,7 +563,7 @@ func (r *rodeServer) UpdatePolicy(ctx context.Context, updatePolicyRequest *pb.U
 		bytes.NewReader(str),
 		r.esClient.Index.WithDocumentID(targetDocumentID),
 		r.esClient.Index.WithContext(ctx),
-		r.esClient.Index.WithRefresh(r.elasticsearchRefresh.String()),
+		r.esClient.Index.WithRefresh(r.elasticsearchConfig.Refresh.String()),
 	)
 	if err != nil {
 		return nil, createError(log, "error sending request to elasticsearch", err)
