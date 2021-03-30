@@ -17,11 +17,12 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"testing"
+
 	"github.com/brianvoe/gofakeit/v5"
 	"github.com/jarcoal/httpmock"
 	. "github.com/onsi/gomega"
-	"net/http"
-	"testing"
 )
 
 func TestConfig(t *testing.T) {
@@ -42,7 +43,8 @@ func TestConfig(t *testing.T) {
 					JWT:   &JWTAuthConfig{},
 				},
 				Elasticsearch: &ElasticsearchConfig{
-					Host: "http://elasticsearch-master:9200",
+					Host:    "http://elasticsearch-master:9200",
+					Refresh: "true",
 				},
 				Grafeas: &GrafeasConfig{
 					Host: "localhost:8080",
@@ -82,7 +84,8 @@ func TestConfig(t *testing.T) {
 					JWT: &JWTAuthConfig{},
 				},
 				Elasticsearch: &ElasticsearchConfig{
-					Host: "http://elasticsearch-master:9200",
+					Host:    "http://elasticsearch-master:9200",
+					Refresh: "true",
 				},
 				Grafeas: &GrafeasConfig{
 					Host: "localhost:8080",
@@ -122,7 +125,8 @@ func TestConfig(t *testing.T) {
 					Host: "localhost:8080",
 				},
 				Elasticsearch: &ElasticsearchConfig{
-					Host: "http://elasticsearch-master:9200",
+					Host:    "http://elasticsearch-master:9200",
+					Refresh: "true",
 				},
 				Opa: &OpaConfig{
 					Host: "opa.test.na:8181",
@@ -140,6 +144,11 @@ func TestConfig(t *testing.T) {
 		{
 			name:        "Elasticsearch missing password",
 			flags:       []string{"--elasticsearch-username=foo"},
+			expectError: true,
+		},
+		{
+			name:        "Elasticsearch bad refresh option",
+			flags:       []string{"--elasticsearch-refresh=foo"},
 			expectError: true,
 		},
 	} {

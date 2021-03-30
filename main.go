@@ -18,8 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/elastic/go-elasticsearch/v7"
-	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 	"log"
 	"net"
 	"net/http"
@@ -27,6 +25,9 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/elastic/go-elasticsearch/v7"
+	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 
@@ -84,7 +85,7 @@ func main() {
 		logger.Fatal("failed to create Elasticsearch client", zap.Error(err))
 	}
 
-	rodeServer, err := server.NewRodeServer(logger.Named("rode"), grafeasClientCommon, grafeasClientProjects, opaClient, esClient, filtering.NewFilterer())
+	rodeServer, err := server.NewRodeServer(logger.Named("rode"), grafeasClientCommon, grafeasClientProjects, opaClient, esClient, filtering.NewFilterer(), c.Elasticsearch)
 	if err != nil {
 		logger.Fatal("failed to create Rode server", zap.Error(err))
 	}
