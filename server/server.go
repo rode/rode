@@ -28,7 +28,6 @@ import (
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 	"github.com/rode/rode/opa"
 	pb "github.com/rode/rode/proto/v1alpha1"
-	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	grafeas_project_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/project_go_proto"
 
@@ -112,7 +111,7 @@ func (r *rodeServer) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePol
 	log.Debug("evaluate policy request received")
 
 	policy, _ := r.GetPolicy(ctx, &pb.GetPolicyRequest{Id: request.Policy})
-	// check OPA policy has been loaded
+	// check OPA policy has been loaded, using the policy id
 	err = r.opa.InitializePolicy(request.Policy, policy.Policy.RegoContent)
 	if err != nil {
 		log.Error("error checking if policy exists", zap.Error(err))
@@ -126,21 +125,9 @@ func (r *rodeServer) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePol
 		return nil, status.Error(codes.Internal, "list occurrences failed")
 	}
 	log.Debug("Occurrences found", zap.Any("occurrences", listOccurrencesResponse))
-	type Wrapper struct {
-		Input struct {
-			Occurrences []*grafeas_go_proto.Occurrence `json:"occurrences"`
-		} `json:"input"`
-	}
-	newWrapper := &Wrapper{
-		Input: struct {
-			Occurrences []*grafeas_proto.Occurrence "json:\"occurrences\""
-		}{
-			Occurrences: listOccurrencesResponse.Occurrences,
-		},
-	}
-	// json encode occurrences. list occurrences response should not generate error
-	input, _ := json.Marshal(newWrapper)
-	log.Debug("test", zap.Any("final stuf", newWrapper))
+
+	input, _ := json.Marshal(listOccurrencesResponse)
+
 	evaluatePolicyResponse := &opa.EvaluatePolicyResponse{
 		Result: &opa.EvaluatePolicyResult{
 			Pass:       false,
@@ -148,7 +135,7 @@ func (r *rodeServer) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePol
 		},
 	}
 	// evalute OPA policy
-	evaluatePolicyResponse, err = r.opa.EvaluatePolicy(request.Policy, input)
+	evaluatePolicyResponse, err = r.opa.EvaluatePolicy(policy.Policy.RegoContent, input)
 	if err != nil {
 		log.Error("evaluate OPA policy failed")
 		return nil, status.Error(codes.Internal, "evaluate OPA policy failed")

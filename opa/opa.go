@@ -129,12 +129,15 @@ func (opa *client) loadPolicy(policy string, policyData string) error {
 // EvaluatePolicy evalutes OPA policy agains provided input
 func (opa *client) EvaluatePolicy(policy string, input []byte) (*EvaluatePolicyResponse, error) {
 	log := opa.logger.Named("Evalute Policy")
+	log.Debug("Whaaaat")
+	log.Debug(policy)
 	request, err := json.Marshal(&EvalutePolicyRequest{Input: json.RawMessage(input)})
 	if err != nil {
 		log.Error("failed to encode OPA input", zap.Error(err), zap.String("input", string(input)))
 		return nil, fmt.Errorf("failed to encode OPA input: %s", err)
 	}
-	httpResponse, err := http.Post(opa.getDataQueryURL(policy), "application/json", bytes.NewReader(request))
+
+	httpResponse, err := http.Post(opa.getDataQueryURL(opa.getOpaPackagePath(policy)), "application/json", bytes.NewReader(request))
 	if err != nil {
 		log.Error("http request to OPA failed", zap.Error(err))
 		return nil, fmt.Errorf("http request to OPA failed: %s", err)
@@ -211,4 +214,19 @@ func (opa *client) getDataQueryURL(path string) string {
 		query = ""
 	}
 	return opa.getURL(fmt.Sprintf("v1/data/%s?%s", path, query))
+}
+
+func (opa *client) getOpaPackagePath(regoContent string) string {
+	// TODO implement better regex in the event that the package line is not the first line
+	// suggested regex: ^\s*package.*$
+	// ex: package abc.def.ghi
+	//re := regexp.MustCompile(`^[[:blank:]]*package.*$`)
+	//packageLine := re.FindString(regoContent)
+	packageLine := strings.Split(regoContent, "\n")[0]
+
+	// package name will be abc.def.ghi
+	packageName := strings.Split(packageLine, " ")[1]
+
+	// abc/def/ghi
+	return strings.Replace(packageName, ".", "/", -1)
 }
