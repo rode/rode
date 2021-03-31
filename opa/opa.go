@@ -21,13 +21,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"go.uber.org/zap"
 )
 
 // Client is an interface for sending requests to the OPA API
 type Client interface {
-	InitializePolicy(policy string) ClientError
+	InitializePolicy(policy string, policyData string) ClientError
 	EvaluatePolicy(policy string, input []byte) (*EvaluatePolicyResponse, error)
 }
 
@@ -87,7 +88,7 @@ func NewClient(logger *zap.Logger, host string, explainQuery bool) Client {
 }
 
 // InitializePolicy initializes OPA policy if it does not already exist
-func (opa *client) InitializePolicy(policy string) ClientError {
+func (opa *client) InitializePolicy(policy string, policyData string) ClientError {
 	_ = opa.logger.Named("Initialize Policy")
 
 	exists, err := opa.policyExists(policy)
@@ -96,8 +97,30 @@ func (opa *client) InitializePolicy(policy string) ClientError {
 	}
 
 	if !exists {
-		// TODO: fetch rules from ES
-		return NewClientError("policy does not exist", OpaClientErrorTypePolicyNotFound, nil)
+		err := opa.loadPolicy(policy, policyData)
+		if err != nil {
+			return NewClientError(err.Error(), OpaClientErrorTypeLoadPolicy, err)
+		}
+	}
+
+	return nil
+}
+
+func (opa *client) loadPolicy(policy string, policyData string) error {
+	log := opa.logger.Named("Load Policy")
+	client := &http.Client{}
+	req, err := http.NewRequest(http.MethodPut, opa.getURL(fmt.Sprintf("v1/policies/%s", policy)), strings.NewReader(policyData))
+	if err != nil {
+		return fmt.Errorf("failed to generate policy request")
+	}
+	response, err := client.Do(req)
+	if response.StatusCode == http.StatusOK {
+		log.Debug("successfully loaded policy in opa")
+		return nil
+	}
+	if err != nil {
+		log.Debug(err.Error())
+		return fmt.Errorf("failed to load the policy in opa")
 	}
 
 	return nil
