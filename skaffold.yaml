@@ -18,6 +18,8 @@ deploy:
           image: rode
         imageStrategy:
           helm: {}
+    flags:
+      install: [ "--timeout=10m" ]
 profiles:
   - name: local
     activation:

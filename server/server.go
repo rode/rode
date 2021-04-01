@@ -20,6 +20,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"net/url"
+	"strings"
 
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/gogo/protobuf/protoc-gen-gogo/generator"
@@ -46,6 +49,7 @@ import (
 const (
 	rodeElasticsearchOccurrencesAlias = "grafeas-rode-occurrences"
 	rodeElasticsearchPoliciesIndex    = "rode-v1alpha1-policies"
+	rodeElasticsearchResourceNamesIndex    = "rode-v1alpha1-resource-names"
 	maxPageSize                       = 1000
 )
 
@@ -89,6 +93,34 @@ type rodeServer struct {
 func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceRequest *pb.BatchCreateOccurrencesRequest) (*pb.BatchCreateOccurrencesResponse, error) {
 	log := r.logger.Named("BatchCreateOccurrences")
 	log.Debug("received request", zap.Any("BatchCreateOccurrencesRequest", occurrenceRequest))
+	uriMap := make(map[string]bool)
+	for _, x := range occurrenceRequest.Occurrences {
+		resourceName := strings.Split(x.Resource.Uri, "@")[0]
+		uriMap[resourceName] = true
+	}
+
+	for resName := range uriMap {
+		resBody := map[string]string{
+			"resourceName": resName,
+		}
+		body, value := encodeRequest(resBody)
+		fmt.Printf("JSON string: %s", value)
+		createDocRes, createDocErr := r.esClient.Create(rodeElasticsearchResourceNamesIndex, url.QueryEscape(resName), body)
+
+		if createDocErr != nil {
+			log.Error("failed to create documents", zap.NamedError("error", createDocErr))
+			return nil, createDocErr
+		}
+
+		if createDocRes.StatusCode != 201 && createDocRes.StatusCode != 409 {
+			body, err := ioutil.ReadAll(createDocRes.Body)
+			if err != nil {
+				return nil, err
+			}
+			log.Info("The response body", zap.String("body", string(body)))
+			return nil, fmt.Errorf("Unexpected status code while creating documents: %d", createDocRes.StatusCode)
+		}
+	}
 
 	//Forward to grafeas to create occurrence
 	occurrenceResponse, err := r.grafeasCommon.BatchCreateOccurrences(ctx, &grafeas_proto.BatchCreateOccurrencesRequest{
@@ -218,6 +250,44 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 	}, nil
 }
 
+func (r *rodeServer) ListResourceNames(ctx context.Context, request *pb.ListResourceNamesRequest) (*pb.ListResourceNamesResponse, error) {
+	log := r.logger.Named("ListResourceNames")
+	log.Debug("received request", zap.Any("ListResourceNamesRequest", request))
+
+	searchQuery := esSearch{}
+
+	encodedBody, requestJSON := encodeRequest(searchQuery)
+	log.Debug("es request payload", zap.Any("payload", requestJSON))
+	res, err := r.esClient.Search(
+		r.esClient.Search.WithContext(ctx),
+		r.esClient.Search.WithIndex(rodeElasticsearchResourceNamesIndex),
+		r.esClient.Search.WithBody(encodedBody),
+		r.esClient.Search.WithSize(maxPageSize),
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if res.IsError() {
+		return nil, fmt.Errorf("error occurred during ES query %v", res)
+	}
+
+	var searchResults esSearchResponse
+	if err := decodeResponse(res.Body, &searchResults); err != nil {
+		return nil, err
+	}
+	var resourceNames []string
+	for _, hit := range searchResults.Hits.Hits {
+		resourceNames = append(resourceNames, hit.ID)
+	}
+
+	return &pb.ListResourceNamesResponse{
+		ResourceNames:     resourceNames,
+		NextPageToken: "",
+	}, nil
+}
+
 func encodeRequest(body interface{}) (io.Reader, string) {
 	b, err := json.Marshal(body)
 	if err != nil {
@@ -251,6 +321,8 @@ func (r *rodeServer) initialize(ctx context.Context) error {
 	}
 	// Create an index for policy storage
 	r.esClient.Indices.Create(rodeElasticsearchPoliciesIndex)
+	// Create an index for resource names
+	r.esClient.Indices.Create(rodeElasticsearchResourceNamesIndex)
 
 	return nil
 }

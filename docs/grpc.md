@@ -23,6 +23,8 @@
     - [BatchCreateOccurrencesResponse](#rode.v1alpha1.BatchCreateOccurrencesResponse)
     - [ListOccurrencesRequest](#rode.v1alpha1.ListOccurrencesRequest)
     - [ListOccurrencesResponse](#rode.v1alpha1.ListOccurrencesResponse)
+    - [ListResourceNamesRequest](#rode.v1alpha1.ListResourceNamesRequest)
+    - [ListResourceNamesResponse](#rode.v1alpha1.ListResourceNamesResponse)
     - [ListResourcesRequest](#rode.v1alpha1.ListResourcesRequest)
     - [ListResourcesResponse](#rode.v1alpha1.ListResourcesResponse)
     - [UpdateOccurrenceRequest](#rode.v1alpha1.UpdateOccurrenceRequest)
@@ -333,6 +335,39 @@ Response for listing occurrences.
 
 
 
+<a name="rode.v1alpha1.ListResourceNamesRequest"></a>
+
+### ListResourceNamesRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| filter | [string](#string) |  |  |
+| page_size | [int32](#int32) |  |  |
+| page_token | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ListResourceNamesResponse"></a>
+
+### ListResourceNamesResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| resource_names | [string](#string) | repeated |  |
+| next_page_token | [string](#string) |  |  |
+
+
+
+
+
+
 <a name="rode.v1alpha1.ListResourcesRequest"></a>
 
 ### ListResourcesRequest
@@ -400,6 +435,7 @@ https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576
 | BatchCreateOccurrences | [BatchCreateOccurrencesRequest](#rode.v1alpha1.BatchCreateOccurrencesRequest) | [BatchCreateOccurrencesResponse](#rode.v1alpha1.BatchCreateOccurrencesResponse) | Create occurrences |
 | EvaluatePolicy | [EvaluatePolicyRequest](#rode.v1alpha1.EvaluatePolicyRequest) | [EvaluatePolicyResponse](#rode.v1alpha1.EvaluatePolicyResponse) | Verify that an artifact satisfies a policy |
 | ListResources | [ListResourcesRequest](#rode.v1alpha1.ListResourcesRequest) | [ListResourcesResponse](#rode.v1alpha1.ListResourcesResponse) | List resource URI |
+| ListResourceNames | [ListResourceNamesRequest](#rode.v1alpha1.ListResourceNamesRequest) | [ListResourceNamesResponse](#rode.v1alpha1.ListResourceNamesResponse) |  |
 | ListOccurrences | [ListOccurrencesRequest](#rode.v1alpha1.ListOccurrencesRequest) | [ListOccurrencesResponse](#rode.v1alpha1.ListOccurrencesResponse) |  |
 | UpdateOccurrence | [UpdateOccurrenceRequest](#rode.v1alpha1.UpdateOccurrenceRequest) | [.grafeas.v1beta1.Occurrence](#grafeas.v1beta1.Occurrence) |  |
 | CreatePolicy | [PolicyEntity](#rode.v1alpha1.PolicyEntity) | [Policy](#rode.v1alpha1.Policy) |  |
