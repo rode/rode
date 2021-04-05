@@ -25,7 +25,7 @@ type RodeClient interface {
 	EvaluatePolicy(ctx context.Context, in *EvaluatePolicyRequest, opts ...grpc.CallOption) (*EvaluatePolicyResponse, error)
 	// List resource URI
 	ListResources(ctx context.Context, in *ListResourcesRequest, opts ...grpc.CallOption) (*ListResourcesResponse, error)
-	ListResourceNames(ctx context.Context, in *ListResourceNamesRequest, opts ...grpc.CallOption) (*ListResourceNamesResponse, error)
+	ListGenericResources(ctx context.Context, in *ListGenericResourcesRequest, opts ...grpc.CallOption) (*ListGenericResourcesResponse, error)
 	ListOccurrences(ctx context.Context, in *ListOccurrencesRequest, opts ...grpc.CallOption) (*ListOccurrencesResponse, error)
 	UpdateOccurrence(ctx context.Context, in *UpdateOccurrenceRequest, opts ...grpc.CallOption) (*grafeas_go_proto.Occurrence, error)
 	CreatePolicy(ctx context.Context, in *PolicyEntity, opts ...grpc.CallOption) (*Policy, error)
@@ -71,9 +71,9 @@ func (c *rodeClient) ListResources(ctx context.Context, in *ListResourcesRequest
 	return out, nil
 }
 
-func (c *rodeClient) ListResourceNames(ctx context.Context, in *ListResourceNamesRequest, opts ...grpc.CallOption) (*ListResourceNamesResponse, error) {
-	out := new(ListResourceNamesResponse)
-	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/ListResourceNames", in, out, opts...)
+func (c *rodeClient) ListGenericResources(ctx context.Context, in *ListGenericResourcesRequest, opts ...grpc.CallOption) (*ListGenericResourcesResponse, error) {
+	out := new(ListGenericResourcesResponse)
+	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/ListGenericResources", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ type RodeServer interface {
 	EvaluatePolicy(context.Context, *EvaluatePolicyRequest) (*EvaluatePolicyResponse, error)
 	// List resource URI
 	ListResources(context.Context, *ListResourcesRequest) (*ListResourcesResponse, error)
-	ListResourceNames(context.Context, *ListResourceNamesRequest) (*ListResourceNamesResponse, error)
+	ListGenericResources(context.Context, *ListGenericResourcesRequest) (*ListGenericResourcesResponse, error)
 	ListOccurrences(context.Context, *ListOccurrencesRequest) (*ListOccurrencesResponse, error)
 	UpdateOccurrence(context.Context, *UpdateOccurrenceRequest) (*grafeas_go_proto.Occurrence, error)
 	CreatePolicy(context.Context, *PolicyEntity) (*Policy, error)
@@ -187,8 +187,8 @@ func (UnimplementedRodeServer) EvaluatePolicy(context.Context, *EvaluatePolicyRe
 func (UnimplementedRodeServer) ListResources(context.Context, *ListResourcesRequest) (*ListResourcesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListResources not implemented")
 }
-func (UnimplementedRodeServer) ListResourceNames(context.Context, *ListResourceNamesRequest) (*ListResourceNamesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListResourceNames not implemented")
+func (UnimplementedRodeServer) ListGenericResources(context.Context, *ListGenericResourcesRequest) (*ListGenericResourcesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListGenericResources not implemented")
 }
 func (UnimplementedRodeServer) ListOccurrences(context.Context, *ListOccurrencesRequest) (*ListOccurrencesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListOccurrences not implemented")
@@ -281,20 +281,20 @@ func _Rode_ListResources_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Rode_ListResourceNames_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListResourceNamesRequest)
+func _Rode_ListGenericResources_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListGenericResourcesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(RodeServer).ListResourceNames(ctx, in)
+		return srv.(RodeServer).ListGenericResources(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/rode.v1alpha1.Rode/ListResourceNames",
+		FullMethod: "/rode.v1alpha1.Rode/ListGenericResources",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RodeServer).ListResourceNames(ctx, req.(*ListResourceNamesRequest))
+		return srv.(RodeServer).ListGenericResources(ctx, req.(*ListGenericResourcesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -460,8 +460,8 @@ var _Rode_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Rode_ListResources_Handler,
 		},
 		{
-			MethodName: "ListResourceNames",
-			Handler:    _Rode_ListResourceNames_Handler,
+			MethodName: "ListGenericResources",
+			Handler:    _Rode_ListGenericResources_Handler,
 		},
 		{
 			MethodName: "ListOccurrences",

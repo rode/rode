@@ -366,9 +366,9 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 	}, nil
 }
 
-func (r *rodeServer) ListResourceNames(ctx context.Context, request *pb.ListResourceNamesRequest) (*pb.ListResourceNamesResponse, error) {
-	log := r.logger.Named("ListResourceNames")
-	log.Debug("received request", zap.Any("ListResourceNamesRequest", request))
+func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListGenericResourcesRequest) (*pb.ListGenericResourcesResponse, error) {
+	log := r.logger.Named("ListGenericResources")
+	log.Debug("received request", zap.Any("request", request))
 
 	searchQuery := esSearch{}
 
@@ -398,7 +398,7 @@ func (r *rodeServer) ListResourceNames(ctx context.Context, request *pb.ListReso
 		resourceNames = append(resourceNames, hit.ID)
 	}
 
-	return &pb.ListResourceNamesResponse{
+	return &pb.ListGenericResourcesResponse{
 		ResourceNames: resourceNames,
 		NextPageToken: "",
 	}, nil

@@ -46,9 +46,9 @@ service Rode {
       get: "/v1alpha1/resources"
     };
   }
-  rpc ListResourceNames(ListResourceNamesRequest) returns (ListResourceNamesResponse) {
+  rpc ListGenericResources(ListGenericResourcesRequest) returns (ListGenericResourcesResponse) {
     option (google.api.http) = {
-      get: "/v1alpha1/resource-names"
+      get: "/v1alpha1/generic-resources"
     };
   }
   rpc ListOccurrences(ListOccurrencesRequest) returns (ListOccurrencesResponse) {
@@ -126,13 +126,13 @@ message ListResourcesResponse {
   string next_page_token = 2;
 }
 
-message ListResourceNamesRequest {
+message ListGenericResourcesRequest {
   string filter = 1;
   int32 page_size = 2;
   string page_token = 3;
 }
 
-message ListResourceNamesResponse {
+message ListGenericResourcesResponse {
   repeated string resource_names = 1;
   string next_page_token = 2;
 }
