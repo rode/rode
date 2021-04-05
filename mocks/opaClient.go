@@ -49,15 +49,15 @@ func (mr *MockOpaClientMockRecorder) EvaluatePolicy(arg0, arg1 interface{}) *gom
 }
 
 // InitializePolicy mocks base method
-func (m *MockOpaClient) InitializePolicy(arg0 string) opa.ClientError {
+func (m *MockOpaClient) InitializePolicy(arg0, arg1 string) opa.ClientError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InitializePolicy", arg0)
+	ret := m.ctrl.Call(m, "InitializePolicy", arg0, arg1)
 	ret0, _ := ret[0].(opa.ClientError)
 	return ret0
 }
 
 // InitializePolicy indicates an expected call of InitializePolicy
-func (mr *MockOpaClientMockRecorder) InitializePolicy(arg0 interface{}) *gomock.Call {
+func (mr *MockOpaClientMockRecorder) InitializePolicy(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitializePolicy", reflect.TypeOf((*MockOpaClient)(nil).InitializePolicy), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitializePolicy", reflect.TypeOf((*MockOpaClient)(nil).InitializePolicy), arg0, arg1)
 }

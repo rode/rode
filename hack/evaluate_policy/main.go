@@ -55,7 +55,7 @@ func main() {
 
 	response, err := rode.EvaluatePolicy(context.Background(), &pb.EvaluatePolicyRequest{
 		Policy:      policy,
-		ResourceURI: resource,
+		ResourceUri: resource,
 	})
 	if err != nil {
 		log.Fatalf("attest policy returned error: %v", err)

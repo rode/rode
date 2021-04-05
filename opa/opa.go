@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"go.uber.org/zap"
@@ -114,13 +115,13 @@ func (opa *client) loadPolicy(policy string, policyData string) error {
 		return fmt.Errorf("failed to generate policy request")
 	}
 	response, err := client.Do(req)
+	if err != nil {
+		log.Error("load policy error", zap.Error(err), zap.String("input", string(policyData)))
+		return fmt.Errorf("failed to load the policy in opa")
+	}
+
 	if response.StatusCode == http.StatusOK {
 		log.Debug("successfully loaded policy in opa")
-		return nil
-	}
-	if err != nil {
-		log.Debug(err.Error())
-		return fmt.Errorf("failed to load the policy in opa")
 	}
 
 	return nil
@@ -129,8 +130,7 @@ func (opa *client) loadPolicy(policy string, policyData string) error {
 // EvaluatePolicy evalutes OPA policy agains provided input
 func (opa *client) EvaluatePolicy(policy string, input []byte) (*EvaluatePolicyResponse, error) {
 	log := opa.logger.Named("Evalute Policy")
-	log.Debug("Whaaaat")
-	log.Debug(policy)
+
 	request, err := json.Marshal(&EvalutePolicyRequest{Input: json.RawMessage(input)})
 	if err != nil {
 		log.Error("failed to encode OPA input", zap.Error(err), zap.String("input", string(input)))
@@ -220,9 +220,8 @@ func (opa *client) getOpaPackagePath(regoContent string) string {
 	// TODO implement better regex in the event that the package line is not the first line
 	// suggested regex: ^\s*package.*$
 	// ex: package abc.def.ghi
-	//re := regexp.MustCompile(`^[[:blank:]]*package.*$`)
-	//packageLine := re.FindString(regoContent)
-	packageLine := strings.Split(regoContent, "\n")[0]
+	re := regexp.MustCompile(`(?m)^[[:blank:]]*(package.*$)`)
+	packageLine := re.FindAllStringSubmatch(string(regoContent), -1)[0][1]
 
 	// package name will be abc.def.ghi
 	packageName := strings.Split(packageLine, " ")[1]

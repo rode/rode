@@ -53,6 +53,48 @@ var _ = Describe("rode server", func() {
 		createProjectError = "CREATE_PROJECT_ERROR"
 		getProjectError    = "GET_PROJECT_ERROR"
 		goodPolicy         = `
+		package harborfail
+		pass = true {
+				count(violation_count) == 0
+		}
+		violation_count[v] {
+				violations[v].pass == false
+		}
+		#######################################################################################
+		note_name_dne[o]{
+			m := input.occurrences
+			#trace(sprintf("this %v",[count({x | m[x]; f(m[x]) })]))
+			o = count({x | m[x]; f(m[x]) })
+		}
+		f(x) = true { x.note_name == "not this" }
+		# No occurrence should be missing a note name
+		violations[result] {
+			result = {
+				"pass": note_name_dne[i] == 0,
+				"id": "note_names_exist",
+				"name": "Occurrences containing note names",
+				"description": "Verify that all occurrences contain a note name",
+				"message": sprintf("found %v occurrences with missing note names", [note_name_dne[i]]),
+			}
+		}
+		###################################################################################
+		uses_gcr[o]{
+			m := input.occurrences
+			#trace(sprintf("this %v",[count({x | m[x]; f(m[x]) })]))
+			o = count({x | m[x]; g(m[x]) })
+		}
+		g(x) = true { contains(x.resource.uri, "gcr.io") }
+		# All occurrences should have a resource uri containing a gcr endpoint
+		violations[result] {
+			result = {
+				"pass": uses_gcr[i] == 0,
+				"id": "uses_gcr",
+				"name": "Occurrences use GCR URIs",
+				"description": "Verify that all occurrences contain a resource uri from gcr",
+				"message": sprintf("found %v occurrences with non gcr resource uris", [uses_gcr[i]]),
+			}
+		}`
+		compilablePolicyMissingRodeFields = `
 		package play
 		default hello = false
 		hello {
@@ -418,13 +460,17 @@ var _ = Describe("rode server", func() {
 
 			BeforeEach(func() {
 				resourceURI = gofakeit.URL()
-				policy = gofakeit.Word()
+				policy = goodPolicy
+				occurrences := []*grafeas_proto.Occurrence{
+					createRandomOccurrence(grafeas_common_proto.NoteKind_VULNERABILITY),
+					createRandomOccurrence(grafeas_common_proto.NoteKind_ATTESTATION),
+				}
 				listOccurrencesRequest = &grafeas_proto.ListOccurrencesRequest{
 					Parent: "projects/rode",
 					Filter: fmt.Sprintf(`"resource.uri" == "%s"`, resourceURI),
 				}
 				evaluatePolicyRequest = &pb.EvaluatePolicyRequest{
-					ResourceURI: resourceURI,
+					ResourceUri: resourceURI,
 					Policy:      policy,
 				}
 				opaEvaluatePolicyResponse = &opa.EvaluatePolicyResponse{
@@ -432,6 +478,24 @@ var _ = Describe("rode server", func() {
 						Pass: false,
 					},
 					Explanation: &[]string{},
+				}
+				createPolicyRequest := createRandomPolicyEntity(goodPolicy)
+				esTransport.preparedHttpResponses = []*http.Response{
+					{
+						StatusCode: http.StatusOK,
+					},
+				}
+				createPolicyResponse, _ := rodeServer.CreatePolicy(context.Background(), createPolicyRequest)
+				esTransport.preparedHttpResponses = []*http.Response{
+
+					{
+						StatusCode: http.StatusOK,
+						Body:       createEsSearchResponseForPolicy([]*pb.Policy{createPolicyResponse}),
+					},
+					{
+						StatusCode: http.StatusOK,
+						Body:       createEsSearchResponse(occurrences),
+					},
 				}
 			})
 
@@ -441,7 +505,7 @@ var _ = Describe("rode server", func() {
 				opaClient.EXPECT().EvaluatePolicy(gomock.Any(), gomock.Any()).AnyTimes().Return(opaEvaluatePolicyResponse, nil)
 
 				// expect OPA initialize policy call
-				opaClient.EXPECT().InitializePolicy(policy).Return(nil)
+				opaClient.EXPECT().InitializePolicy(policy, goodPolicy).Return(nil)
 
 				_, _ = rodeServer.EvaluatePolicy(context.Background(), evaluatePolicyRequest)
 			})
@@ -449,7 +513,7 @@ var _ = Describe("rode server", func() {
 			When("OPA policy initializes", func() {
 
 				BeforeEach(func() {
-					opaClient.EXPECT().InitializePolicy(gomock.Any()).AnyTimes().Return(nil)
+					opaClient.EXPECT().InitializePolicy(gomock.Any(), goodPolicy).AnyTimes().Return(nil)
 				})
 
 				It("should list Grafeas occurrences", func() {
@@ -504,7 +568,7 @@ var _ = Describe("rode server", func() {
 
 			When("OPA policy is not found", func() {
 				It("should return an error", func() {
-					opaClient.EXPECT().InitializePolicy(gomock.Any()).Return(opa.NewClientError("policy not found", opa.OpaClientErrorTypePolicyNotFound, fmt.Errorf("es search result empty")))
+					opaClient.EXPECT().InitializePolicy(gomock.Any(), goodPolicy).Return(opa.NewClientError("policy not found", opa.OpaClientErrorTypePolicyNotFound, fmt.Errorf("es search result empty")))
 
 					_, evaluatePolicyError := rodeServer.EvaluatePolicy(context.Background(), evaluatePolicyRequest)
 					Expect(evaluatePolicyError).To(HaveOccurred())
@@ -865,6 +929,23 @@ var _ = Describe("rode server", func() {
 				Expect(err).To(HaveOccurred())
 			})
 		})
+		When("creating an compilable policy with missing Rode Requirements", func() {
+			var (
+				policyEntity   *pb.PolicyEntity
+				policyResponse *pb.Policy
+				err            error
+			)
+
+			BeforeEach(func() {
+				policyEntity = createRandomPolicyEntity(compilablePolicyMissingRodeFields)
+				policyResponse, err = rodeServer.CreatePolicy(context.Background(), policyEntity)
+			})
+
+			It("should throw a compilation error", func() {
+				Expect(policyResponse).To(BeNil())
+				Expect(err).To(HaveOccurred())
+			})
+		})
 		When("validating a good policy", func() {
 			var (
 				validatePolicyRequest  *pb.ValidatePolicyRequest
@@ -1148,6 +1229,9 @@ func createEsSearchResponse(occurrences []*grafeas_proto.Occurrence) io.ReadClos
 
 	response := &esSearchResponse{
 		Hits: &esSearchResponseHits{
+			Total: &esSearchResponseTotal{
+				Value: len(occurrences),
+			},
 			Hits: occurrenceHits,
 		},
 		Took: gofakeit.Number(1, 10),
