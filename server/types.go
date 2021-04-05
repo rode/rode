@@ -53,7 +53,41 @@ type esSearchResponseHit struct {
 	Sort       []interface{}   `json:"sort"`
 }
 
-type esMGetResponse struct {
+type esMgetDocument struct {
 	ID         string          `json:"_id"`
 	Found      bool            `json:"found"`
+}
+
+type esMgetResponse struct {
+	Docs []esMgetDocument `json:"docs"`
+}
+
+type esBulkQueryFragment struct {
+	Create *esBulkQueryCreateFragment `json:"create"`
+}
+
+type esBulkQueryCreateFragment struct {
+	Id string `json:"_id"`
+}
+
+type esBulkResponse struct {
+	Items  []*esBulkResponseActionItem `json:"items"`
+	Errors bool                        `json:"errors"`
+}
+
+type esBulkResponseActionItem struct {
+	Create *esBulkResponseItem `json:"create,omitempty"`
+}
+
+type esBulkResponseItem struct {
+	Id      string                   `json:"_id"`
+	Result  string                   `json:"result"`
+	Version int                      `json:"_version"`
+	Status  int                      `json:"status"`
+	Error   *esBulkResponseItemError `json:"error,omitempty"`
+}
+
+type esBulkResponseItemError struct {
+	Type   string `json:"type"`
+	Reason string `json:"reason"`
 }

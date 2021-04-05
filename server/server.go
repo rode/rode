@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 
@@ -90,155 +89,116 @@ type rodeServer struct {
 	elasticsearchConfig *config.ElasticsearchConfig
 }
 
-type docsResponse struct {
-	Docs []esMGetResponse `json:"docs"`
-}
+func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrenceRequest *pb.BatchCreateOccurrencesRequest) error {
+	log := r.logger.Named("batchCreateGenericResources")
 
-type esBulkQueryFragment struct {
-	Create *esBulkQueryCreateFragment `json:"create"`
-}
+	resources := map[string]bool{}
+	var resourceNames []string
+	for _, x := range occurrenceRequest.Occurrences {
+		resourceName := strings.Split(x.Resource.Uri, "@")[0]
+		if _, ok := resources[resourceName]; ok {
+			continue
+		}
+		resources[resourceName] = true
+		resourceNames = append(resourceNames, resourceName)
+	}
 
-type esBulkQueryCreateFragment struct {
-	Id string `json:"_id"`
-}
+	mgetBody, _ := encodeRequest(map[string]interface{}{
+		"ids": resourceNames,
+	})
 
-type esBulkResponse struct {
-	Items  []*esBulkResponseItem `json:"items"`
-	Errors bool				     `json:"errors"`
-}
+	response, err := r.esClient.Mget(mgetBody, r.esClient.Mget.WithContext(ctx), r.esClient.Mget.WithIndex(rodeElasticsearchResourceNamesIndex))
+	if err != nil {
+		log.Error("failed to mget documents", zap.NamedError("error", err))
+		return err
+	}
+	if response.IsError() {
+		return fmt.Errorf("unexpected status code from mget request: %d", response.StatusCode)
+	}
+	mGetResponse := esMgetResponse{}
+	if err := decodeResponse(response.Body, &mGetResponse); err != nil {
+		return err
+	}
 
-type esBulkResponseItem struct {
-	Create *esCreateDocResponse `json:"create,omitempty"`
-}
+	var body bytes.Buffer
+	for i := range resourceNames {
+		resourceName := resourceNames[i]
+		existingDocument := mGetResponse.Docs[i]
+		if existingDocument.Found {
+			log.Debug("skipping resource creation because it already exists", zap.String("resourceName", resourceName))
+			continue
+		}
 
-type esCreateDocResponse struct {
-	Id      string           `json:"_id"`
-	Result  string           `json:"result"`
-	Version int              `json:"_version"`
-	Status  int              `json:"status"`
-	Error   *esCreateDocError `json:"error,omitempty"`
-}
+		log.Debug("Adding resource to bulk request", zap.String("resourceName", resourceName))
 
-type esCreateDocError struct {
-	Type   string `json:"type"`
-	Reason string `json:"reason"`
+		metadata, _ := json.Marshal(esBulkQueryFragment{
+			Create: &esBulkQueryCreateFragment{
+				Id: resourceName,
+			},
+		})
+		metadata = append(metadata, "\n"...)
+
+		data, _ := json.Marshal(map[string]string{
+			"resourceName": resourceName,
+		})
+		data = append(data, "\n"...)
+
+		body.Grow(len(metadata) + len(data))
+		body.Write(metadata)
+		body.Write(data)
+	}
+
+	// no new generic resources to create
+	if body.Len() == 0 {
+		return nil
+	}
+
+	response, err = r.esClient.Bulk(
+		bytes.NewReader(body.Bytes()),
+		r.esClient.Bulk.WithContext(ctx),
+		r.esClient.Bulk.WithRefresh(r.elasticsearchConfig.Refresh.String()),
+		r.esClient.Bulk.WithIndex(rodeElasticsearchResourceNamesIndex))
+
+	if err != nil {
+		log.Error("failed to create generic resources", zap.Error(err))
+		return err
+	}
+
+	if response.IsError() {
+		return fmt.Errorf("unexpected status code while creating generic resources: %d", response.StatusCode)
+	}
+
+	bulkResponse := &esBulkResponse{}
+	err = esutil.DecodeResponse(response.Body, bulkResponse)
+	if err != nil {
+		return err
+	}
+
+	var errors []error
+	for i := range bulkResponse.Items {
+		item := bulkResponse.Items[i].Create
+		if item.Error != nil && item.Status != http.StatusConflict {
+			itemError := fmt.Errorf("error creating generic resource [%d] %s: %s", item.Status, item.Error.Type, item.Error.Reason)
+			errors = append(errors, itemError)
+		}
+	}
+
+	if len(errors) > 0 {
+		log.Error("Failed to create all resources", zap.Any("errors", errors))
+		return status.Errorf(codes.Internal, "Failed to create all resources: %v", errors)
+	}
+
+	return nil
 }
 
 func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceRequest *pb.BatchCreateOccurrencesRequest) (*pb.BatchCreateOccurrencesResponse, error) {
 	log := r.logger.Named("BatchCreateOccurrences")
 	log.Debug("received request", zap.Any("BatchCreateOccurrencesRequest", occurrenceRequest))
-	uriMap := make(map[string]bool)
-	for _, x := range occurrenceRequest.Occurrences {
-		resourceName := strings.Split(x.Resource.Uri, "@")[0]
-		uriMap[resourceName] = true
-	}
-	var resNames []string
-	for resName := range uriMap {
-		resNames = append(resNames, resName)
-	}
 
-	docsReqBody, value := encodeRequest(map[string]interface{}{
-		"ids": resNames,
-	})
-
-	log.Info("printing value of encodeRequest", zap.String("value", string(value)))
-	getDocsRes, err := r.esClient.Mget(docsReqBody, r.esClient.Mget.WithContext(ctx), r.esClient.Mget.WithIndex(rodeElasticsearchResourceNamesIndex))
-
-	if err != nil {
-		log.Error("failed to get documents", zap.NamedError("error", err))
+	if err := r.batchCreateGenericResources(ctx, occurrenceRequest); err != nil {
 		return nil, err
 	}
-	if getDocsRes.IsError() {
-		return nil, fmt.Errorf("Unexpected status code while getting documents: %d", getDocsRes.StatusCode)
-	}
-	docs := docsResponse{}
-	if err := decodeResponse(getDocsRes.Body, &docs); err != nil {
-		return nil, err
-	}
-	fmt.Printf("docs: %v", docs)
 
-
-
-	var body bytes.Buffer
-	for resName := range uriMap {
-		docIdCheck := false
-
-		resBody := map[string]string{
-			"resourceName": resName,
-		}
-		fmt.Printf("JSON string: %s", value)
-		for _, docIds := range docs.Docs {
-
-			if docIds.Found && docIds.ID == resName {
-				log.Info("in comparison ", zap.String("resName", string(resName)))
-				log.Info("in comparison ", zap.String("docId.ID", string(docIds.ID)))
-				docIdCheck = true
-			}
-		}
-		if docIdCheck {
-			log.Info("skipping resource", zap.String("resName", string(resName)))
-			continue
-		}
-
-		createMetadata := &esBulkQueryFragment{
-			Create: &esBulkQueryCreateFragment{
-				Id: resName,
-			},
-		}
-
-		metadata, _ := json.Marshal(createMetadata)
-		metadata = append(metadata, "\n"...)
-
-		name, _ := json.Marshal(resBody)
-		dataBytes := append(name, "\n"...)
-
-		body.Grow(len(metadata) + len(dataBytes))
-		body.Write(metadata)
-		body.Write(dataBytes)
-	}
-	if body.Len() > 0 {
-		createDocRes, createDocErr := r.esClient.Bulk(
-			bytes.NewReader(body.Bytes()),
-			r.esClient.Bulk.WithContext(ctx),
-			r.esClient.Bulk.WithRefresh(string(r.elasticsearchConfig.Refresh.String())),
-			r.esClient.Bulk.WithIndex(rodeElasticsearchResourceNamesIndex))
-
-		if createDocErr != nil {
-			log.Error("failed to create documents", zap.NamedError("error", createDocErr))
-			return nil, createDocErr
-		}
-
-		if createDocRes.IsError() {
-			body, err := ioutil.ReadAll(createDocRes.Body)
-			if err != nil {
-				return nil, err
-			}
-			log.Info("The response body", zap.String("body", string(body)))
-			return nil, fmt.Errorf("Unexpected status code while creating documents: %d", createDocRes.StatusCode)
-		}
-
-		response := &esBulkResponse{}
-		err = esutil.DecodeResponse(createDocRes.Body, response)
-		if err != nil {
-			return nil, err
-		}
-		var errors []error
-		if response.Errors {
-			for _, item := range response.Items {
-				if item.Create.Error != nil && item.Create.Status != http.StatusConflict {
-					itemError := fmt.Errorf( "[%d] %s: %s", item.Create.Status, item.Create.Error.Type, item.Create.Error.Reason)
-					log.Error("Error creating resources", zap.Error(itemError))
-					errors = append(errors, itemError)
-				}
-			}
-			if len(errors) > 0 {
-				return nil, status.Errorf(codes.Internal, "Failed to create all resources: %v", errors)
-			}
-		}
-
-		//fmt.Printf("bulk response: %v", response)
-	}
-	//Forward to grafeas to create occurrence
 	occurrenceResponse, err := r.grafeasCommon.BatchCreateOccurrences(ctx, &grafeas_proto.BatchCreateOccurrencesRequest{
 		Parent:      "projects/rode",
 		Occurrences: occurrenceRequest.GetOccurrences(),
