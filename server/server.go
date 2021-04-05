@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/url"
+	"net/http"
 	"strings"
 
 	"github.com/elastic/go-elasticsearch/v7"
@@ -47,10 +47,10 @@ import (
 )
 
 const (
-	rodeElasticsearchOccurrencesAlias = "grafeas-rode-occurrences"
-	rodeElasticsearchPoliciesIndex    = "rode-v1alpha1-policies"
-	rodeElasticsearchResourceNamesIndex    = "rode-v1alpha1-resource-names"
-	maxPageSize                       = 1000
+	rodeElasticsearchOccurrencesAlias   = "grafeas-rode-occurrences"
+	rodeElasticsearchPoliciesIndex      = "rode-v1alpha1-policies"
+	rodeElasticsearchResourceNamesIndex = "rode-v1alpha1-resource-names"
+	maxPageSize                         = 1000
 )
 
 // NewRodeServer constructor for rodeServer
@@ -90,6 +90,40 @@ type rodeServer struct {
 	elasticsearchConfig *config.ElasticsearchConfig
 }
 
+type docsResponse struct {
+	Docs []esMGetResponse `json:"docs"`
+}
+
+type esBulkQueryFragment struct {
+	Create *esBulkQueryCreateFragment `json:"create"`
+}
+
+type esBulkQueryCreateFragment struct {
+	Id string `json:"_id"`
+}
+
+type esBulkResponse struct {
+	Items  []*esBulkResponseItem `json:"items"`
+	Errors bool				     `json:"errors"`
+}
+
+type esBulkResponseItem struct {
+	Create *esCreateDocResponse `json:"create,omitempty"`
+}
+
+type esCreateDocResponse struct {
+	Id      string           `json:"_id"`
+	Result  string           `json:"result"`
+	Version int              `json:"_version"`
+	Status  int              `json:"status"`
+	Error   *esCreateDocError `json:"error,omitempty"`
+}
+
+type esCreateDocError struct {
+	Type   string `json:"type"`
+	Reason string `json:"reason"`
+}
+
 func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceRequest *pb.BatchCreateOccurrencesRequest) (*pb.BatchCreateOccurrencesResponse, error) {
 	log := r.logger.Named("BatchCreateOccurrences")
 	log.Debug("received request", zap.Any("BatchCreateOccurrencesRequest", occurrenceRequest))
@@ -98,21 +132,83 @@ func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceReque
 		resourceName := strings.Split(x.Resource.Uri, "@")[0]
 		uriMap[resourceName] = true
 	}
-
+	var resNames []string
 	for resName := range uriMap {
+		resNames = append(resNames, resName)
+	}
+
+	docsReqBody, value := encodeRequest(map[string]interface{}{
+		"ids": resNames,
+	})
+
+	log.Info("printing value of encodeRequest", zap.String("value", string(value)))
+	getDocsRes, err := r.esClient.Mget(docsReqBody, r.esClient.Mget.WithContext(ctx), r.esClient.Mget.WithIndex(rodeElasticsearchResourceNamesIndex))
+
+	if err != nil {
+		log.Error("failed to get documents", zap.NamedError("error", err))
+		return nil, err
+	}
+	if getDocsRes.IsError() {
+		return nil, fmt.Errorf("Unexpected status code while getting documents: %d", getDocsRes.StatusCode)
+	}
+	docs := docsResponse{}
+	if err := decodeResponse(getDocsRes.Body, &docs); err != nil {
+		return nil, err
+	}
+	fmt.Printf("docs: %v", docs)
+
+
+
+	var body bytes.Buffer
+	for resName := range uriMap {
+		docIdCheck := false
+
 		resBody := map[string]string{
 			"resourceName": resName,
 		}
-		body, value := encodeRequest(resBody)
 		fmt.Printf("JSON string: %s", value)
-		createDocRes, createDocErr := r.esClient.Create(rodeElasticsearchResourceNamesIndex, url.QueryEscape(resName), body)
+		for _, docIds := range docs.Docs {
+
+			if docIds.Found && docIds.ID == resName {
+				log.Info("in comparison ", zap.String("resName", string(resName)))
+				log.Info("in comparison ", zap.String("docId.ID", string(docIds.ID)))
+				docIdCheck = true
+			}
+		}
+		if docIdCheck {
+			log.Info("skipping resource", zap.String("resName", string(resName)))
+			continue
+		}
+
+		createMetadata := &esBulkQueryFragment{
+			Create: &esBulkQueryCreateFragment{
+				Id: resName,
+			},
+		}
+
+		metadata, _ := json.Marshal(createMetadata)
+		metadata = append(metadata, "\n"...)
+
+		name, _ := json.Marshal(resBody)
+		dataBytes := append(name, "\n"...)
+
+		body.Grow(len(metadata) + len(dataBytes))
+		body.Write(metadata)
+		body.Write(dataBytes)
+	}
+	if body.Len() > 0 {
+		createDocRes, createDocErr := r.esClient.Bulk(
+			bytes.NewReader(body.Bytes()),
+			r.esClient.Bulk.WithContext(ctx),
+			r.esClient.Bulk.WithRefresh(string(r.elasticsearchConfig.Refresh.String())),
+			r.esClient.Bulk.WithIndex(rodeElasticsearchResourceNamesIndex))
 
 		if createDocErr != nil {
 			log.Error("failed to create documents", zap.NamedError("error", createDocErr))
 			return nil, createDocErr
 		}
 
-		if createDocRes.StatusCode != 201 && createDocRes.StatusCode != 409 {
+		if createDocRes.IsError() {
 			body, err := ioutil.ReadAll(createDocRes.Body)
 			if err != nil {
 				return nil, err
@@ -120,8 +216,28 @@ func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceReque
 			log.Info("The response body", zap.String("body", string(body)))
 			return nil, fmt.Errorf("Unexpected status code while creating documents: %d", createDocRes.StatusCode)
 		}
-	}
 
+		response := &esBulkResponse{}
+		err = esutil.DecodeResponse(createDocRes.Body, response)
+		if err != nil {
+			return nil, err
+		}
+		var errors []error
+		if response.Errors {
+			for _, item := range response.Items {
+				if item.Create.Error != nil && item.Create.Status != http.StatusConflict {
+					itemError := fmt.Errorf( "[%d] %s: %s", item.Create.Status, item.Create.Error.Type, item.Create.Error.Reason)
+					log.Error("Error creating resources", zap.Error(itemError))
+					errors = append(errors, itemError)
+				}
+			}
+			if len(errors) > 0 {
+				return nil, status.Errorf(codes.Internal, "Failed to create all resources: %v", errors)
+			}
+		}
+
+		//fmt.Printf("bulk response: %v", response)
+	}
 	//Forward to grafeas to create occurrence
 	occurrenceResponse, err := r.grafeasCommon.BatchCreateOccurrences(ctx, &grafeas_proto.BatchCreateOccurrencesRequest{
 		Parent:      "projects/rode",
@@ -283,7 +399,7 @@ func (r *rodeServer) ListResourceNames(ctx context.Context, request *pb.ListReso
 	}
 
 	return &pb.ListResourceNamesResponse{
-		ResourceNames:     resourceNames,
+		ResourceNames: resourceNames,
 		NextPageToken: "",
 	}, nil
 }

@@ -52,3 +52,8 @@ type esSearchResponseHit struct {
 	Highlights json.RawMessage `json:"highlight"`
 	Sort       []interface{}   `json:"sort"`
 }
+
+type esMGetResponse struct {
+	ID         string          `json:"_id"`
+	Found      bool            `json:"found"`
+}
