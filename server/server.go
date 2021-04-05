@@ -46,10 +46,10 @@ import (
 )
 
 const (
-	rodeElasticsearchOccurrencesAlias   = "grafeas-rode-occurrences"
-	rodeElasticsearchPoliciesIndex      = "rode-v1alpha1-policies"
-	rodeElasticsearchResourceNamesIndex = "rode-v1alpha1-generic-resources"
-	maxPageSize                         = 1000
+	rodeElasticsearchOccurrencesAlias      = "grafeas-rode-occurrences"
+	rodeElasticsearchPoliciesIndex         = "rode-v1alpha1-policies"
+	rodeElasticsearchGenericResourcesIndex = "rode-v1alpha1-generic-resources"
+	maxPageSize                            = 1000
 )
 
 // NewRodeServer constructor for rodeServer
@@ -92,14 +92,14 @@ type rodeServer struct {
 func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrenceRequest *pb.BatchCreateOccurrencesRequest) error {
 	log := r.logger.Named("batchCreateGenericResources")
 
-	resources := map[string]bool{}
+	visitedResources := map[string]bool{}
 	var resourceNames []string
 	for _, x := range occurrenceRequest.Occurrences {
 		resourceName := strings.Split(x.Resource.Uri, "@")[0]
-		if _, ok := resources[resourceName]; ok {
+		if _, ok := visitedResources[resourceName]; ok {
 			continue
 		}
-		resources[resourceName] = true
+		visitedResources[resourceName] = true
 		resourceNames = append(resourceNames, resourceName)
 	}
 
@@ -107,7 +107,7 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 		"ids": resourceNames,
 	})
 
-	response, err := r.esClient.Mget(mgetBody, r.esClient.Mget.WithContext(ctx), r.esClient.Mget.WithIndex(rodeElasticsearchResourceNamesIndex))
+	response, err := r.esClient.Mget(mgetBody, r.esClient.Mget.WithContext(ctx), r.esClient.Mget.WithIndex(rodeElasticsearchGenericResourcesIndex))
 	if err != nil {
 		log.Error("failed to mget documents", zap.NamedError("error", err))
 		return err
@@ -157,7 +157,7 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 		bytes.NewReader(body.Bytes()),
 		r.esClient.Bulk.WithContext(ctx),
 		r.esClient.Bulk.WithRefresh(r.elasticsearchConfig.Refresh.String()),
-		r.esClient.Bulk.WithIndex(rodeElasticsearchResourceNamesIndex))
+		r.esClient.Bulk.WithIndex(rodeElasticsearchGenericResourcesIndex))
 
 	if err != nil {
 		log.Error("failed to create generic resources", zap.Error(err))
@@ -336,7 +336,7 @@ func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListG
 	log.Debug("es request payload", zap.Any("payload", requestJSON))
 	res, err := r.esClient.Search(
 		r.esClient.Search.WithContext(ctx),
-		r.esClient.Search.WithIndex(rodeElasticsearchResourceNamesIndex),
+		r.esClient.Search.WithIndex(rodeElasticsearchGenericResourcesIndex),
 		r.esClient.Search.WithBody(encodedBody),
 		r.esClient.Search.WithSize(maxPageSize),
 	)
@@ -396,8 +396,8 @@ func (r *rodeServer) initialize(ctx context.Context) error {
 		}
 	}
 	// Create an index for policy storage
-	r.esClient.Indices.Create(rodeElasticsearchPoliciesIndex)
-	r.esClient.Indices.Create(rodeElasticsearchResourceNamesIndex)
+	r.esClient.Indices.Create(rodeElasticsearchPoliciesIndex, r.esClient.Indices.Create.WithContext(ctx))
+	r.esClient.Indices.Create(rodeElasticsearchGenericResourcesIndex, r.esClient.Indices.Create.WithContext(ctx))
 
 	return nil
 }

@@ -129,6 +129,23 @@ var _ = Describe("rode server", func() {
 			rodeServer, rodeServerError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer, elasticsearchConfig)
 		})
 
+		Context("Rode Elasticsearch indices", func() {
+			BeforeEach(func() {
+				grafeasProjectsClient.EXPECT().GetProject(gomock.Any(), gomock.Any())
+				_, _ = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer, elasticsearchConfig)
+			})
+
+			It("should create an index for policies", func() {
+				Expect(esTransport.receivedHttpRequests[0].Method).To(Equal(http.MethodPut))
+				Expect(esTransport.receivedHttpRequests[0].URL.Path).To(Equal("/rode-v1alpha1-policies"))
+			})
+
+			It("should create an index for generic resources", func() {
+				Expect(esTransport.receivedHttpRequests[1].Method).To(Equal(http.MethodPut))
+				Expect(esTransport.receivedHttpRequests[1].URL.Path).To(Equal("/rode-v1alpha1-generic-resources"))
+			})
+		})
+
 		When("the rode project does not exist", func() {
 			var (
 				createProjectRequest = &grafeas_project_proto.CreateProjectRequest{
@@ -282,6 +299,52 @@ var _ = Describe("rode server", func() {
 
 				// check response
 				Expect(response.Occurrences).To(BeEquivalentTo(grafeasBatchCreateOccurrencesResponse.Occurrences))
+			})
+		})
+
+		Context("creating generic resources", func() {
+			var (
+				actualError error
+				occurrence  *grafeas_go_proto.Occurrence
+				request     *pb.BatchCreateOccurrencesRequest
+			)
+
+			BeforeEach(func() {
+				occurrence = createRandomOccurrence(grafeas_common_proto.NoteKind_BUILD)
+
+				responses := []*http.Response{
+					{
+						StatusCode: http.StatusOK,
+						Body: structToJsonBody(&esMgetResponse{
+							Docs: []*esMgetDocument{{Found: true}},
+						}),
+					},
+				}
+
+				grafeasClient.EXPECT().BatchCreateOccurrences(gomock.Any(), gomock.Any()).AnyTimes()
+
+				esTransport.preparedHttpResponses = append(esTransport.preparedHttpResponses, responses...)
+			})
+
+			JustBeforeEach(func() {
+				_, actualError = rodeServer.BatchCreateOccurrences(context.Background(), request)
+			})
+
+			It("should not return an error", func() {
+				Expect(actualError).NotTo(HaveOccurred())
+			})
+
+			When("the generic resources do not exist", func() {
+				BeforeEach(func() {
+					request = &pb.BatchCreateOccurrencesRequest{
+						Occurrences: []*grafeas_go_proto.Occurrence{occurrence},
+					}
+				})
+
+				FIt("should check if the resources already exist", func() {
+					Expect(esTransport.receivedHttpRequests[2].Method).To(Equal(http.MethodGet))
+					Expect(esTransport.receivedHttpRequests[2].URL.Path).To(Equal(fmt.Sprintf("/%s/_mget", rodeElasticsearchGenericResourcesIndex)))
+				})
 			})
 		})
 

@@ -1,4 +1,4 @@
-.PHONY: generate tools test fmtcheck vet fmt mocks
+.PHONY: generate tools test fmtcheck vet fmt mocks coverage
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v proto)
 
 GO111MODULE=on
@@ -21,6 +21,9 @@ vet:
 
 test: fmtcheck vet
 	go test ./... -coverprofile=coverage.txt -covermode atomic
+
+coverage: test
+	go tool cover -html=coverage.txt
 
 mocks:
 	mockgen -package mocks -mock_names GrafeasV1Beta1Client=MockGrafeasClient github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto GrafeasV1Beta1Client > mocks/grafeasClient.go
