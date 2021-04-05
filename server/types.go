@@ -54,12 +54,12 @@ type esSearchResponseHit struct {
 }
 
 type esMgetDocument struct {
-	ID         string          `json:"_id"`
-	Found      bool            `json:"found"`
+	ID    string `json:"_id"`
+	Found bool   `json:"found"`
 }
 
 type esMgetResponse struct {
-	Docs []esMgetDocument `json:"docs"`
+	Docs []*esMgetDocument `json:"docs"`
 }
 
 type esBulkQueryFragment struct {

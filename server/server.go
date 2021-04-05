@@ -48,7 +48,7 @@ import (
 const (
 	rodeElasticsearchOccurrencesAlias   = "grafeas-rode-occurrences"
 	rodeElasticsearchPoliciesIndex      = "rode-v1alpha1-policies"
-	rodeElasticsearchResourceNamesIndex = "rode-v1alpha1-resource-names"
+	rodeElasticsearchResourceNamesIndex = "rode-v1alpha1-generic-resources"
 	maxPageSize                         = 1000
 )
 
@@ -397,7 +397,6 @@ func (r *rodeServer) initialize(ctx context.Context) error {
 	}
 	// Create an index for policy storage
 	r.esClient.Indices.Create(rodeElasticsearchPoliciesIndex)
-	// Create an index for resource names
 	r.esClient.Indices.Create(rodeElasticsearchResourceNamesIndex)
 
 	return nil

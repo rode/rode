@@ -109,6 +109,10 @@ var _ = Describe("rode server", func() {
 				StatusCode: http.StatusOK,
 				Body:       structToJsonBody(createEsIndexResponse("rode-v1alpha1-policies")),
 			},
+			{
+				StatusCode: http.StatusOK,
+				Body:       structToJsonBody(createEsIndexResponse("rode-v1alpha1-generic-resources")),
+			},
 		}
 	})
 
@@ -237,6 +241,15 @@ var _ = Describe("rode server", func() {
 
 			BeforeEach(func() {
 				randomOccurrence = createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED)
+				mgetResponse := esMgetResponse{Docs: []*esMgetDocument{
+					{
+						Found: true,
+					},
+				}}
+				esTransport.preparedHttpResponses = append(esTransport.preparedHttpResponses, &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       structToJsonBody(mgetResponse),
+				})
 
 				// expected Grafeas BatchCreateOccurrences request
 				grafeasBatchCreateOccurrencesRequest = &grafeas_proto.BatchCreateOccurrencesRequest{
@@ -542,20 +555,20 @@ var _ = Describe("rode server", func() {
 				})
 
 				It("should query the Rode occurrences index", func() {
-					actualRequest := esTransport.receivedHttpRequests[1]
+					actualRequest := esTransport.receivedHttpRequests[2]
 
 					Expect(actualRequest.URL.Path).To(Equal("/grafeas-rode-occurrences/_search"))
 				})
 
 				It("should take the first 1000 matches", func() {
-					actualRequest := esTransport.receivedHttpRequests[1]
+					actualRequest := esTransport.receivedHttpRequests[2]
 					query := actualRequest.URL.Query()
 
 					Expect(query.Get("size")).To(Equal("1000"))
 				})
 
 				It("should collapse fields on resource.uri", func() {
-					actualRequest := esTransport.receivedHttpRequests[1]
+					actualRequest := esTransport.receivedHttpRequests[2]
 					search := readEsSearchResponse(actualRequest)
 
 					Expect(search.Collapse.Field).To(Equal("resource.uri"))
@@ -603,7 +616,7 @@ var _ = Describe("rode server", func() {
 					_, err := rodeServer.ListResources(context.Background(), request)
 					Expect(err).To(BeNil())
 
-					actualRequest := esTransport.receivedHttpRequests[1]
+					actualRequest := esTransport.receivedHttpRequests[2]
 					search := readEsSearchResponse(actualRequest)
 
 					Expect(search.Query).To(Equal(expectedQuery))
@@ -668,7 +681,7 @@ var _ = Describe("rode server", func() {
 			})
 
 			It("should have a correct url path", func() {
-				Expect(esTransport.receivedHttpRequests[1].URL.Path).To(Equal("/rode-v1alpha1-policies/_doc"))
+				Expect(esTransport.receivedHttpRequests[2].URL.Path).To(Equal("/rode-v1alpha1-policies/_doc"))
 			})
 			It("should match the policy entity", func() {
 				Expect(err).To(Not(HaveOccurred()))
@@ -789,13 +802,13 @@ var _ = Describe("rode server", func() {
 					Expect(listResponse.Policies).To(HaveLen(4))
 				})
 				It("should have generated a filter query", func() {
-					actualRequest := esTransport.receivedHttpRequests[1]
+					actualRequest := esTransport.receivedHttpRequests[2]
 					search := readEsSearchResponse(actualRequest)
 
 					Expect(search.Query).To(Equal(expectedQuery))
 				})
 				It("should have generated a filter query", func() {
-					actualRequest := esTransport.receivedHttpRequests[1]
+					actualRequest := esTransport.receivedHttpRequests[2]
 					search := readEsSearchResponse(actualRequest)
 
 					Expect(search.Query).To(Equal(expectedQuery))
