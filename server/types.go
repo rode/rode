@@ -16,6 +16,7 @@ package server
 
 import (
 	"encoding/json"
+
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 )
 
@@ -53,13 +54,17 @@ type esSearchResponseHit struct {
 	Sort       []interface{}   `json:"sort"`
 }
 
-type esMgetDocument struct {
+type esMultiGetRequest struct {
+	IDs []string `json:"ids"`
+}
+
+type esMultiGetDocument struct {
 	ID    string `json:"_id"`
 	Found bool   `json:"found"`
 }
 
-type esMgetResponse struct {
-	Docs []*esMgetDocument `json:"docs"`
+type esMultiGetResponse struct {
+	Docs []*esMultiGetDocument `json:"docs"`
 }
 
 type esBulkQueryFragment struct {

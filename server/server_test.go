@@ -260,7 +260,7 @@ var _ = Describe("rode server", func() {
 
 			BeforeEach(func() {
 				randomOccurrence = createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED)
-				mgetResponse := esMgetResponse{Docs: []*esMgetDocument{
+				mgetResponse := esMultiGetResponse{Docs: []*esMultiGetDocument{
 					{
 						Found: true,
 					},
@@ -340,8 +340,8 @@ var _ = Describe("rode server", func() {
 				esTransport.preparedHttpResponses = []*http.Response{
 					{
 						StatusCode: http.StatusOK,
-						Body: structToJsonBody(&esMgetResponse{
-							Docs: []*esMgetDocument{{Found: false}},
+						Body: structToJsonBody(&esMultiGetResponse{
+							Docs: []*esMultiGetDocument{{Found: false}},
 						}),
 					},
 					{
@@ -378,9 +378,9 @@ var _ = Describe("rode server", func() {
 					Expect(esTransport.receivedHttpRequests[2].Method).To(Equal(http.MethodGet))
 					Expect(esTransport.receivedHttpRequests[2].URL.Path).To(Equal(fmt.Sprintf("/%s/_mget", rodeElasticsearchGenericResourcesIndex)))
 
-					requestBody := map[string]interface{}{}
+					requestBody := &esMultiGetRequest{}
 					readResponseBody(esTransport.receivedHttpRequests[2], &requestBody)
-					Expect(requestBody["ids"]).To(ConsistOf(expectedResourceName))
+					Expect(requestBody.IDs).To(ConsistOf(expectedResourceName))
 				})
 
 				It("should make a bulk request to create all of the resources", func() {
@@ -421,9 +421,9 @@ var _ = Describe("rode server", func() {
 				})
 
 				It("should only try to make a single resource", func() {
-					requestBody := map[string]interface{}{}
+					requestBody := &esMultiGetRequest{}
 					readResponseBody(esTransport.receivedHttpRequests[2], &requestBody)
-					Expect(requestBody["ids"]).To(HaveLen(1))
+					Expect(requestBody.IDs).To(HaveLen(1))
 				})
 			})
 
@@ -431,8 +431,8 @@ var _ = Describe("rode server", func() {
 				BeforeEach(func() {
 					esTransport.preparedHttpResponses[0] = &http.Response{
 						StatusCode: http.StatusOK,
-						Body: structToJsonBody(&esMgetResponse{
-							Docs: []*esMgetDocument{{Found: true}},
+						Body: structToJsonBody(&esMultiGetResponse{
+							Docs: []*esMultiGetDocument{{Found: true}},
 						}),
 					}
 				})
