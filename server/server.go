@@ -109,7 +109,7 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 
 	response, err := r.esClient.Mget(mgetBody, r.esClient.Mget.WithContext(ctx), r.esClient.Mget.WithIndex(rodeElasticsearchGenericResourcesIndex))
 	if err != nil {
-		log.Error("failed to mget documents", zap.NamedError("error", err))
+		log.Error("failed to mget documents", zap.Error(err))
 		return err
 	}
 	if response.IsError() {
@@ -138,9 +138,7 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 		})
 		metadata = append(metadata, "\n"...)
 
-		data, _ := json.Marshal(map[string]string{
-			"resourceName": resourceName,
-		})
+		data, _ := protojson.MarshalOptions{EmitUnpopulated: true}.Marshal(proto.MessageV2(&pb.GenericResource{Name: resourceName}))
 		data = append(data, "\n"...)
 
 		body.Grow(len(metadata) + len(data))
@@ -161,7 +159,7 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 
 	if err != nil {
 		log.Error("failed to create generic resources", zap.Error(err))
-		return err
+		return fmt.Errorf("failed to create generic resources: %s", err)
 	}
 
 	if response.IsError() {
@@ -185,7 +183,7 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 
 	if len(errors) > 0 {
 		log.Error("Failed to create all resources", zap.Any("errors", errors))
-		return status.Errorf(codes.Internal, "Failed to create all resources: %v", errors)
+		return fmt.Errorf("failed to create all resources: %v", errors)
 	}
 
 	return nil
@@ -196,7 +194,7 @@ func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceReque
 	log.Debug("received request", zap.Any("BatchCreateOccurrencesRequest", occurrenceRequest))
 
 	if err := r.batchCreateGenericResources(ctx, occurrenceRequest); err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "failed to create generic resources: %s", err)
 	}
 
 	occurrenceResponse, err := r.grafeasCommon.BatchCreateOccurrences(ctx, &grafeas_proto.BatchCreateOccurrencesRequest{
@@ -353,14 +351,14 @@ func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListG
 	if err := decodeResponse(res.Body, &searchResults); err != nil {
 		return nil, err
 	}
-	var resourceNames []string
+	var resources []*pb.GenericResource
 	for _, hit := range searchResults.Hits.Hits {
-		resourceNames = append(resourceNames, hit.ID)
+		resources = append(resources, &pb.GenericResource{Name: hit.ID})
 	}
 
 	return &pb.ListGenericResourcesResponse{
-		ResourceNames: resourceNames,
-		NextPageToken: "",
+		GenericResources: resources,
+		NextPageToken:    "",
 	}, nil
 }
 

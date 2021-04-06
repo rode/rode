@@ -21,6 +21,7 @@
 - [proto/v1alpha1/rode.proto](#proto/v1alpha1/rode.proto)
     - [BatchCreateOccurrencesRequest](#rode.v1alpha1.BatchCreateOccurrencesRequest)
     - [BatchCreateOccurrencesResponse](#rode.v1alpha1.BatchCreateOccurrencesResponse)
+    - [GenericResource](#rode.v1alpha1.GenericResource)
     - [ListGenericResourcesRequest](#rode.v1alpha1.ListGenericResourcesRequest)
     - [ListGenericResourcesResponse](#rode.v1alpha1.ListGenericResourcesResponse)
     - [ListOccurrencesRequest](#rode.v1alpha1.ListOccurrencesRequest)
@@ -302,6 +303,21 @@ Response for creating occurrences in batch.
 
 
 
+<a name="rode.v1alpha1.GenericResource"></a>
+
+### GenericResource
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| name | [string](#string) |  |  |
+
+
+
+
+
+
 <a name="rode.v1alpha1.ListGenericResourcesRequest"></a>
 
 ### ListGenericResourcesRequest
@@ -327,7 +343,7 @@ Response for creating occurrences in batch.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| resource_names | [string](#string) | repeated |  |
+| generic_resources | [GenericResource](#rode.v1alpha1.GenericResource) | repeated |  |
 | next_page_token | [string](#string) |  |  |
 
 

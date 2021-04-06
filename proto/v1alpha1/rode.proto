@@ -100,6 +100,10 @@ service Rode {
   }
 }
 
+message GenericResource {
+  string name = 1;
+}
+
 // Request to create occurrences in batch.
 message BatchCreateOccurrencesRequest {
   // The occurrences to create.
@@ -133,7 +137,7 @@ message ListGenericResourcesRequest {
 }
 
 message ListGenericResourcesResponse {
-  repeated string resource_names = 1;
+  repeated GenericResource generic_resources = 1;
   string next_page_token = 2;
 }
 

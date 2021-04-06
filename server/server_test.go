@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -304,26 +305,42 @@ var _ = Describe("rode server", func() {
 
 		Context("creating generic resources", func() {
 			var (
-				actualError error
-				occurrence  *grafeas_go_proto.Occurrence
-				request     *pb.BatchCreateOccurrencesRequest
+				actualError          error
+				expectedResourceName string
+				occurrence           *grafeas_go_proto.Occurrence
+				request              *pb.BatchCreateOccurrencesRequest
 			)
 
 			BeforeEach(func() {
 				occurrence = createRandomOccurrence(grafeas_common_proto.NoteKind_BUILD)
-
-				responses := []*http.Response{
+				expectedResourceName = gofakeit.URL()
+				occurrence.Resource.Uri = fmt.Sprintf("%s@sha256:%s", expectedResourceName, gofakeit.LetterN(10))
+				esTransport.preparedHttpResponses = []*http.Response{
 					{
 						StatusCode: http.StatusOK,
 						Body: structToJsonBody(&esMgetResponse{
-							Docs: []*esMgetDocument{{Found: true}},
+							Docs: []*esMgetDocument{{Found: false}},
+						}),
+					},
+					{
+						StatusCode: http.StatusOK,
+						Body: structToJsonBody(&esBulkResponse{
+							Items: []*esBulkResponseActionItem{
+								{
+									Create: &esBulkResponseItem{
+										Id:     expectedResourceName,
+										Status: http.StatusOK,
+									},
+								},
+							},
 						}),
 					},
 				}
+				request = &pb.BatchCreateOccurrencesRequest{
+					Occurrences: []*grafeas_go_proto.Occurrence{occurrence},
+				}
 
 				grafeasClient.EXPECT().BatchCreateOccurrences(gomock.Any(), gomock.Any()).AnyTimes()
-
-				esTransport.preparedHttpResponses = append(esTransport.preparedHttpResponses, responses...)
 			})
 
 			JustBeforeEach(func() {
@@ -335,15 +352,200 @@ var _ = Describe("rode server", func() {
 			})
 
 			When("the generic resources do not exist", func() {
+				It("should check if the resources already exist", func() {
+					Expect(esTransport.receivedHttpRequests[2].Method).To(Equal(http.MethodGet))
+					Expect(esTransport.receivedHttpRequests[2].URL.Path).To(Equal(fmt.Sprintf("/%s/_mget", rodeElasticsearchGenericResourcesIndex)))
+
+					requestBody := map[string]interface{}{}
+					readResponseBody(esTransport.receivedHttpRequests[2], &requestBody)
+					Expect(requestBody["ids"]).To(ConsistOf(expectedResourceName))
+				})
+
+				It("should make a bulk request to create all of the resources", func() {
+					Expect(esTransport.receivedHttpRequests[3].Method).To(Equal(http.MethodPost))
+					Expect(esTransport.receivedHttpRequests[3].URL.Path).To(Equal(fmt.Sprintf("/%s/_bulk", rodeElasticsearchGenericResourcesIndex)))
+					Expect(esTransport.receivedHttpRequests[3].URL.Query().Get("refresh")).To(Equal("true"))
+				})
+
+				It("should send the API action and document as part of the bulk request", func() {
+					body, err := ioutil.ReadAll(esTransport.receivedHttpRequests[3].Body)
+					Expect(err).To(BeNil())
+
+					metadata := &esBulkQueryFragment{}
+					resource := &pb.GenericResource{}
+					pieces := bytes.Split(body, []byte{'\n'})
+
+					Expect(json.Unmarshal(pieces[0], metadata)).To(BeNil())
+					Expect(json.Unmarshal(pieces[1], resource)).To(BeNil())
+
+					Expect(metadata).To(Equal(&esBulkQueryFragment{
+						Create: &esBulkQueryCreateFragment{
+							Id: expectedResourceName,
+						},
+					}))
+					Expect(resource).To(Equal(&pb.GenericResource{
+						Name: expectedResourceName,
+					}))
+				})
+
+			})
+
+			When("the same resource appears multiple times", func() {
 				BeforeEach(func() {
-					request = &pb.BatchCreateOccurrencesRequest{
-						Occurrences: []*grafeas_go_proto.Occurrence{occurrence},
+					otherOccurrence := createRandomOccurrence(grafeas_common_proto.NoteKind_BUILD)
+					otherOccurrence.Resource.Uri = occurrence.Resource.Uri
+
+					request.Occurrences = append(request.Occurrences, otherOccurrence)
+				})
+
+				It("should only try to make a single resource", func() {
+					requestBody := map[string]interface{}{}
+					readResponseBody(esTransport.receivedHttpRequests[2], &requestBody)
+					Expect(requestBody["ids"]).To(HaveLen(1))
+				})
+			})
+
+			When("the generic resources already exist", func() {
+				BeforeEach(func() {
+					esTransport.preparedHttpResponses[0] = &http.Response{
+						StatusCode: http.StatusOK,
+						Body: structToJsonBody(&esMgetResponse{
+							Docs: []*esMgetDocument{{Found: true}},
+						}),
 					}
 				})
 
-				FIt("should check if the resources already exist", func() {
-					Expect(esTransport.receivedHttpRequests[2].Method).To(Equal(http.MethodGet))
-					Expect(esTransport.receivedHttpRequests[2].URL.Path).To(Equal(fmt.Sprintf("/%s/_mget", rodeElasticsearchGenericResourcesIndex)))
+				It("should not make any further requests to Elasticsearch", func() {
+					Expect(esTransport.receivedHttpRequests).To(HaveLen(3))
+				})
+			})
+
+			When("an unexpected status code is returned from the multi-get", func() {
+				BeforeEach(func() {
+					esTransport.preparedHttpResponses[0] = &http.Response{
+						StatusCode: http.StatusInternalServerError,
+					}
+				})
+
+				It("should return an error", func() {
+					Expect(actualError).To(HaveOccurred())
+				})
+			})
+
+			When("an error occurs during the multi-get request", func() {
+				BeforeEach(func() {
+					esTransport.actions = []func(req *http.Request) (*http.Response, error){
+						func(req *http.Request) (*http.Response, error) {
+							return nil, errors.New(gofakeit.Word())
+						},
+					}
+				})
+
+				It("should return the error", func() {
+					Expect(actualError).To(HaveOccurred())
+				})
+			})
+
+			When("an the response from the multi-get fails to parse", func() {
+				BeforeEach(func() {
+					esTransport.preparedHttpResponses[0] = &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       createInvalidResponseBody(),
+					}
+				})
+
+				It("should return an error", func() {
+					Expect(actualError).To(HaveOccurred())
+				})
+			})
+
+			When("an unexpected status code is returned from the bulk request", func() {
+				BeforeEach(func() {
+					esTransport.preparedHttpResponses[1] = &http.Response{
+						StatusCode: http.StatusInternalServerError,
+					}
+				})
+
+				It("should return an error", func() {
+					Expect(actualError).To(HaveOccurred())
+				})
+			})
+
+			When("an error occurs during the bulk request", func() {
+				BeforeEach(func() {
+					esTransport.actions = []func(req *http.Request) (*http.Response, error){
+						func(req *http.Request) (*http.Response, error) {
+							return esTransport.preparedHttpResponses[0], nil
+						},
+						func(req *http.Request) (*http.Response, error) {
+							return nil, errors.New(gofakeit.Word())
+						},
+					}
+				})
+
+				It("should return the error", func() {
+					Expect(actualError).To(HaveOccurred())
+				})
+			})
+
+			When("the response from the bulk request fails to parse", func() {
+				BeforeEach(func() {
+					esTransport.preparedHttpResponses[1] = &http.Response{
+						StatusCode: http.StatusOK,
+						Body:       createInvalidResponseBody(),
+					}
+				})
+
+				It("should return an error", func() {
+					Expect(actualError).To(HaveOccurred())
+				})
+			})
+
+			When("one of the bulk requests fails", func() {
+				BeforeEach(func() {
+					esTransport.preparedHttpResponses[1] = &http.Response{
+						StatusCode: http.StatusOK,
+						Body: structToJsonBody(&esBulkResponse{
+							Items: []*esBulkResponseActionItem{
+								{
+									Create: &esBulkResponseItem{
+										Error: &esBulkResponseItemError{
+											Reason: gofakeit.Word(),
+										},
+										Status: http.StatusInternalServerError,
+									},
+								},
+							},
+						}),
+					}
+				})
+
+				It("should return an error", func() {
+					Expect(actualError).To(HaveOccurred())
+				})
+			})
+
+			When("one of the bulk request items tries to create an already existing resource", func() {
+				BeforeEach(func() {
+					esTransport.preparedHttpResponses[1] = &http.Response{
+						StatusCode: http.StatusOK,
+						Body: structToJsonBody(&esBulkResponse{
+							Items: []*esBulkResponseActionItem{
+								{
+									Create: &esBulkResponseItem{
+										Error: &esBulkResponseItemError{
+											Reason: gofakeit.Word(),
+										},
+										Status: http.StatusConflict,
+									},
+								},
+							},
+						}),
+					}
+				})
+
+				It("should not return an error", func() {
+					Expect(actualError).NotTo(HaveOccurred())
 				})
 			})
 		})
@@ -1267,14 +1469,22 @@ func createEsSearchResponseForPolicy(occurrences []*pb.Policy) io.ReadCloser {
 }
 
 func readEsSearchResponse(request *http.Request) *esSearch {
+	search := &esSearch{}
+	readResponseBody(request, search)
+
+	return search
+}
+
+func readResponseBody(request *http.Request, v interface{}) {
 	requestBody, err := ioutil.ReadAll(request.Body)
 	Expect(err).To(BeNil())
 
-	search := &esSearch{}
-	err = json.Unmarshal(requestBody, search)
+	err = json.Unmarshal(requestBody, v)
 	Expect(err).To(BeNil())
+}
 
-	return search
+func createInvalidResponseBody() io.ReadCloser {
+	return ioutil.NopCloser(strings.NewReader("{"))
 }
 
 func createRandomPolicyEntity(policy string) *pb.PolicyEntity {
