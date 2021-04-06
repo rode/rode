@@ -331,7 +331,7 @@ func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListG
 	searchQuery := esSearch{}
 
 	encodedBody, requestJSON := encodeRequest(searchQuery)
-	log.Debug("es request payload", zap.Any("payload", requestJSON))
+	log.Debug("es request payload", zap.String("payload", requestJSON))
 	res, err := r.esClient.Search(
 		r.esClient.Search.WithContext(ctx),
 		r.esClient.Search.WithIndex(rodeElasticsearchGenericResourcesIndex),
@@ -340,16 +340,16 @@ func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListG
 	)
 
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "error occurred during query: %s", err)
 	}
 
 	if res.IsError() {
-		return nil, fmt.Errorf("error occurred during ES query %v", res)
+		return nil, status.Errorf(codes.Internal, "unexpected status code from Elasticsearch: %v", res)
 	}
 
 	var searchResults esSearchResponse
 	if err := decodeResponse(res.Body, &searchResults); err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "error occurred decoding response: %s", err)
 	}
 	var resources []*pb.GenericResource
 	for _, hit := range searchResults.Hits.Hits {

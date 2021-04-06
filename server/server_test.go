@@ -23,6 +23,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/brianvoe/gofakeit/v5"
@@ -324,7 +325,7 @@ var _ = Describe("rode server", func() {
 			})
 		})
 
-		Context("creating generic resources", func() {
+		Describe("creating generic resources", func() {
 			var (
 				actualError          error
 				expectedResourceName string
@@ -567,6 +568,118 @@ var _ = Describe("rode server", func() {
 
 				It("should not return an error", func() {
 					Expect(actualError).NotTo(HaveOccurred())
+				})
+			})
+		})
+
+		Describe("ListGenericResources", func() {
+			When("querying for generic resources", func() {
+				var (
+					actualError      error
+					actualResponse   *pb.ListGenericResourcesResponse
+					listRequest      *pb.ListGenericResourcesRequest
+					genericResources []*pb.GenericResource
+				)
+
+				BeforeEach(func() {
+					genericResources = []*pb.GenericResource{}
+					for i := 0; i < gofakeit.Number(2, 5); i++ {
+						genericResources = append(genericResources, &pb.GenericResource{Name: gofakeit.LetterN(10)})
+					}
+
+					esTransport.preparedHttpResponses = []*http.Response{
+						{
+							StatusCode: http.StatusOK,
+							Body:       createEsSearchResponseForGenericResource(genericResources),
+						},
+					}
+
+					listRequest = &pb.ListGenericResourcesRequest{}
+				})
+
+				JustBeforeEach(func() {
+					actualResponse, actualError = rodeServer.ListGenericResources(context.Background(), listRequest)
+				})
+
+				It("should not return an error", func() {
+					Expect(actualError).NotTo(HaveOccurred())
+				})
+
+				It("should search against the generic resources index", func() {
+					Expect(esTransport.receivedHttpRequests[2].Method).To(Equal(http.MethodGet))
+					Expect(esTransport.receivedHttpRequests[2].URL.Path).To(Equal(fmt.Sprintf("/%s/_search", rodeElasticsearchGenericResourcesIndex)))
+					Expect(esTransport.receivedHttpRequests[2].URL.Query().Get("size")).To(Equal(strconv.Itoa(maxPageSize)))
+
+					body := readEsSearchResponse(esTransport.receivedHttpRequests[2])
+
+					Expect(body).To(Equal(&esSearch{}))
+				})
+
+				It("should return all of the resources", func() {
+					var expectedNames []string
+					var actualNames []string
+
+					for _, resource := range genericResources {
+						expectedNames = append(expectedNames, resource.Name)
+					}
+
+					for _, actual := range actualResponse.GenericResources {
+						actualNames = append(actualNames, actual.Name)
+					}
+
+					Expect(actualNames).To(ConsistOf(expectedNames))
+				})
+
+				When("an unexpected status code is returned from the search", func() {
+					BeforeEach(func() {
+						esTransport.preparedHttpResponses[0].StatusCode = http.StatusInternalServerError
+					})
+
+					It("should return an error", func() {
+						Expect(actualError).To(HaveOccurred())
+					})
+
+					It("should set a gRPC status", func() {
+						status := getGRPCStatusFromError(actualError)
+
+						Expect(status.Code()).To(Equal(codes.Internal))
+					})
+				})
+
+				When("an unparseable response is returned from Elasticsearch", func() {
+					BeforeEach(func() {
+						esTransport.preparedHttpResponses[0].Body = createInvalidResponseBody()
+					})
+
+					It("should return an error", func() {
+						Expect(actualError).To(HaveOccurred())
+					})
+
+					It("should set a gRPC status", func() {
+						status := getGRPCStatusFromError(actualError)
+
+						Expect(status.Code()).To(Equal(codes.Internal))
+					})
+				})
+
+				When("an error occurs during the search", func() {
+					BeforeEach(func() {
+						esTransport.actions = []func(req *http.Request) (*http.Response, error){
+							func(req *http.Request) (*http.Response, error) {
+								return nil, errors.New(gofakeit.Word())
+							},
+						}
+					})
+
+					It("should return an error", func() {
+						Expect(actualError).To(HaveOccurred())
+					})
+
+					It("should set a gRPC status", func() {
+						status := getGRPCStatusFromError(actualError)
+
+						Expect(status.Code()).To(Equal(codes.Internal))
+					})
 				})
 			})
 		})
@@ -1458,6 +1571,34 @@ func createEsSearchResponse(occurrences []*grafeas_proto.Occurrence) io.ReadClos
 	return ioutil.NopCloser(bytes.NewReader(responseBody))
 }
 
+func createEsSearchResponseForGenericResource(resources []*pb.GenericResource) io.ReadCloser {
+	var hits []*esSearchResponseHit
+
+	for _, resource := range resources {
+		source, err := protojson.Marshal(proto.MessageV2(resource))
+		Expect(err).To(BeNil())
+
+		response := &esSearchResponseHit{
+			ID:     resource.Name,
+			Source: source,
+		}
+
+		hits = append(hits, response)
+	}
+
+	response := &esSearchResponse{
+		Hits: &esSearchResponseHits{
+			Hits: hits,
+		},
+		Took: gofakeit.Number(1, 10),
+	}
+
+	responseBody, err := json.Marshal(response)
+	Expect(err).To(BeNil())
+
+	return ioutil.NopCloser(bytes.NewReader(responseBody))
+}
+
 func createEsSearchResponseForPolicy(occurrences []*pb.Policy) io.ReadCloser {
 	var occurrenceHits []*esSearchResponseHit
 
@@ -1506,6 +1647,13 @@ func readResponseBody(request *http.Request, v interface{}) {
 
 func createInvalidResponseBody() io.ReadCloser {
 	return ioutil.NopCloser(strings.NewReader("{"))
+}
+
+func getGRPCStatusFromError(err error) *status.Status {
+	s, ok := status.FromError(err)
+	Expect(ok).To(BeTrue(), "Expected error to be a gRPC status")
+
+	return s
 }
 
 func createRandomPolicyEntity(policy string) *pb.PolicyEntity {
