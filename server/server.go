@@ -127,7 +127,7 @@ func (r *rodeServer) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePol
 	}
 	log.Debug("Occurrences found", zap.Any("occurrences", listOccurrencesResponse))
 
-	input, _ := json.Marshal(listOccurrencesResponse)
+	input, _ := protojson.Marshal(proto.MessageV2(listOccurrencesResponse))
 
 	evaluatePolicyResponse := &opa.EvaluatePolicyResponse{
 		Result: &opa.EvaluatePolicyResult{
