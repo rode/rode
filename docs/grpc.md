@@ -64,7 +64,7 @@
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | policy | [string](#string) |  |  |
-| resourceUri | [string](#string) |  |  |
+| resource_uri | [string](#string) |  |  |
 
 
 

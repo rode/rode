@@ -23,7 +23,7 @@ import "google/protobuf/field_mask.proto";
 
 message EvaluatePolicyRequest {
   string policy = 1;
-  string resourceUri = 2;
+  string resource_uri = 2;
 }
 
 message EvaluatePolicyResponse {

@@ -137,7 +137,7 @@ func (opa *client) EvaluatePolicy(policy string, input []byte) (*EvaluatePolicyR
 		return nil, fmt.Errorf("failed to encode OPA input: %s", err)
 	}
 
-	httpResponse, err := http.Post(opa.getDataQueryURL(opa.getOpaPackagePath(policy)), "application/json", bytes.NewReader(request))
+	httpResponse, err := http.Post(opa.getDataQueryURL(getOpaPackagePath(policy)), "application/json", bytes.NewReader(request))
 	if err != nil {
 		log.Error("http request to OPA failed", zap.Error(err))
 		return nil, fmt.Errorf("http request to OPA failed: %s", err)
@@ -216,7 +216,7 @@ func (opa *client) getDataQueryURL(path string) string {
 	return opa.getURL(fmt.Sprintf("v1/data/%s?%s", path, query))
 }
 
-func (opa *client) getOpaPackagePath(regoContent string) string {
+func getOpaPackagePath(regoContent string) string {
 	// TODO implement better regex in the event that the package line is not the first line
 	// suggested regex: ^\s*package.*$
 	// ex: package abc.def.ghi

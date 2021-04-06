@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"regexp"
 
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/gogo/protobuf/protoc-gen-gogo/generator"
@@ -357,9 +356,8 @@ func (r *rodeServer) ValidatePolicy(ctx context.Context, policy *pb.ValidatePoli
 		return message, s.Err()
 
 	}
-	log.Debug("general compilation successful")
 
-	internalErrors := r.validateRodeRequirementsForPolicy(ctx, policy.Policy)
+	internalErrors := validateRodeRequirementsForPolicy(mod, policy.Policy)
 	if len(internalErrors) != 0 {
 		var stringifiedErrorList []string
 		for _, err := range internalErrors {
@@ -609,19 +607,27 @@ func (r *rodeServer) UpdatePolicy(ctx context.Context, updatePolicyRequest *pb.U
 // validateRodeRequirementsForPolicy ensures that these two rules are followed:
 // 1. A policy is expected to return a pass that is simply a boolean representing the AND of all rules.
 // 2. A policy is expected to return an array of violations that are maps containing a description id message name pass. pass here is what will be used to determine the overall pass.
-func (r *rodeServer) validateRodeRequirementsForPolicy(ctx context.Context, regoContent string) []error {
+func validateRodeRequirementsForPolicy(mod *ast.Module, regoContent string) []error {
 	errorsList := []error{}
 	// policy must contains a pass block somewhere in the code
-	rePass := regexp.MustCompile(`(?m)^[[:blank:]]*(pass.*$)`)
-	passBlocks := rePass.FindAllStringSubmatch(string(regoContent), -1)
-	if len(passBlocks) == 0 || len(passBlocks[0]) == 0 {
+	passBlockExists := false
+	// policy must contains a violations block somewhere in the code
+	violationsBlockExists := false
+
+	for _, r := range mod.Rules {
+		if r.Head.Name == "pass" {
+			passBlockExists = true
+		}
+		if r.Head.Name == "violations" && r.Head.Key != nil && r.Head.Key.Value.String() == "result" {
+			violationsBlockExists = true
+		}
+	}
+
+	if !passBlockExists {
 		err := errors.New("all policies must contain a \"pass\" block that returns a boolean result of the policy")
 		errorsList = append(errorsList, err)
 	}
-	// policy must contains a violations block somewhere in the code
-	reViolations := regexp.MustCompile(`(?m)^[[:blank:]]*(violations\[.+\].*$)`)
-	violationBlocks := reViolations.FindAllStringSubmatch(string(regoContent), -1)
-	if len(violationBlocks) == 0 || len(violationBlocks[0]) == 0 {
+	if !violationsBlockExists {
 		err := errors.New("all policies must contain a \"violations\" block that returns a map of results")
 		errorsList = append(errorsList, err)
 	}
