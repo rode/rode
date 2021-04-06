@@ -301,6 +301,27 @@ var _ = Describe("rode server", func() {
 				// check response
 				Expect(response.Occurrences).To(BeEquivalentTo(grafeasBatchCreateOccurrencesResponse.Occurrences))
 			})
+
+			When("an error occurs creating occurrences", func() {
+				BeforeEach(func() {
+					grafeasClient.
+						EXPECT().
+						BatchCreateOccurrences(gomock.Any(), gomock.Any()).
+						Return(nil, errors.New(gofakeit.Word()))
+
+				})
+
+				It("should return an error", func() {
+					batchCreateOccurrencesRequest := &pb.BatchCreateOccurrencesRequest{
+						Occurrences: []*grafeas_proto.Occurrence{
+							randomOccurrence,
+						},
+					}
+					_, err := rodeServer.BatchCreateOccurrences(context.Background(), batchCreateOccurrencesRequest)
+
+					Expect(err).To(HaveOccurred())
+				})
+			})
 		})
 
 		Context("creating generic resources", func() {
