@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/gogo/protobuf/protoc-gen-gogo/generator"
@@ -96,7 +95,11 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 	visitedResources := map[string]bool{}
 	var resourceNames []string
 	for _, x := range occurrenceRequest.Occurrences {
-		resourceName := strings.Split(x.Resource.Uri, "@")[0]
+		uriParts, err := parseResourceUri(x.Resource.Uri)
+		if err != nil {
+			return err
+		}
+		resourceName := uriParts.name
 		if _, ok := visitedResources[resourceName]; ok {
 			continue
 		}

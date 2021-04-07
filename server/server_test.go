@@ -469,6 +469,16 @@ var _ = Describe("rode server", func() {
 				})
 			})
 
+			When("an error occurs determining the resource uri version", func() {
+				BeforeEach(func() {
+					occurrence.Resource.Uri = gofakeit.URL()
+				})
+
+				It("should return an error", func() {
+					Expect(actualError).To(HaveOccurred())
+				})
+			})
+
 			When("the generic resources already exist", func() {
 				BeforeEach(func() {
 					esTransport.preparedHttpResponses[0] = &http.Response{
@@ -1551,7 +1561,7 @@ func createRandomOccurrence(kind grafeas_common_proto.NoteKind) *grafeas_proto.O
 	return &grafeas_proto.Occurrence{
 		Name: gofakeit.LetterN(10),
 		Resource: &grafeas_proto.Resource{
-			Uri: gofakeit.URL(),
+			Uri: fmt.Sprintf("%s@sha256:%s", gofakeit.URL(), gofakeit.LetterN(10)),
 		},
 		NoteName:    gofakeit.LetterN(10),
 		Kind:        kind,
