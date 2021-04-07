@@ -48,6 +48,7 @@ const (
 	OpaClientErrorTypePublishPolicy  ClientErrorType = "Publish Policy"
 	OpaClientErrorTypeHTTP           ClientErrorType = "HTTP Error"
 	OpaClientErrorTypeBadResponse    ClientErrorType = "Bad Response"
+	OpaClientErrorTypeLoadPolicy     ClientErrorType = "Load Policy"
 )
 
 // Error returns formatted error message

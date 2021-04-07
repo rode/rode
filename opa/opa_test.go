@@ -29,9 +29,18 @@ import (
 
 var _ = Describe("opa client", func() {
 	var (
-		Opa       Client
-		opaHost   string
-		opaPolicy string
+		Opa     Client
+		opaHost string
+	)
+	const (
+		compilablePolicyMissingRodeFields = `
+		package play
+		default hello = false
+		hello {
+			m := input.message
+			m == "world"
+		}`
+		opaPolicy = "play"
 	)
 
 	BeforeEach(func() {
@@ -41,7 +50,7 @@ var _ = Describe("opa client", func() {
 			opaHost,
 			false,
 		}
-		opaPolicy = gofakeit.Word()
+
 	})
 
 	When("a new OPA client is created", func() {
@@ -72,7 +81,7 @@ var _ = Describe("opa client", func() {
 		})
 
 		JustBeforeEach(func() {
-			initializePolicyError = Opa.InitializePolicy(opaPolicy)
+			initializePolicyError = Opa.InitializePolicy(opaPolicy, gofakeit.LetterN(200))
 		})
 
 		It("should check if policy exists in OPA", func() {
@@ -187,12 +196,8 @@ var _ = Describe("opa client", func() {
 			expectedErr           error
 		)
 
-		BeforeEach(func() {
-			opaPolicy = gofakeit.Word()
-		})
-
 		JustBeforeEach(func() {
-			evalutePolicyResponse, expectedErr = Opa.EvaluatePolicy(opaPolicy, input)
+			evalutePolicyResponse, expectedErr = Opa.EvaluatePolicy(compilablePolicyMissingRodeFields, input)
 		})
 
 		When("OPA returns a valid response", func() {

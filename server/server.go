@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -211,29 +212,35 @@ func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceReque
 
 func (r *rodeServer) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePolicyRequest) (*pb.EvaluatePolicyResponse, error) {
 	var err error
-	log := r.logger.Named("EvaluatePolicy").With(zap.String("policy", request.Policy), zap.String("resource", request.ResourceURI))
+	log := r.logger.Named("EvaluatePolicy").With(zap.String("policy", request.Policy), zap.String("resource", request.ResourceUri))
 	log.Debug("evaluate policy request received")
 
-	// check OPA policy has been loaded
-	err = r.opa.InitializePolicy(request.Policy)
+	policy, _ := r.GetPolicy(ctx, &pb.GetPolicyRequest{Id: request.Policy})
+	// check OPA policy has been loaded, using the policy id
+	err = r.opa.InitializePolicy(request.Policy, policy.Policy.RegoContent)
 	if err != nil {
 		log.Error("error checking if policy exists", zap.Error(err))
 		return nil, status.Error(codes.Internal, "check if policy exists failed")
 	}
 
 	// fetch occurrences from grafeas
-	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{Parent: "projects/rode", Filter: fmt.Sprintf(`"resource.uri" == "%s"`, request.ResourceURI)})
+	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{Parent: "projects/rode", Filter: fmt.Sprintf(`"resource.uri" == "%s"`, request.ResourceUri)})
 	if err != nil {
-		log.Error("list occurrences failed", zap.Error(err), zap.String("resource", request.ResourceURI))
+		log.Error("list occurrences failed", zap.Error(err), zap.String("resource", request.ResourceUri))
 		return nil, status.Error(codes.Internal, "list occurrences failed")
 	}
 	log.Debug("Occurrences found", zap.Any("occurrences", listOccurrencesResponse))
 
-	// json encode occurrences. list occurrences response should not generate error
 	input, _ := protojson.Marshal(proto.MessageV2(listOccurrencesResponse))
 
+	evaluatePolicyResponse := &opa.EvaluatePolicyResponse{
+		Result: &opa.EvaluatePolicyResult{
+			Pass:       false,
+			Violations: []*opa.EvaluatePolicyViolation{},
+		},
+	}
 	// evalute OPA policy
-	evaluatePolicyResponse, err := r.opa.EvaluatePolicy(request.Policy, input)
+	evaluatePolicyResponse, err = r.opa.EvaluatePolicy(policy.Policy.RegoContent, input)
 	if err != nil {
 		log.Error("evaluate OPA policy failed")
 		return nil, status.Error(codes.Internal, "evaluate OPA policy failed")
@@ -242,16 +249,23 @@ func (r *rodeServer) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePol
 
 	attestation := &pb.EvaluatePolicyResult{}
 	attestation.Created = timestamppb.Now()
-	attestation.Pass = evaluatePolicyResponse.Result.Pass
-	for _, violation := range evaluatePolicyResponse.Result.Violations {
-		attestation.Violations = append(attestation.Violations, &pb.EvaluatePolicyViolation{
-			Id:          violation.ID,
-			Name:        violation.Name,
-			Description: violation.Description,
-			Message:     violation.Message,
-			Link:        violation.Link,
-			Pass:        violation.Pass,
-		})
+	if evaluatePolicyResponse.Result != nil {
+		attestation.Pass = evaluatePolicyResponse.Result.Pass
+
+		for _, violation := range evaluatePolicyResponse.Result.Violations {
+			attestation.Violations = append(attestation.Violations, &pb.EvaluatePolicyViolation{
+				Id:          violation.ID,
+				Name:        violation.Name,
+				Description: violation.Description,
+				Message:     violation.Message,
+				Link:        violation.Link,
+				Pass:        violation.Pass,
+			})
+		}
+	} else {
+		evaluatePolicyResponse.Result = &opa.EvaluatePolicyResult{
+			Pass: false,
+		}
 	}
 
 	return &pb.EvaluatePolicyResponse{
@@ -485,7 +499,21 @@ func (r *rodeServer) ValidatePolicy(ctx context.Context, policy *pb.ValidatePoli
 		return message, s.Err()
 
 	}
-	log.Debug("compilation successful")
+
+	internalErrors := validateRodeRequirementsForPolicy(mod, policy.Policy)
+	if len(internalErrors) != 0 {
+		var stringifiedErrorList []string
+		for _, err := range internalErrors {
+			stringifiedErrorList = append(stringifiedErrorList, err.Error())
+		}
+		message := &pb.ValidatePolicyResponse{
+			Policy:  policy.Policy,
+			Compile: false,
+			Errors:  stringifiedErrorList,
+		}
+		s, _ := status.New(codes.InvalidArgument, "policy compiled successfully but is missing Rode required fields").WithDetails(message)
+		return message, s.Err()
+	}
 
 	return &pb.ValidatePolicyResponse{
 		Policy:  policy.Policy,
@@ -717,6 +745,37 @@ func (r *rodeServer) UpdatePolicy(ctx context.Context, updatePolicyRequest *pb.U
 	}
 
 	return policy, nil
+}
+
+// validateRodeRequirementsForPolicy ensures that these two rules are followed:
+// 1. A policy is expected to return a pass that is simply a boolean representing the AND of all rules.
+// 2. A policy is expected to return an array of violations that are maps containing a description id message name pass. pass here is what will be used to determine the overall pass.
+func validateRodeRequirementsForPolicy(mod *ast.Module, regoContent string) []error {
+	errorsList := []error{}
+	// policy must contains a pass block somewhere in the code
+	passBlockExists := false
+	// policy must contains a violations block somewhere in the code
+	violationsBlockExists := false
+
+	for _, r := range mod.Rules {
+		if r.Head.Name == "pass" {
+			passBlockExists = true
+		}
+		if r.Head.Name == "violations" && r.Head.Key != nil && r.Head.Key.Value.String() == "result" {
+			violationsBlockExists = true
+		}
+	}
+
+	if !passBlockExists {
+		err := errors.New("all policies must contain a \"pass\" block that returns a boolean result of the policy")
+		errorsList = append(errorsList, err)
+	}
+	if !violationsBlockExists {
+		err := errors.New("all policies must contain a \"violations\" block that returns a map of results")
+		errorsList = append(errorsList, err)
+	}
+
+	return errorsList
 }
 
 func (r *rodeServer) genericGet(ctx context.Context, log *zap.Logger, search *esSearch, index string, protoMessage interface{}) (string, error) {

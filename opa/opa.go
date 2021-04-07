@@ -21,13 +21,15 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
+	"strings"
 
 	"go.uber.org/zap"
 )
 
 // Client is an interface for sending requests to the OPA API
 type Client interface {
-	InitializePolicy(policy string) ClientError
+	InitializePolicy(policy string, policyData string) ClientError
 	EvaluatePolicy(policy string, input []byte) (*EvaluatePolicyResponse, error)
 }
 
@@ -87,7 +89,7 @@ func NewClient(logger *zap.Logger, host string, explainQuery bool) Client {
 }
 
 // InitializePolicy initializes OPA policy if it does not already exist
-func (opa *client) InitializePolicy(policy string) ClientError {
+func (opa *client) InitializePolicy(policy string, policyData string) ClientError {
 	_ = opa.logger.Named("Initialize Policy")
 
 	exists, err := opa.policyExists(policy)
@@ -96,8 +98,32 @@ func (opa *client) InitializePolicy(policy string) ClientError {
 	}
 
 	if !exists {
-		// TODO: fetch rules from ES
-		return NewClientError("policy does not exist", OpaClientErrorTypePolicyNotFound, nil)
+		err := opa.loadPolicy(policy, policyData)
+		if err != nil {
+			return NewClientError(err.Error(), OpaClientErrorTypeLoadPolicy, err)
+		}
+	}
+
+	return nil
+}
+
+func (opa *client) loadPolicy(policy string, policyData string) error {
+	log := opa.logger.Named("Load Policy")
+
+	req, err := http.NewRequest(http.MethodPut, opa.getURL(fmt.Sprintf("v1/policies/%s", policy)), strings.NewReader(policyData))
+	if err != nil {
+		return fmt.Errorf("failed to generate policy request")
+	}
+	response, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Error("load policy error", zap.Error(err), zap.String("input", string(policyData)))
+		return fmt.Errorf("failed to load the policy in opa")
+	}
+
+	if response.StatusCode == http.StatusOK {
+		log.Debug("successfully loaded policy in opa")
+	} else {
+		return fmt.Errorf("failed to load the policy in opa, got %d", response.StatusCode)
 	}
 
 	return nil
@@ -106,12 +132,14 @@ func (opa *client) InitializePolicy(policy string) ClientError {
 // EvaluatePolicy evalutes OPA policy agains provided input
 func (opa *client) EvaluatePolicy(policy string, input []byte) (*EvaluatePolicyResponse, error) {
 	log := opa.logger.Named("Evalute Policy")
+
 	request, err := json.Marshal(&EvalutePolicyRequest{Input: json.RawMessage(input)})
 	if err != nil {
 		log.Error("failed to encode OPA input", zap.Error(err), zap.String("input", string(input)))
 		return nil, fmt.Errorf("failed to encode OPA input: %s", err)
 	}
-	httpResponse, err := http.Post(opa.getDataQueryURL(policy), "application/json", bytes.NewReader(request))
+
+	httpResponse, err := http.Post(opa.getDataQueryURL(getOpaPackagePath(policy)), "application/json", bytes.NewReader(request))
 	if err != nil {
 		log.Error("http request to OPA failed", zap.Error(err))
 		return nil, fmt.Errorf("http request to OPA failed: %s", err)
@@ -188,4 +216,18 @@ func (opa *client) getDataQueryURL(path string) string {
 		query = ""
 	}
 	return opa.getURL(fmt.Sprintf("v1/data/%s?%s", path, query))
+}
+
+func getOpaPackagePath(regoContent string) string {
+	// TODO implement better regex in the event that the package line is not the first line
+	// suggested regex: ^\s*package.*$
+	// ex: package abc.def.ghi
+	re := regexp.MustCompile(`(?m)^[[:blank:]]*(package.*$)`)
+	packageLine := re.FindAllStringSubmatch(string(regoContent), -1)[0][1]
+
+	// package name will be abc.def.ghi
+	packageName := strings.Split(packageLine, " ")[1]
+
+	// abc/def/ghi
+	return strings.Replace(packageName, ".", "/", -1)
 }
