@@ -46,6 +46,11 @@ service Rode {
       get: "/v1alpha1/resources"
     };
   }
+  rpc ListGenericResources(ListGenericResourcesRequest) returns (ListGenericResourcesResponse) {
+    option (google.api.http) = {
+      get: "/v1alpha1/generic-resources"
+    };
+  }
   rpc ListOccurrences(ListOccurrencesRequest) returns (ListOccurrencesResponse) {
     option (google.api.http) = {
       get: "/v1alpha1/occurrences"
@@ -95,6 +100,10 @@ service Rode {
   }
 }
 
+message GenericResource {
+  string name = 1;
+}
+
 // Request to create occurrences in batch.
 message BatchCreateOccurrencesRequest {
   // The occurrences to create.
@@ -118,6 +127,17 @@ message ListResourcesRequest {
 
 message ListResourcesResponse {
   repeated grafeas.v1beta1.Resource resources = 1;
+  string next_page_token = 2;
+}
+
+message ListGenericResourcesRequest {
+  string filter = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListGenericResourcesResponse {
+  repeated GenericResource generic_resources = 1;
   string next_page_token = 2;
 }
 

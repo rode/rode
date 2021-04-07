@@ -20,6 +20,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
+	"strings"
 
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/gogo/protobuf/protoc-gen-gogo/generator"
@@ -44,9 +46,10 @@ import (
 )
 
 const (
-	rodeElasticsearchOccurrencesAlias = "grafeas-rode-occurrences"
-	rodeElasticsearchPoliciesIndex    = "rode-v1alpha1-policies"
-	maxPageSize                       = 1000
+	rodeElasticsearchOccurrencesAlias      = "grafeas-rode-occurrences"
+	rodeElasticsearchPoliciesIndex         = "rode-v1alpha1-policies"
+	rodeElasticsearchGenericResourcesIndex = "rode-v1alpha1-generic-resources"
+	maxPageSize                            = 1000
 )
 
 // NewRodeServer constructor for rodeServer
@@ -86,11 +89,112 @@ type rodeServer struct {
 	elasticsearchConfig *config.ElasticsearchConfig
 }
 
+func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrenceRequest *pb.BatchCreateOccurrencesRequest) error {
+	log := r.logger.Named("batchCreateGenericResources")
+
+	visitedResources := map[string]bool{}
+	var resourceNames []string
+	for _, x := range occurrenceRequest.Occurrences {
+		resourceName := strings.Split(x.Resource.Uri, "@")[0]
+		if _, ok := visitedResources[resourceName]; ok {
+			continue
+		}
+		visitedResources[resourceName] = true
+		resourceNames = append(resourceNames, resourceName)
+	}
+
+	mgetBody, _ := encodeRequest(&esMultiGetRequest{IDs: resourceNames})
+
+	response, err := r.esClient.Mget(mgetBody, r.esClient.Mget.WithContext(ctx), r.esClient.Mget.WithIndex(rodeElasticsearchGenericResourcesIndex))
+	if err != nil {
+		log.Error("failed to mget documents", zap.Error(err))
+		return err
+	}
+	if response.IsError() {
+		return fmt.Errorf("unexpected status code from mget request: %d", response.StatusCode)
+	}
+	mGetResponse := esMultiGetResponse{}
+	if err := decodeResponse(response.Body, &mGetResponse); err != nil {
+		return err
+	}
+
+	var body bytes.Buffer
+	for i := range resourceNames {
+		resourceName := resourceNames[i]
+		existingDocument := mGetResponse.Docs[i]
+		if existingDocument.Found {
+			log.Debug("skipping resource creation because it already exists", zap.String("resourceName", resourceName))
+			continue
+		}
+
+		log.Debug("Adding resource to bulk request", zap.String("resourceName", resourceName))
+
+		metadata, _ := json.Marshal(esBulkQueryFragment{
+			Create: &esBulkQueryCreateFragment{
+				Id: resourceName,
+			},
+		})
+		metadata = append(metadata, "\n"...)
+
+		data, _ := protojson.MarshalOptions{EmitUnpopulated: true}.Marshal(proto.MessageV2(&pb.GenericResource{Name: resourceName}))
+		data = append(data, "\n"...)
+
+		body.Grow(len(metadata) + len(data))
+		body.Write(metadata)
+		body.Write(data)
+	}
+
+	// no new generic resources to create
+	if body.Len() == 0 {
+		return nil
+	}
+
+	response, err = r.esClient.Bulk(
+		bytes.NewReader(body.Bytes()),
+		r.esClient.Bulk.WithContext(ctx),
+		r.esClient.Bulk.WithRefresh(r.elasticsearchConfig.Refresh.String()),
+		r.esClient.Bulk.WithIndex(rodeElasticsearchGenericResourcesIndex))
+
+	if err != nil {
+		log.Error("failed to create generic resources", zap.Error(err))
+		return fmt.Errorf("failed to create generic resources: %s", err)
+	}
+
+	if response.IsError() {
+		return fmt.Errorf("unexpected status code while creating generic resources: %d", response.StatusCode)
+	}
+
+	bulkResponse := &esBulkResponse{}
+	err = esutil.DecodeResponse(response.Body, bulkResponse)
+	if err != nil {
+		return err
+	}
+
+	var errors []error
+	for i := range bulkResponse.Items {
+		item := bulkResponse.Items[i].Create
+		if item.Error != nil && item.Status != http.StatusConflict {
+			itemError := fmt.Errorf("error creating generic resource [%d] %s: %s", item.Status, item.Error.Type, item.Error.Reason)
+			errors = append(errors, itemError)
+		}
+	}
+
+	if len(errors) > 0 {
+		log.Error("Failed to create all resources", zap.Any("errors", errors))
+		return fmt.Errorf("failed to create all resources: %v", errors)
+	}
+
+	return nil
+}
+
 func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceRequest *pb.BatchCreateOccurrencesRequest) (*pb.BatchCreateOccurrencesResponse, error) {
 	log := r.logger.Named("BatchCreateOccurrences")
 	log.Debug("received request", zap.Any("BatchCreateOccurrencesRequest", occurrenceRequest))
 
-	//Forward to grafeas to create occurrence
+	if err := r.batchCreateGenericResources(ctx, occurrenceRequest); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to create generic resources: %s", err)
+	}
+
 	occurrenceResponse, err := r.grafeasCommon.BatchCreateOccurrences(ctx, &grafeas_proto.BatchCreateOccurrencesRequest{
 		Parent:      "projects/rode",
 		Occurrences: occurrenceRequest.GetOccurrences(),
@@ -218,6 +322,44 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 	}, nil
 }
 
+func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListGenericResourcesRequest) (*pb.ListGenericResourcesResponse, error) {
+	log := r.logger.Named("ListGenericResources")
+	log.Debug("received request", zap.Any("request", request))
+
+	searchQuery := esSearch{}
+
+	encodedBody, requestJSON := encodeRequest(searchQuery)
+	log.Debug("es request payload", zap.String("payload", requestJSON))
+	res, err := r.esClient.Search(
+		r.esClient.Search.WithContext(ctx),
+		r.esClient.Search.WithIndex(rodeElasticsearchGenericResourcesIndex),
+		r.esClient.Search.WithBody(encodedBody),
+		r.esClient.Search.WithSize(maxPageSize),
+	)
+
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "error occurred during query: %s", err)
+	}
+
+	if res.IsError() {
+		return nil, status.Errorf(codes.Internal, "unexpected status code from Elasticsearch: %v", res)
+	}
+
+	var searchResults esSearchResponse
+	if err := decodeResponse(res.Body, &searchResults); err != nil {
+		return nil, status.Errorf(codes.Internal, "error occurred decoding response: %s", err)
+	}
+	var resources []*pb.GenericResource
+	for _, hit := range searchResults.Hits.Hits {
+		resources = append(resources, &pb.GenericResource{Name: hit.ID})
+	}
+
+	return &pb.ListGenericResourcesResponse{
+		GenericResources: resources,
+		NextPageToken:    "",
+	}, nil
+}
+
 func encodeRequest(body interface{}) (io.Reader, string) {
 	b, err := json.Marshal(body)
 	if err != nil {
@@ -250,7 +392,8 @@ func (r *rodeServer) initialize(ctx context.Context) error {
 		}
 	}
 	// Create an index for policy storage
-	r.esClient.Indices.Create(rodeElasticsearchPoliciesIndex)
+	r.esClient.Indices.Create(rodeElasticsearchPoliciesIndex, r.esClient.Indices.Create.WithContext(ctx))
+	r.esClient.Indices.Create(rodeElasticsearchGenericResourcesIndex, r.esClient.Indices.Create.WithContext(ctx))
 
 	return nil
 }
