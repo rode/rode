@@ -109,12 +109,12 @@ func (opa *client) InitializePolicy(policy string, policyData string) ClientErro
 
 func (opa *client) loadPolicy(policy string, policyData string) error {
 	log := opa.logger.Named("Load Policy")
-	client := &http.Client{}
+
 	req, err := http.NewRequest(http.MethodPut, opa.getURL(fmt.Sprintf("v1/policies/%s", policy)), strings.NewReader(policyData))
 	if err != nil {
 		return fmt.Errorf("failed to generate policy request")
 	}
-	response, err := client.Do(req)
+	response, err := http.DefaultClient.Do(req)
 	if err != nil {
 		log.Error("load policy error", zap.Error(err), zap.String("input", string(policyData)))
 		return fmt.Errorf("failed to load the policy in opa")
@@ -122,6 +122,8 @@ func (opa *client) loadPolicy(policy string, policyData string) error {
 
 	if response.StatusCode == http.StatusOK {
 		log.Debug("successfully loaded policy in opa")
+	} else {
+		return fmt.Errorf("failed to load the policy in opa, got %d", response.StatusCode)
 	}
 
 	return nil
