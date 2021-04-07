@@ -281,8 +281,8 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 	log := r.logger.Named("ListResources")
 	log.Debug("received request", zap.Any("ListResourcesRequest", request))
 
-	searchQuery := esSearch{
-		Collapse: &esCollapse{
+	searchQuery := esutil.EsSearch{
+		Collapse: &esutil.EsCollapse{
 			Field: "resource.uri",
 		},
 	}
@@ -314,7 +314,7 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 		return nil, fmt.Errorf("error occurred during ES query %v", res)
 	}
 
-	var searchResults esSearchResponse
+	var searchResults esutil.EsSearchResponse
 	if err := decodeResponse(res.Body, &searchResults); err != nil {
 		return nil, err
 	}
@@ -340,7 +340,7 @@ func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListG
 	log := r.logger.Named("ListGenericResources")
 	log.Debug("received request", zap.Any("request", request))
 
-	searchQuery := esSearch{}
+	searchQuery := esutil.EsSearch{}
 
 	encodedBody, requestJSON := encodeRequest(searchQuery)
 	log.Debug("es request payload", zap.String("payload", requestJSON))
@@ -359,7 +359,7 @@ func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListG
 		return nil, status.Errorf(codes.Internal, "unexpected status code from Elasticsearch: %v", res)
 	}
 
-	var searchResults esSearchResponse
+	var searchResults esutil.EsSearchResponse
 	if err := decodeResponse(res.Body, &searchResults); err != nil {
 		return nil, status.Errorf(codes.Internal, "error occurred decoding response: %s", err)
 	}
@@ -571,7 +571,7 @@ func (r *rodeServer) CreatePolicy(ctx context.Context, policyEntity *pb.PolicyEn
 func (r *rodeServer) GetPolicy(ctx context.Context, getPolicyRequest *pb.GetPolicyRequest) (*pb.Policy, error) {
 	log := r.logger.Named("GetPolicy")
 
-	search := &esSearch{
+	search := &esutil.EsSearch{
 		Query: &filtering.Query{
 			Term: &filtering.Term{
 				"id.keyword": getPolicyRequest.Id,
@@ -593,7 +593,7 @@ func (r *rodeServer) GetPolicy(ctx context.Context, getPolicyRequest *pb.GetPoli
 func (r *rodeServer) DeletePolicy(ctx context.Context, deletePolicyRequest *pb.DeletePolicyRequest) (*emptypb.Empty, error) {
 	log := r.logger.Named("DeletePolicy")
 
-	search := &esSearch{
+	search := &esutil.EsSearch{
 		Query: &filtering.Query{
 			Term: &filtering.Term{
 				"id.keyword": deletePolicyRequest.Id,
@@ -617,7 +617,7 @@ func (r *rodeServer) DeletePolicy(ctx context.Context, deletePolicyRequest *pb.D
 		return nil, createError(log, "received unexpected response from elasticsearch", nil)
 	}
 
-	var deletedResults esDeleteResponse
+	var deletedResults esutil.EsDeleteResponse
 	if err = decodeResponse(res.Body, &deletedResults); err != nil {
 		return nil, createError(log, "error unmarshalling elasticsearch response", err)
 	}
@@ -632,7 +632,7 @@ func (r *rodeServer) DeletePolicy(ctx context.Context, deletePolicyRequest *pb.D
 func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.ListPoliciesRequest) (*pb.ListPoliciesResponse, error) {
 	log := r.logger.Named("List Policies")
 
-	body := &esSearch{}
+	body := &esutil.EsSearch{}
 	if listPoliciesRequest.Filter != "" {
 		log = log.With(zap.String("filter", listPoliciesRequest.Filter))
 		filterQuery, err := r.filterer.ParseExpression(listPoliciesRequest.Filter)
@@ -661,7 +661,7 @@ func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.L
 		return nil, createError(log, "error searching elasticsearch for document", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
 	}
 
-	var searchResults esSearchResponse
+	var searchResults esutil.EsSearchResponse
 	if err := decodeResponse(res.Body, &searchResults); err != nil {
 		return nil, createError(log, "error unmarshalling elasticsearch response", err)
 	}
@@ -694,7 +694,7 @@ func (r *rodeServer) UpdatePolicy(ctx context.Context, updatePolicyRequest *pb.U
 	log := r.logger.Named("Update Policy")
 
 	// check if the policy exists
-	search := &esSearch{
+	search := &esutil.EsSearch{
 		Query: &filtering.Query{
 			Term: &filtering.Term{
 				"id.keyword": updatePolicyRequest.Id,
@@ -778,7 +778,7 @@ func validateRodeRequirementsForPolicy(mod *ast.Module, regoContent string) []er
 	return errorsList
 }
 
-func (r *rodeServer) genericGet(ctx context.Context, log *zap.Logger, search *esSearch, index string, protoMessage interface{}) (string, error) {
+func (r *rodeServer) genericGet(ctx context.Context, log *zap.Logger, search *esutil.EsSearch, index string, protoMessage interface{}) (string, error) {
 	encodedBody, requestJson := esutil.EncodeRequest(search)
 	log = log.With(zap.String("request", requestJson))
 
@@ -794,7 +794,7 @@ func (r *rodeServer) genericGet(ctx context.Context, log *zap.Logger, search *es
 		return "", createError(log, "error searching elasticsearch for document", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
 	}
 
-	var searchResults esSearchResponse
+	var searchResults esutil.EsSearchResponse
 	if err := esutil.DecodeResponse(res.Body, &searchResults); err != nil {
 		return "", createError(log, "error unmarshalling elasticsearch response", err)
 	}
@@ -816,23 +816,6 @@ func createError(log *zap.Logger, message string, err error, fields ...zap.Field
 
 	log.Error(message, append(fields, zap.Error(err))...)
 	return status.Errorf(codes.Internal, "%s: %s", message, err)
-}
-
-type esDeleteResponse struct {
-	Deleted int `json:"deleted"`
-}
-
-type esIndexDocResponse struct {
-	Id      string           `json:"_id"`
-	Result  string           `json:"result"`
-	Version int              `json:"_version"`
-	Status  int              `json:"status"`
-	Error   *esIndexDocError `json:"error,omitempty"`
-}
-
-type esIndexDocError struct {
-	Type   string `json:"type"`
-	Reason string `json:"reason"`
 }
 
 // contains returns a boolean describing whether or not a string slice contains a particular string

@@ -20,7 +20,7 @@ require (
 	github.com/onsi/gomega v1.10.3
 	github.com/open-policy-agent/opa v0.27.1
 	github.com/pquerna/cachecontrol v0.0.0-20201205024021-ac21108117ac // indirect
-	github.com/rode/grafeas-elasticsearch v0.5.0
+	github.com/rode/grafeas-elasticsearch v0.6.0
 	go.uber.org/zap v1.16.0
 	golang.org/x/net v0.0.0-20210119194325-5f4716e94777 // indirect
 	golang.org/x/oauth2 v0.0.0-20210201163806-010130855d6c

@@ -33,6 +33,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 	"github.com/rode/rode/config"
 	"github.com/rode/rode/mocks"
@@ -654,7 +655,7 @@ var _ = Describe("rode server", func() {
 
 					body := readEsSearchResponse(esTransport.receivedHttpRequests[2])
 
-					Expect(body).To(Equal(&esSearch{}))
+					Expect(body).To(Equal(&esutil.EsSearch{}))
 				})
 
 				It("should return all of the resources", func() {
@@ -1625,13 +1626,13 @@ func structToJsonBody(i interface{}) io.ReadCloser {
 }
 
 func createEsSearchResponse(occurrences []*grafeas_proto.Occurrence) io.ReadCloser {
-	var occurrenceHits []*esSearchResponseHit
+	var occurrenceHits []*esutil.EsSearchResponseHit
 
 	for _, occurrence := range occurrences {
 		source, err := protojson.Marshal(proto.MessageV2(occurrence))
 		Expect(err).To(BeNil())
 
-		response := &esSearchResponseHit{
+		response := &esutil.EsSearchResponseHit{
 			ID:     gofakeit.UUID(),
 			Source: source,
 		}
@@ -1639,9 +1640,9 @@ func createEsSearchResponse(occurrences []*grafeas_proto.Occurrence) io.ReadClos
 		occurrenceHits = append(occurrenceHits, response)
 	}
 
-	response := &esSearchResponse{
-		Hits: &esSearchResponseHits{
-			Total: &esSearchResponseTotal{
+	response := &esutil.EsSearchResponse{
+		Hits: &esutil.EsSearchResponseHits{
+			Total: &esutil.EsSearchResponseTotal{
 				Value: len(occurrences),
 			},
 			Hits: occurrenceHits,
@@ -1656,13 +1657,13 @@ func createEsSearchResponse(occurrences []*grafeas_proto.Occurrence) io.ReadClos
 }
 
 func createEsSearchResponseForGenericResource(resources []*pb.GenericResource) io.ReadCloser {
-	var hits []*esSearchResponseHit
+	var hits []*esutil.EsSearchResponseHit
 
 	for _, resource := range resources {
 		source, err := protojson.Marshal(proto.MessageV2(resource))
 		Expect(err).To(BeNil())
 
-		response := &esSearchResponseHit{
+		response := &esutil.EsSearchResponseHit{
 			ID:     resource.Name,
 			Source: source,
 		}
@@ -1670,8 +1671,8 @@ func createEsSearchResponseForGenericResource(resources []*pb.GenericResource) i
 		hits = append(hits, response)
 	}
 
-	response := &esSearchResponse{
-		Hits: &esSearchResponseHits{
+	response := &esutil.EsSearchResponse{
+		Hits: &esutil.EsSearchResponseHits{
 			Hits: hits,
 		},
 		Took: gofakeit.Number(1, 10),
@@ -1684,13 +1685,13 @@ func createEsSearchResponseForGenericResource(resources []*pb.GenericResource) i
 }
 
 func createEsSearchResponseForPolicy(occurrences []*pb.Policy) io.ReadCloser {
-	var occurrenceHits []*esSearchResponseHit
+	var occurrenceHits []*esutil.EsSearchResponseHit
 
 	for _, occurrence := range occurrences {
 		source, err := protojson.Marshal(proto.MessageV2(occurrence))
 		Expect(err).To(BeNil())
 
-		response := &esSearchResponseHit{
+		response := &esutil.EsSearchResponseHit{
 			ID:     gofakeit.UUID(),
 			Source: source,
 		}
@@ -1698,9 +1699,9 @@ func createEsSearchResponseForPolicy(occurrences []*pb.Policy) io.ReadCloser {
 		occurrenceHits = append(occurrenceHits, response)
 	}
 
-	response := &esSearchResponse{
-		Hits: &esSearchResponseHits{
-			Total: &esSearchResponseTotal{
+	response := &esutil.EsSearchResponse{
+		Hits: &esutil.EsSearchResponseHits{
+			Total: &esutil.EsSearchResponseTotal{
 				Value: len(occurrences),
 			},
 			Hits: occurrenceHits,
@@ -1714,8 +1715,8 @@ func createEsSearchResponseForPolicy(occurrences []*pb.Policy) io.ReadCloser {
 	return ioutil.NopCloser(bytes.NewReader(responseBody))
 }
 
-func readEsSearchResponse(request *http.Request) *esSearch {
-	search := &esSearch{}
+func readEsSearchResponse(request *http.Request) *esutil.EsSearch {
+	search := &esutil.EsSearch{}
 	readResponseBody(request, search)
 
 	return search
