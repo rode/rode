@@ -303,7 +303,7 @@ var _ = Describe("rode server", func() {
 
 			BeforeEach(func() {
 				randomOccurrence = createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED)
-				mgetResponse := esMultiGetResponse{Docs: []*esMultiGetDocument{
+				mgetResponse := esutil.EsMultiGetResponse{Docs: []*esutil.EsMultiGetDocument{
 					{
 						Found: true,
 					},
@@ -383,8 +383,8 @@ var _ = Describe("rode server", func() {
 				esTransport.preparedHttpResponses = []*http.Response{
 					{
 						StatusCode: http.StatusOK,
-						Body: structToJsonBody(&esMultiGetResponse{
-							Docs: []*esMultiGetDocument{{Found: false}},
+						Body: structToJsonBody(&esutil.EsMultiGetResponse{
+							Docs: []*esutil.EsMultiGetDocument{{Found: false}},
 						}),
 					},
 					{
@@ -421,7 +421,7 @@ var _ = Describe("rode server", func() {
 					Expect(esTransport.receivedHttpRequests[2].Method).To(Equal(http.MethodGet))
 					Expect(esTransport.receivedHttpRequests[2].URL.Path).To(Equal(fmt.Sprintf("/%s/_mget", rodeElasticsearchGenericResourcesIndex)))
 
-					requestBody := &esMultiGetRequest{}
+					requestBody := &esutil.EsMultiGetRequest{}
 					readResponseBody(esTransport.receivedHttpRequests[2], &requestBody)
 					Expect(requestBody.IDs).To(ConsistOf(expectedResourceName))
 				})
@@ -464,7 +464,7 @@ var _ = Describe("rode server", func() {
 				})
 
 				It("should only try to make a single resource", func() {
-					requestBody := &esMultiGetRequest{}
+					requestBody := &esutil.EsMultiGetRequest{}
 					readResponseBody(esTransport.receivedHttpRequests[2], &requestBody)
 					Expect(requestBody.IDs).To(HaveLen(1))
 				})
@@ -474,8 +474,8 @@ var _ = Describe("rode server", func() {
 				BeforeEach(func() {
 					esTransport.preparedHttpResponses[0] = &http.Response{
 						StatusCode: http.StatusOK,
-						Body: structToJsonBody(&esMultiGetResponse{
-							Docs: []*esMultiGetDocument{{Found: true}},
+						Body: structToJsonBody(&esutil.EsMultiGetResponse{
+							Docs: []*esutil.EsMultiGetDocument{{Found: true}},
 						}),
 					}
 				})
@@ -1563,59 +1563,28 @@ func createRandomOccurrence(kind grafeas_common_proto.NoteKind) *grafeas_proto.O
 	}
 }
 
-func createEsIndexResponse(index string) *esIndexResponse {
-	return &esIndexResponse{
+func createEsIndexResponse(index string) *esutil.EsIndexResponse {
+	return &esutil.EsIndexResponse{
 		Acknowledged:       true,
 		ShardsAcknowledged: true,
 		Index:              index,
 	}
 }
 
-type esIndexResponse struct {
-	Acknowledged       bool   `json:"acknowledged"`
-	ShardsAcknowledged bool   `json:"shards_acknowledged"`
-	Index              string `json:"index"`
-}
-
-func createEsDeleteDocResponse() *esDeleteDocResponse {
-	return &esDeleteDocResponse{
-		Took:             int(gofakeit.Int16()),
-		TimedOut:         false,
-		Total:            int(gofakeit.Int16()),
-		Deleted:          int(gofakeit.Int16()),
-		Batches:          int(gofakeit.Int16()),
-		VersionConflicts: int(gofakeit.Int16()),
-		Noops:            int(gofakeit.Int16()),
-		Retries: struct {
-			Bulk   int "json:\"bulk\""
-			Search int "json:\"search\""
-		}{
-			Bulk:   int(gofakeit.Int16()),
-			Search: int(gofakeit.Int16()),
-		},
+func createEsDeleteDocResponse() *esutil.EsDeleteResponse {
+	return &esutil.EsDeleteResponse{
+		Took:                 int(gofakeit.Int16()),
+		TimedOut:             false,
+		Total:                int(gofakeit.Int16()),
+		Deleted:              int(gofakeit.Int16()),
+		Batches:              int(gofakeit.Int16()),
+		VersionConflicts:     int(gofakeit.Int16()),
+		Noops:                int(gofakeit.Int16()),
 		ThrottledMillis:      int(gofakeit.Int16()),
 		RequestsPerSecond:    gofakeit.Float64(),
 		ThrottledUntilMillis: int(gofakeit.Int16()),
 		Failures:             nil,
 	}
-}
-
-type esDeleteDocResponse struct {
-	Took             int  `json:"took"`
-	TimedOut         bool `json:"timed_out"`
-	Total            int  `json:"total"`
-	Deleted          int  `json:"deleted"`
-	Batches          int  `json:"batches"`
-	VersionConflicts int  `json:"version_conflicts"`
-	Noops            int  `json:"noops"`
-	Retries          struct {
-		Bulk   int `json:"bulk"`
-		Search int `json:"search"`
-	} `json:"retries"`
-	ThrottledMillis      int           `json:"throttled_millis"`
-	RequestsPerSecond    float64       `json:"requests_per_second"`
-	ThrottledUntilMillis int           `json:"throttled_until_millis"`
-	Failures             []interface{} `json:"failures"`
 }
 
 func structToJsonBody(i interface{}) io.ReadCloser {

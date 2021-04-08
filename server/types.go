@@ -19,19 +19,6 @@ package server
 // vendored Grafeas protobufs in Rode. As a result they're copied here
 // original types: https://github.com/rode/grafeas-elasticsearch/blob/624ccb5d038b55d90fb7c6b3b5378125d7ad0aa5/go/v1beta1/storage/types.go#L32
 
-type esMultiGetRequest struct {
-	IDs []string `json:"ids"`
-}
-
-type esMultiGetDocument struct {
-	ID    string `json:"_id"`
-	Found bool   `json:"found"`
-}
-
-type esMultiGetResponse struct {
-	Docs []*esMultiGetDocument `json:"docs"`
-}
-
 type esBulkQueryFragment struct {
 	Create *esBulkQueryCreateFragment `json:"create"`
 }

@@ -104,7 +104,7 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 		resourceNames = append(resourceNames, resourceName)
 	}
 
-	mgetBody, _ := encodeRequest(&esMultiGetRequest{IDs: resourceNames})
+	mgetBody, _ := encodeRequest(&esutil.EsMultiGetRequest{IDs: resourceNames})
 
 	response, err := r.esClient.Mget(mgetBody, r.esClient.Mget.WithContext(ctx), r.esClient.Mget.WithIndex(rodeElasticsearchGenericResourcesIndex))
 	if err != nil {
@@ -114,7 +114,7 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 	if response.IsError() {
 		return fmt.Errorf("unexpected status code from mget request: %d", response.StatusCode)
 	}
-	mGetResponse := esMultiGetResponse{}
+	mGetResponse := esutil.EsMultiGetResponse{}
 	if err := decodeResponse(response.Body, &mGetResponse); err != nil {
 		return err
 	}
