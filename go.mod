@@ -3,7 +3,7 @@ module github.com/rode/rode
 go 1.15
 
 require (
-	github.com/antlr/antlr4 v0.0.0-20210408161727-b71f6894c7cb // indirect
+	github.com/antlr/antlr4 v0.0.0-20210409163025-478e46409e82 // indirect
 	github.com/brianvoe/gofakeit/v5 v5.10.1
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
@@ -25,7 +25,7 @@ require (
 	github.com/open-policy-agent/opa v0.27.1
 	github.com/pquerna/cachecontrol v0.1.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
-	github.com/rode/grafeas-elasticsearch v0.6.0
+	github.com/rode/grafeas-elasticsearch v0.6.1
 	go.uber.org/zap v1.16.0
 	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2 // indirect
 	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4 // indirect
