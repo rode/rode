@@ -33,6 +33,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 	"github.com/rode/rode/config"
 	"github.com/rode/rode/mocks"
@@ -174,19 +175,81 @@ var _ = Describe("rode server", func() {
 		})
 
 		Context("Rode Elasticsearch indices", func() {
-			BeforeEach(func() {
+			var actualError error
+			assertIndexRequestHasMappings := func(request *http.Request) {
+				payload := map[string]interface{}{}
+				readResponseBody(request, &payload)
+				Expect(payload).To(MatchAllKeys(Keys{
+					"mappings": MatchAllKeys(Keys{
+						"_meta": MatchAllKeys(Keys{
+							"type": Equal("rode"),
+						}),
+						"dynamic_templates": ConsistOf(MatchAllKeys(Keys{
+							"strings_as_keywords": MatchAllKeys(Keys{
+								"match_mapping_type": Equal("string"),
+								"mapping": MatchAllKeys(Keys{
+									"norms": Equal(false),
+									"type":  Equal("keyword"),
+								}),
+							}),
+						})),
+					}),
+				}))
+			}
+
+			JustBeforeEach(func() {
 				grafeasProjectsClient.EXPECT().GetProject(gomock.Any(), gomock.Any())
-				_, _ = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer, elasticsearchConfig)
+				_, actualError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer, elasticsearchConfig)
 			})
 
 			It("should create an index for policies", func() {
 				Expect(esTransport.receivedHttpRequests[0].Method).To(Equal(http.MethodPut))
 				Expect(esTransport.receivedHttpRequests[0].URL.Path).To(Equal("/rode-v1alpha1-policies"))
+				assertIndexRequestHasMappings(esTransport.receivedHttpRequests[0])
 			})
 
 			It("should create an index for generic resources", func() {
 				Expect(esTransport.receivedHttpRequests[1].Method).To(Equal(http.MethodPut))
 				Expect(esTransport.receivedHttpRequests[1].URL.Path).To(Equal("/rode-v1alpha1-generic-resources"))
+				assertIndexRequestHasMappings(esTransport.receivedHttpRequests[1])
+			})
+
+			When("an unexpected status code is returned from the create index call", func() {
+				BeforeEach(func() {
+					esTransport.preparedHttpResponses[0].StatusCode = http.StatusInternalServerError
+				})
+
+				It("should return an error", func() {
+					Expect(actualError).To(HaveOccurred())
+				})
+
+				It("should not make any further requests", func() {
+					Expect(esTransport.receivedHttpRequests).To(HaveLen(1))
+				})
+			})
+
+			When("an error occurs during the request", func() {
+				BeforeEach(func() {
+					esTransport.actions = []func(req *http.Request) (*http.Response, error){
+						func(req *http.Request) (*http.Response, error) {
+							return nil, errors.New(gofakeit.Word())
+						},
+					}
+				})
+
+				It("should return an error", func() {
+					Expect(actualError).To(HaveOccurred())
+				})
+			})
+
+			When("the index already exists", func() {
+				BeforeEach(func() {
+					esTransport.preparedHttpResponses[0].StatusCode = http.StatusBadRequest
+				})
+
+				It("should not return an error", func() {
+					Expect(actualError).NotTo(HaveOccurred())
+				})
 			})
 		})
 
@@ -469,6 +532,16 @@ var _ = Describe("rode server", func() {
 				})
 			})
 
+			When("an error occurs determining the resource uri version", func() {
+				BeforeEach(func() {
+					occurrence.Resource.Uri = gofakeit.URL()
+				})
+
+				It("should return an error", func() {
+					Expect(actualError).To(HaveOccurred())
+				})
+			})
+
 			When("the generic resources already exist", func() {
 				BeforeEach(func() {
 					esTransport.preparedHttpResponses[0] = &http.Response{
@@ -651,6 +724,7 @@ var _ = Describe("rode server", func() {
 					Expect(esTransport.receivedHttpRequests[2].Method).To(Equal(http.MethodGet))
 					Expect(esTransport.receivedHttpRequests[2].URL.Path).To(Equal(fmt.Sprintf("/%s/_search", rodeElasticsearchGenericResourcesIndex)))
 					Expect(esTransport.receivedHttpRequests[2].URL.Query().Get("size")).To(Equal(strconv.Itoa(maxPageSize)))
+					Expect(esTransport.receivedHttpRequests[2].URL.Query().Get("sort")).To(Equal("name:asc"))
 
 					body := readEsSearchResponse(esTransport.receivedHttpRequests[2])
 
@@ -670,6 +744,54 @@ var _ = Describe("rode server", func() {
 					}
 
 					Expect(actualNames).To(ConsistOf(expectedNames))
+				})
+
+				When("a filter is provided", func() {
+					var (
+						expectedFilter string
+					)
+
+					BeforeEach(func() {
+						expectedFilter = gofakeit.LetterN(10)
+						listRequest.Filter = expectedFilter
+					})
+
+					When("the filter is valid", func() {
+						var expectedQuery *filtering.Query
+
+						BeforeEach(func() {
+							expectedQuery = &filtering.Query{
+								Term: &filtering.Term{
+									gofakeit.LetterN(10): gofakeit.LetterN(10),
+								},
+							}
+							mockFilterer.EXPECT().ParseExpression(expectedFilter).Return(expectedQuery, nil)
+						})
+
+						It("should include the filter query in the request body", func() {
+							body := readEsSearchResponse(esTransport.receivedHttpRequests[2])
+
+							Expect(body).To(Equal(&esSearch{
+								Query: expectedQuery,
+							}))
+						})
+					})
+
+					When("the filter is invalid", func() {
+						BeforeEach(func() {
+							mockFilterer.EXPECT().ParseExpression(expectedFilter).Return(nil, errors.New(gofakeit.Word()))
+						})
+
+						It("should return an error", func() {
+							Expect(actualError).To(HaveOccurred())
+						})
+
+						It("should set a gRPC status", func() {
+							status := getGRPCStatusFromError(actualError)
+
+							Expect(status.Code()).To(Equal(codes.Internal))
+						})
+					})
 				})
 
 				When("an unexpected status code is returned from the search", func() {
@@ -1551,7 +1673,7 @@ func createRandomOccurrence(kind grafeas_common_proto.NoteKind) *grafeas_proto.O
 	return &grafeas_proto.Occurrence{
 		Name: gofakeit.LetterN(10),
 		Resource: &grafeas_proto.Resource{
-			Uri: gofakeit.URL(),
+			Uri: fmt.Sprintf("%s@sha256:%s", gofakeit.URL(), gofakeit.LetterN(10)),
 		},
 		NoteName:    gofakeit.LetterN(10),
 		Kind:        kind,
