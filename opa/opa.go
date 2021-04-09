@@ -38,7 +38,7 @@ type client struct {
 	logger       *zap.Logger
 	Host         string
 	ExplainQuery bool
-	HTTPClient   *http.Client
+	httpClient   *http.Client
 }
 
 // EvalutePolicyRequest OPA evalute policy request
@@ -90,7 +90,7 @@ func NewClient(logger *zap.Logger, host string, explainQuery bool) Client {
 		logger:       logger,
 		Host:         host,
 		ExplainQuery: explainQuery,
-		HTTPClient:   httpclient,
+		httpClient:   httpclient,
 	}
 	return client
 }
@@ -121,7 +121,7 @@ func (opa *client) loadPolicy(policy string, policyData string) error {
 	if err != nil {
 		return fmt.Errorf("failed to generate policy request")
 	}
-	response, err := opa.HTTPClient.Do(req)
+	response, err := opa.httpClient.Do(req)
 	if err != nil {
 		log.Error("load policy error", zap.Error(err), zap.String("input", string(policyData)))
 		return fmt.Errorf("failed to load the policy in opa")
@@ -146,7 +146,7 @@ func (opa *client) EvaluatePolicy(policy string, input []byte) (*EvaluatePolicyR
 		return nil, fmt.Errorf("failed to encode OPA input: %s", err)
 	}
 
-	httpResponse, err := opa.HTTPClient.Post(opa.getDataQueryURL(getOpaPackagePath(policy)), "application/json", bytes.NewReader(request))
+	httpResponse, err := opa.httpClient.Post(opa.getDataQueryURL(getOpaPackagePath(policy)), "application/json", bytes.NewReader(request))
 	if err != nil {
 		log.Error("http request to OPA failed", zap.Error(err))
 		return nil, fmt.Errorf("http request to OPA failed: %s", err)
@@ -169,7 +169,7 @@ func (opa *client) EvaluatePolicy(policy string, input []byte) (*EvaluatePolicyR
 // policyExists tests if OPA policy exists
 func (opa *client) policyExists(policy string) (bool, error) {
 	log := opa.logger.Named("Policy Exists")
-	response, err := opa.HTTPClient.Get(opa.getURL(fmt.Sprintf("v1/policies/%s", policy)))
+	response, err := opa.httpClient.Get(opa.getURL(fmt.Sprintf("v1/policies/%s", policy)))
 	if err != nil {
 		log.Error("error sending get policy request to OPA", zap.Error(err))
 		return false, NewClientError("error sending get policy request to OPA", OpaClientErrorTypeHTTP, err)
@@ -198,7 +198,7 @@ func (opa *client) publishPolicy(policy string, violations []PolicyViolation) er
 	if err != nil {
 		log.Error("error creating create policy request", zap.Error(err))
 	}
-	response, err := opa.HTTPClient.Do(request)
+	response, err := opa.httpClient.Do(request)
 	if err != nil {
 		log.Error("error sending create policy request", zap.Error(err))
 		return NewClientError("error sending create policy request", OpaClientErrorTypeHTTP, err)

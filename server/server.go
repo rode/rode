@@ -285,7 +285,7 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 	log.Debug("received request", zap.Any("ListResourcesRequest", request))
 
 	searchQuery := esutil.EsSearch{
-		Collapse: &esutil.EsCollapse{
+		Collapse: &esutil.EsSearchCollapse{
 			Field: "resource.uri",
 		},
 	}
@@ -299,7 +299,9 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 
 		searchQuery.Query = parsedQuery
 	}
-
+	searchQuery.Sort = map[string]esutil.EsSortOrder{
+		"resource.uri": esutil.EsSortOrderAscending,
+	}
 	encodedBody, requestJSON := encodeRequest(searchQuery)
 	log.Debug("es request payload", zap.Any("payload", requestJSON))
 	res, err := r.esClient.Search(
@@ -307,7 +309,6 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 		r.esClient.Search.WithIndex(rodeElasticsearchOccurrencesAlias),
 		r.esClient.Search.WithBody(encodedBody),
 		r.esClient.Search.WithSize(maxPageSize),
-		r.esClient.Search.WithSort("resource.uri:asc"),
 	)
 
 	if err != nil {
@@ -662,6 +663,10 @@ func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.L
 		body.Query = filterQuery
 	}
 
+	body.Sort = map[string]esutil.EsSortOrder{
+		"created": esutil.EsSortOrderDecending,
+	}
+
 	encodedBody, requestJson := esutil.EncodeRequest(body)
 	log = log.With(zap.String("request", requestJson))
 	log.Debug("performing search")
@@ -672,7 +677,6 @@ func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.L
 		r.esClient.Search.WithIndex(rodeElasticsearchPoliciesIndex),
 		r.esClient.Search.WithBody(encodedBody),
 		r.esClient.Search.WithSize(maxPageSize),
-		r.esClient.Search.WithSort("created:desc"),
 	)
 
 	if err != nil {
