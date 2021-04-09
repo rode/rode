@@ -130,8 +130,8 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 
 		log.Debug("Adding resource to bulk request", zap.String("resourceName", resourceName))
 
-		metadata, _ := json.Marshal(esBulkQueryFragment{
-			Create: &esBulkQueryCreateFragment{
+		metadata, _ := json.Marshal(esutil.EsBulkQueryFragment{
+			Create: &esutil.EsBulkQueryCreateFragment{
 				Id: resourceName,
 			},
 		})
@@ -165,7 +165,7 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 		return fmt.Errorf("unexpected status code while creating generic resources: %d", response.StatusCode)
 	}
 
-	bulkResponse := &esBulkResponse{}
+	bulkResponse := &esutil.EsBulkResponse{}
 	err = esutil.DecodeResponse(response.Body, bulkResponse)
 	if err != nil {
 		return err
@@ -304,6 +304,7 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 		r.esClient.Search.WithIndex(rodeElasticsearchOccurrencesAlias),
 		r.esClient.Search.WithBody(encodedBody),
 		r.esClient.Search.WithSize(maxPageSize),
+		r.esClient.Search.WithSort("resource.uri:asc"),
 	)
 
 	if err != nil {
@@ -542,10 +543,12 @@ func (r *rodeServer) CreatePolicy(ctx context.Context, policyEntity *pb.PolicyEn
 		s, _ := status.New(codes.InvalidArgument, "failed to compile the provided policy").WithDetails(message)
 		return nil, s.Err()
 	}
-
+	currentTime := timestamppb.Now()
 	policy := &pb.Policy{
-		Id:     uuid.New().String(),
-		Policy: policyEntity,
+		Id:      uuid.New().String(),
+		Policy:  policyEntity,
+		Created: currentTime,
+		Updated: currentTime,
 	}
 	str, err := protojson.MarshalOptions{EmitUnpopulated: true}.Marshal(proto.MessageV2(policy))
 	if err != nil {
@@ -642,6 +645,7 @@ func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.L
 
 		body.Query = filterQuery
 	}
+
 	encodedBody, requestJson := esutil.EncodeRequest(body)
 	log = log.With(zap.String("request", requestJson))
 	log.Debug("performing search")
@@ -652,6 +656,7 @@ func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.L
 		r.esClient.Search.WithIndex(rodeElasticsearchPoliciesIndex),
 		r.esClient.Search.WithBody(encodedBody),
 		r.esClient.Search.WithSize(maxPageSize),
+		r.esClient.Search.WithSort("created:desc"),
 	)
 
 	if err != nil {
@@ -722,8 +727,9 @@ func (r *rodeServer) UpdatePolicy(ctx context.Context, updatePolicyRequest *pb.U
 		log.Info("errors while mapping masks", zap.Any("errors", err))
 		return policy, err
 	}
-	fieldmask_utils.StructToStruct(m, updatePolicyRequest.Policy, policy.Policy)
 
+	fieldmask_utils.StructToStruct(m, updatePolicyRequest.Policy, policy.Policy)
+	policy.Updated = timestamppb.Now()
 	str, err := protojson.MarshalOptions{EmitUnpopulated: true}.Marshal(proto.MessageV2(policy))
 	if err != nil {
 		return nil, createError(log, fmt.Sprintf("error marshalling %T to json", policy), err)

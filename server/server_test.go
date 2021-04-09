@@ -389,10 +389,10 @@ var _ = Describe("rode server", func() {
 					},
 					{
 						StatusCode: http.StatusOK,
-						Body: structToJsonBody(&esBulkResponse{
-							Items: []*esBulkResponseActionItem{
+						Body: structToJsonBody(&esutil.EsBulkResponse{
+							Items: []*esutil.EsBulkResponseItem{
 								{
-									Create: &esBulkResponseItem{
+									Create: &esutil.EsIndexDocResponse{
 										Id:     expectedResourceName,
 										Status: http.StatusOK,
 									},
@@ -436,15 +436,15 @@ var _ = Describe("rode server", func() {
 					body, err := ioutil.ReadAll(esTransport.receivedHttpRequests[3].Body)
 					Expect(err).To(BeNil())
 
-					metadata := &esBulkQueryFragment{}
+					metadata := &esutil.EsBulkQueryFragment{}
 					resource := &pb.GenericResource{}
 					pieces := bytes.Split(body, []byte{'\n'})
 
 					Expect(json.Unmarshal(pieces[0], metadata)).To(BeNil())
 					Expect(json.Unmarshal(pieces[1], resource)).To(BeNil())
 
-					Expect(metadata).To(Equal(&esBulkQueryFragment{
-						Create: &esBulkQueryCreateFragment{
+					Expect(metadata).To(Equal(&esutil.EsBulkQueryFragment{
+						Create: &esutil.EsBulkQueryCreateFragment{
 							Id: expectedResourceName,
 						},
 					}))
@@ -570,11 +570,11 @@ var _ = Describe("rode server", func() {
 				BeforeEach(func() {
 					esTransport.preparedHttpResponses[1] = &http.Response{
 						StatusCode: http.StatusOK,
-						Body: structToJsonBody(&esBulkResponse{
-							Items: []*esBulkResponseActionItem{
+						Body: structToJsonBody(&esutil.EsBulkResponse{
+							Items: []*esutil.EsBulkResponseItem{
 								{
-									Create: &esBulkResponseItem{
-										Error: &esBulkResponseItemError{
+									Create: &esutil.EsIndexDocResponse{
+										Error: &esutil.EsIndexDocError{
 											Reason: gofakeit.Word(),
 										},
 										Status: http.StatusInternalServerError,
@@ -594,11 +594,11 @@ var _ = Describe("rode server", func() {
 				BeforeEach(func() {
 					esTransport.preparedHttpResponses[1] = &http.Response{
 						StatusCode: http.StatusOK,
-						Body: structToJsonBody(&esBulkResponse{
-							Items: []*esBulkResponseActionItem{
+						Body: structToJsonBody(&esutil.EsBulkResponse{
+							Items: []*esutil.EsBulkResponseItem{
 								{
-									Create: &esBulkResponseItem{
-										Error: &esBulkResponseItemError{
+									Create: &esutil.EsIndexDocResponse{
+										Error: &esutil.EsIndexDocError{
 											Reason: gofakeit.Word(),
 										},
 										Status: http.StatusConflict,

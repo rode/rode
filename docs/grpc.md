@@ -184,6 +184,8 @@
 | ----- | ---- | ----- | ----------- |
 | id | [string](#string) |  | Unique autogenerate id |
 | policy | [PolicyEntity](#rode.v1alpha1.PolicyEntity) |  |  |
+| created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
+| updated | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
 
 
 

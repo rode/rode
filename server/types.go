@@ -19,32 +19,32 @@ package server
 // vendored Grafeas protobufs in Rode. As a result they're copied here
 // original types: https://github.com/rode/grafeas-elasticsearch/blob/624ccb5d038b55d90fb7c6b3b5378125d7ad0aa5/go/v1beta1/storage/types.go#L32
 
-type esBulkQueryFragment struct {
-	Create *esBulkQueryCreateFragment `json:"create"`
-}
+// type esBulkQueryFragment struct {
+// 	Create *esBulkQueryCreateFragment `json:"create"`
+// }
 
-type esBulkQueryCreateFragment struct {
-	Id string `json:"_id"`
-}
+// type esBulkQueryCreateFragment struct {
+// 	Id string `json:"_id"`
+// }
 
-type esBulkResponse struct {
-	Items  []*esBulkResponseActionItem `json:"items"`
-	Errors bool                        `json:"errors"`
-}
+// type esBulkResponse struct {
+// 	Items  []*esBulkResponseActionItem `json:"items"`
+// 	Errors bool                        `json:"errors"`
+// }
 
-type esBulkResponseActionItem struct {
-	Create *esBulkResponseItem `json:"create,omitempty"`
-}
+// type esBulkResponseActionItem struct {
+// 	Create *esBulkResponseItem `json:"create,omitempty"`
+// }
 
-type esBulkResponseItem struct {
-	Id      string                   `json:"_id"`
-	Result  string                   `json:"result"`
-	Version int                      `json:"_version"`
-	Status  int                      `json:"status"`
-	Error   *esBulkResponseItemError `json:"error,omitempty"`
-}
+// type esBulkResponseItem struct {
+// 	Id      string                   `json:"_id"`
+// 	Result  string                   `json:"result"`
+// 	Version int                      `json:"_version"`
+// 	Status  int                      `json:"status"`
+// 	Error   *esBulkResponseItemError `json:"error,omitempty"`
+// }
 
-type esBulkResponseItemError struct {
-	Type   string `json:"type"`
-	Reason string `json:"reason"`
-}
+// type esBulkResponseItemError struct {
+// 	Type   string `json:"type"`
+// 	Reason string `json:"reason"`
+// }

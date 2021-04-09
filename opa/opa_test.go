@@ -45,10 +45,12 @@ var _ = Describe("opa client", func() {
 
 	BeforeEach(func() {
 		opaHost = fmt.Sprintf("http://%s", gofakeit.DomainName())
+
 		Opa = &client{
 			logger,
 			opaHost,
 			false,
+			&http.Client{},
 		}
 
 	})
