@@ -38,5 +38,3 @@ require (
 	google.golang.org/protobuf v1.26.0
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
 )
-
-replace github.com/rode/grafeas-elasticsearch => /Users/ahmedalsabag/Documents/liatrio/grafeas-elasticsearch
