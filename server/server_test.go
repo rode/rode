@@ -849,9 +849,11 @@ var _ = Describe("rode server", func() {
 			})
 		})
 
-		When("listing occurrences for a resource", func() {
+		When("listing occurrences", func() {
 			var (
 				randomOccurrence               *grafeas_proto.Occurrence
+				nextPageToken                  string
+				currentPageToken               string
 				grafeasListOccurrencesRequest  *grafeas_proto.ListOccurrencesRequest
 				grafeasListOccurrencesResponse *grafeas_proto.ListOccurrencesResponse
 				uri                            string
@@ -861,11 +863,14 @@ var _ = Describe("rode server", func() {
 				randomOccurrence = createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED)
 
 				uri = randomOccurrence.Resource.Uri
+				nextPageToken = gofakeit.Word()
+				currentPageToken = gofakeit.Word()
 
 				// expected Grafeas ListOccurrencesRequest request
 				grafeasListOccurrencesRequest = &grafeas_proto.ListOccurrencesRequest{
 					Parent: "projects/rode",
 					Filter: fmt.Sprintf(`"resource.uri" == "%s"`, uri),
+					PageToken: currentPageToken,
 				}
 
 				// mocked Grafeas ListOccurrencesResponse response
@@ -873,6 +878,7 @@ var _ = Describe("rode server", func() {
 					Occurrences: []*grafeas_proto.Occurrence{
 						randomOccurrence,
 					},
+					NextPageToken: nextPageToken,
 				}
 
 			})
@@ -883,12 +889,14 @@ var _ = Describe("rode server", func() {
 
 				listOccurrencesRequest := &pb.ListOccurrencesRequest{
 					Filter: fmt.Sprintf(`"resource.uri" == "%s"`, uri),
+					PageToken: currentPageToken,
 				}
 				response, err := rodeServer.ListOccurrences(context.Background(), listOccurrencesRequest)
 				Expect(err).ToNot(HaveOccurred())
 
 				// check response
 				Expect(response.Occurrences).To(BeEquivalentTo(grafeasListOccurrencesResponse.Occurrences))
+				Expect(response.NextPageToken).To(Equal(nextPageToken))
 			})
 
 			When("Grafeas returns an error", func() {
@@ -897,6 +905,7 @@ var _ = Describe("rode server", func() {
 
 					listOccurrencesRequest := &pb.ListOccurrencesRequest{
 						Filter: fmt.Sprintf(`"resource.uri" == "%s"`, uri),
+						PageToken: currentPageToken,
 					}
 					response, err := rodeServer.ListOccurrences(context.Background(), listOccurrencesRequest)
 					Expect(err).ToNot(BeNil())

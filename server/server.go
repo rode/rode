@@ -46,6 +46,7 @@ import (
 )
 
 const (
+	rodeProjectSlug                        = "projects/rode"
 	rodeElasticsearchOccurrencesAlias      = "grafeas-rode-occurrences"
 	rodeElasticsearchPoliciesIndex         = "rode-v1alpha1-policies"
 	rodeElasticsearchGenericResourcesIndex = "rode-v1alpha1-generic-resources"
@@ -200,7 +201,7 @@ func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceReque
 	}
 
 	occurrenceResponse, err := r.grafeasCommon.BatchCreateOccurrences(ctx, &grafeas_proto.BatchCreateOccurrencesRequest{
-		Parent:      "projects/rode",
+		Parent:      rodeProjectSlug,
 		Occurrences: occurrenceRequest.GetOccurrences(),
 	})
 	if err != nil {
@@ -227,7 +228,7 @@ func (r *rodeServer) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePol
 	}
 
 	// fetch occurrences from grafeas
-	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{Parent: "projects/rode", Filter: fmt.Sprintf(`"resource.uri" == "%s"`, request.ResourceUri)})
+	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{Parent: rodeProjectSlug, Filter: fmt.Sprintf(`"resource.uri" == "%s"`, request.ResourceUri)})
 	if err != nil {
 		log.Error("list occurrences failed", zap.Error(err), zap.String("resource", request.ResourceUri))
 		return nil, status.Error(codes.Internal, "list occurrences failed")
@@ -242,13 +243,13 @@ func (r *rodeServer) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePol
 			Violations: []*opa.EvaluatePolicyViolation{},
 		},
 	}
-	// evalute OPA policy
+	// evaluate OPA policy
 	evaluatePolicyResponse, err = r.opa.EvaluatePolicy(policy.Policy.RegoContent, input)
 	if err != nil {
 		log.Error("evaluate OPA policy failed")
 		return nil, status.Error(codes.Internal, "evaluate OPA policy failed")
 	}
-	log.Debug("Evalute policy result", zap.Any("policy result", evaluatePolicyResponse))
+	log.Debug("Evaluate policy result", zap.Any("policy result", evaluatePolicyResponse))
 
 	attestation := &pb.EvaluatePolicyResult{}
 	attestation.Created = timestamppb.Now()
@@ -406,10 +407,10 @@ func decodeResponse(r io.ReadCloser, i interface{}) error {
 func (r *rodeServer) initialize(ctx context.Context) error {
 	log := r.logger.Named("initialize")
 
-	_, err := r.grafeasProjects.GetProject(ctx, &grafeas_project_proto.GetProjectRequest{Name: "projects/rode"})
+	_, err := r.grafeasProjects.GetProject(ctx, &grafeas_project_proto.GetProjectRequest{Name: rodeProjectSlug})
 	if err != nil {
 		if status.Code(err) == codes.NotFound {
-			_, err := r.grafeasProjects.CreateProject(ctx, &grafeas_project_proto.CreateProjectRequest{Project: &grafeas_project_proto.Project{Name: "projects/rode"}})
+			_, err := r.grafeasProjects.CreateProject(ctx, &grafeas_project_proto.CreateProjectRequest{Project: &grafeas_project_proto.Project{Name: rodeProjectSlug}})
 			if err != nil {
 				log.Error("failed to create rode project", zap.Error(err))
 				return err
@@ -434,16 +435,21 @@ func (r *rodeServer) ListOccurrences(ctx context.Context, occurrenceRequest *pb.
 	log := r.logger.Named("ListOccurrences")
 	log.Debug("received request", zap.Any("ListOccurrencesRequest", occurrenceRequest))
 
-	requestedFilter := occurrenceRequest.Filter
+	request := &grafeas_proto.ListOccurrencesRequest{
+		Parent: rodeProjectSlug,
+		Filter: occurrenceRequest.Filter,
+		PageToken: occurrenceRequest.PageToken,
+	}
 
-	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{Parent: "projects/rode", Filter: requestedFilter})
+	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, request)
 	if err != nil {
 		log.Error("list occurrences failed", zap.Error(err), zap.String("filter", occurrenceRequest.Filter))
 		return nil, status.Error(codes.Internal, "list occurrences failed")
 	}
+
 	return &pb.ListOccurrencesResponse{
 		Occurrences:   listOccurrencesResponse.GetOccurrences(),
-		NextPageToken: "",
+		NextPageToken: listOccurrencesResponse.GetNextPageToken(),
 	}, nil
 }
 
