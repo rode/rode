@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/gogo/protobuf/protoc-gen-gogo/generator"
@@ -96,7 +95,11 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 	visitedResources := map[string]bool{}
 	var resourceNames []string
 	for _, x := range occurrenceRequest.Occurrences {
-		resourceName := strings.Split(x.Resource.Uri, "@")[0]
+		uriParts, err := parseResourceUri(x.Resource.Uri)
+		if err != nil {
+			return err
+		}
+		resourceName := uriParts.name
 		if _, ok := visitedResources[resourceName]; ok {
 			continue
 		}
@@ -171,18 +174,18 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 		return err
 	}
 
-	var errors []error
+	var bulkItemErrors []error
 	for i := range bulkResponse.Items {
 		item := bulkResponse.Items[i].Create
 		if item.Error != nil && item.Status != http.StatusConflict {
 			itemError := fmt.Errorf("error creating generic resource [%d] %s: %s", item.Status, item.Error.Type, item.Error.Reason)
-			errors = append(errors, itemError)
+			bulkItemErrors = append(bulkItemErrors, itemError)
 		}
 	}
 
-	if len(errors) > 0 {
-		log.Error("Failed to create all resources", zap.Any("errors", errors))
-		return fmt.Errorf("failed to create all resources: %v", errors)
+	if len(bulkItemErrors) > 0 {
+		log.Error("Failed to create all resources", zap.Any("errors", bulkItemErrors))
+		return fmt.Errorf("failed to create all resources: %v", bulkItemErrors)
 	}
 
 	return nil
@@ -342,6 +345,15 @@ func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListG
 	log.Debug("received request", zap.Any("request", request))
 
 	searchQuery := esutil.EsSearch{}
+	if request.Filter != "" {
+		parsedQuery, err := r.filterer.ParseExpression(request.Filter)
+		if err != nil {
+			log.Error("failed to parse query", zap.Error(err))
+			return nil, status.Errorf(codes.Internal, "failed to parse query: %s", err)
+		}
+
+		searchQuery.Query = parsedQuery
+	}
 
 	encodedBody, requestJSON := encodeRequest(searchQuery)
 	log.Debug("es request payload", zap.String("payload", requestJSON))
@@ -350,6 +362,7 @@ func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListG
 		r.esClient.Search.WithIndex(rodeElasticsearchGenericResourcesIndex),
 		r.esClient.Search.WithBody(encodedBody),
 		r.esClient.Search.WithSize(maxPageSize),
+		r.esClient.Search.WithSort("name:asc"),
 	)
 
 	if err != nil {
@@ -406,9 +419,12 @@ func (r *rodeServer) initialize(ctx context.Context) error {
 			return err
 		}
 	}
-	// Create an index for policy storage
-	r.esClient.Indices.Create(rodeElasticsearchPoliciesIndex, r.esClient.Indices.Create.WithContext(ctx))
-	r.esClient.Indices.Create(rodeElasticsearchGenericResourcesIndex, r.esClient.Indices.Create.WithContext(ctx))
+
+	for _, index := range []string{rodeElasticsearchPoliciesIndex, rodeElasticsearchGenericResourcesIndex} {
+		if err := r.createIndex(ctx, index); err != nil {
+			return fmt.Errorf("error creating index %s: %s", index, err)
+		}
+	}
 
 	return nil
 }
@@ -577,7 +593,7 @@ func (r *rodeServer) GetPolicy(ctx context.Context, getPolicyRequest *pb.GetPoli
 	search := &esutil.EsSearch{
 		Query: &filtering.Query{
 			Term: &filtering.Term{
-				"id.keyword": getPolicyRequest.Id,
+				"id": getPolicyRequest.Id,
 			},
 		},
 	}
@@ -599,7 +615,7 @@ func (r *rodeServer) DeletePolicy(ctx context.Context, deletePolicyRequest *pb.D
 	search := &esutil.EsSearch{
 		Query: &filtering.Query{
 			Term: &filtering.Term{
-				"id.keyword": deletePolicyRequest.Id,
+				"id": deletePolicyRequest.Id,
 			},
 		},
 	}
@@ -702,7 +718,7 @@ func (r *rodeServer) UpdatePolicy(ctx context.Context, updatePolicyRequest *pb.U
 	search := &esutil.EsSearch{
 		Query: &filtering.Query{
 			Term: &filtering.Term{
-				"id.keyword": updatePolicyRequest.Id,
+				"id": updatePolicyRequest.Id,
 			},
 		},
 	}
@@ -751,6 +767,39 @@ func (r *rodeServer) UpdatePolicy(ctx context.Context, updatePolicyRequest *pb.U
 	}
 
 	return policy, nil
+}
+
+func (r *rodeServer) createIndex(ctx context.Context, indexName string) error {
+	mappings := map[string]interface{}{
+		"mappings": map[string]interface{}{
+			"_meta": map[string]interface{}{
+				"type": "rode",
+			},
+			"dynamic_templates": []map[string]interface{}{
+				{
+					"strings_as_keywords": map[string]interface{}{
+						"match_mapping_type": "string",
+						"mapping": map[string]interface{}{
+							"type":  "keyword",
+							"norms": false,
+						},
+					},
+				},
+			},
+		},
+	}
+	body, _ := encodeRequest(mappings)
+	response, err := r.esClient.Indices.Create(indexName, r.esClient.Indices.Create.WithBody(body), r.esClient.Indices.Create.WithContext(ctx))
+
+	if err != nil {
+		return err
+	}
+
+	if response.IsError() && response.StatusCode != http.StatusBadRequest {
+		return fmt.Errorf("unexpected response creating Elasticsearch index: %s", response)
+	}
+
+	return nil
 }
 
 // validateRodeRequirementsForPolicy ensures that these two rules are followed:
