@@ -107,7 +107,7 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 		resourceNames = append(resourceNames, resourceName)
 	}
 
-	mgetBody, _ := encodeRequest(&esMultiGetRequest{IDs: resourceNames})
+	mgetBody, _ := encodeRequest(&esutil.EsMultiGetRequest{IDs: resourceNames})
 
 	response, err := r.esClient.Mget(mgetBody, r.esClient.Mget.WithContext(ctx), r.esClient.Mget.WithIndex(rodeElasticsearchGenericResourcesIndex))
 	if err != nil {
@@ -117,7 +117,7 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 	if response.IsError() {
 		return fmt.Errorf("unexpected status code from mget request: %d", response.StatusCode)
 	}
-	mGetResponse := esMultiGetResponse{}
+	mGetResponse := esutil.EsMultiGetResponse{}
 	if err := decodeResponse(response.Body, &mGetResponse); err != nil {
 		return err
 	}
@@ -133,8 +133,8 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 
 		log.Debug("Adding resource to bulk request", zap.String("resourceName", resourceName))
 
-		metadata, _ := json.Marshal(esBulkQueryFragment{
-			Create: &esBulkQueryCreateFragment{
+		metadata, _ := json.Marshal(esutil.EsBulkQueryFragment{
+			Create: &esutil.EsBulkQueryCreateFragment{
 				Id: resourceName,
 			},
 		})
@@ -168,7 +168,7 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 		return fmt.Errorf("unexpected status code while creating generic resources: %d", response.StatusCode)
 	}
 
-	bulkResponse := &esBulkResponse{}
+	bulkResponse := &esutil.EsBulkResponse{}
 	err = esutil.DecodeResponse(response.Body, bulkResponse)
 	if err != nil {
 		return err
@@ -284,8 +284,8 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 	log := r.logger.Named("ListResources")
 	log.Debug("received request", zap.Any("ListResourcesRequest", request))
 
-	searchQuery := esSearch{
-		Collapse: &esCollapse{
+	searchQuery := esutil.EsSearch{
+		Collapse: &esutil.EsSearchCollapse{
 			Field: "resource.uri",
 		},
 	}
@@ -299,7 +299,9 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 
 		searchQuery.Query = parsedQuery
 	}
-
+	searchQuery.Sort = map[string]esutil.EsSortOrder{
+		"resource.uri": esutil.EsSortOrderAscending,
+	}
 	encodedBody, requestJSON := encodeRequest(searchQuery)
 	log.Debug("es request payload", zap.Any("payload", requestJSON))
 	res, err := r.esClient.Search(
@@ -317,7 +319,7 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 		return nil, fmt.Errorf("error occurred during ES query %v", res)
 	}
 
-	var searchResults esSearchResponse
+	var searchResults esutil.EsSearchResponse
 	if err := decodeResponse(res.Body, &searchResults); err != nil {
 		return nil, err
 	}
@@ -343,7 +345,7 @@ func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListG
 	log := r.logger.Named("ListGenericResources")
 	log.Debug("received request", zap.Any("request", request))
 
-	searchQuery := esSearch{}
+	searchQuery := esutil.EsSearch{}
 	if request.Filter != "" {
 		parsedQuery, err := r.filterer.ParseExpression(request.Filter)
 		if err != nil {
@@ -372,7 +374,7 @@ func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListG
 		return nil, status.Errorf(codes.Internal, "unexpected status code from Elasticsearch: %v", res)
 	}
 
-	var searchResults esSearchResponse
+	var searchResults esutil.EsSearchResponse
 	if err := decodeResponse(res.Body, &searchResults); err != nil {
 		return nil, status.Errorf(codes.Internal, "error occurred decoding response: %s", err)
 	}
@@ -558,10 +560,12 @@ func (r *rodeServer) CreatePolicy(ctx context.Context, policyEntity *pb.PolicyEn
 		s, _ := status.New(codes.InvalidArgument, "failed to compile the provided policy").WithDetails(message)
 		return nil, s.Err()
 	}
-
+	currentTime := timestamppb.Now()
 	policy := &pb.Policy{
-		Id:     uuid.New().String(),
-		Policy: policyEntity,
+		Id:      uuid.New().String(),
+		Policy:  policyEntity,
+		Created: currentTime,
+		Updated: currentTime,
 	}
 	str, err := protojson.MarshalOptions{EmitUnpopulated: true}.Marshal(proto.MessageV2(policy))
 	if err != nil {
@@ -587,7 +591,7 @@ func (r *rodeServer) CreatePolicy(ctx context.Context, policyEntity *pb.PolicyEn
 func (r *rodeServer) GetPolicy(ctx context.Context, getPolicyRequest *pb.GetPolicyRequest) (*pb.Policy, error) {
 	log := r.logger.Named("GetPolicy")
 
-	search := &esSearch{
+	search := &esutil.EsSearch{
 		Query: &filtering.Query{
 			Term: &filtering.Term{
 				"id": getPolicyRequest.Id,
@@ -609,7 +613,7 @@ func (r *rodeServer) GetPolicy(ctx context.Context, getPolicyRequest *pb.GetPoli
 func (r *rodeServer) DeletePolicy(ctx context.Context, deletePolicyRequest *pb.DeletePolicyRequest) (*emptypb.Empty, error) {
 	log := r.logger.Named("DeletePolicy")
 
-	search := &esSearch{
+	search := &esutil.EsSearch{
 		Query: &filtering.Query{
 			Term: &filtering.Term{
 				"id": deletePolicyRequest.Id,
@@ -633,7 +637,7 @@ func (r *rodeServer) DeletePolicy(ctx context.Context, deletePolicyRequest *pb.D
 		return nil, createError(log, "received unexpected response from elasticsearch", nil)
 	}
 
-	var deletedResults esDeleteResponse
+	var deletedResults esutil.EsDeleteResponse
 	if err = decodeResponse(res.Body, &deletedResults); err != nil {
 		return nil, createError(log, "error unmarshalling elasticsearch response", err)
 	}
@@ -648,7 +652,7 @@ func (r *rodeServer) DeletePolicy(ctx context.Context, deletePolicyRequest *pb.D
 func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.ListPoliciesRequest) (*pb.ListPoliciesResponse, error) {
 	log := r.logger.Named("List Policies")
 
-	body := &esSearch{}
+	body := &esutil.EsSearch{}
 	if listPoliciesRequest.Filter != "" {
 		log = log.With(zap.String("filter", listPoliciesRequest.Filter))
 		filterQuery, err := r.filterer.ParseExpression(listPoliciesRequest.Filter)
@@ -658,6 +662,11 @@ func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.L
 
 		body.Query = filterQuery
 	}
+
+	body.Sort = map[string]esutil.EsSortOrder{
+		"created": esutil.EsSortOrderDecending,
+	}
+
 	encodedBody, requestJson := esutil.EncodeRequest(body)
 	log = log.With(zap.String("request", requestJson))
 	log.Debug("performing search")
@@ -677,7 +686,7 @@ func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.L
 		return nil, createError(log, "error searching elasticsearch for document", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
 	}
 
-	var searchResults esSearchResponse
+	var searchResults esutil.EsSearchResponse
 	if err := decodeResponse(res.Body, &searchResults); err != nil {
 		return nil, createError(log, "error unmarshalling elasticsearch response", err)
 	}
@@ -710,7 +719,7 @@ func (r *rodeServer) UpdatePolicy(ctx context.Context, updatePolicyRequest *pb.U
 	log := r.logger.Named("Update Policy")
 
 	// check if the policy exists
-	search := &esSearch{
+	search := &esutil.EsSearch{
 		Query: &filtering.Query{
 			Term: &filtering.Term{
 				"id": updatePolicyRequest.Id,
@@ -738,8 +747,9 @@ func (r *rodeServer) UpdatePolicy(ctx context.Context, updatePolicyRequest *pb.U
 		log.Info("errors while mapping masks", zap.Any("errors", err))
 		return policy, err
 	}
-	fieldmask_utils.StructToStruct(m, updatePolicyRequest.Policy, policy.Policy)
 
+	fieldmask_utils.StructToStruct(m, updatePolicyRequest.Policy, policy.Policy)
+	policy.Updated = timestamppb.Now()
 	str, err := protojson.MarshalOptions{EmitUnpopulated: true}.Marshal(proto.MessageV2(policy))
 	if err != nil {
 		return nil, createError(log, fmt.Sprintf("error marshalling %T to json", policy), err)
@@ -827,7 +837,7 @@ func validateRodeRequirementsForPolicy(mod *ast.Module, regoContent string) []er
 	return errorsList
 }
 
-func (r *rodeServer) genericGet(ctx context.Context, log *zap.Logger, search *esSearch, index string, protoMessage interface{}) (string, error) {
+func (r *rodeServer) genericGet(ctx context.Context, log *zap.Logger, search *esutil.EsSearch, index string, protoMessage interface{}) (string, error) {
 	encodedBody, requestJson := esutil.EncodeRequest(search)
 	log = log.With(zap.String("request", requestJson))
 
@@ -843,7 +853,7 @@ func (r *rodeServer) genericGet(ctx context.Context, log *zap.Logger, search *es
 		return "", createError(log, "error searching elasticsearch for document", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
 	}
 
-	var searchResults esSearchResponse
+	var searchResults esutil.EsSearchResponse
 	if err := esutil.DecodeResponse(res.Body, &searchResults); err != nil {
 		return "", createError(log, "error unmarshalling elasticsearch response", err)
 	}
@@ -865,23 +875,6 @@ func createError(log *zap.Logger, message string, err error, fields ...zap.Field
 
 	log.Error(message, append(fields, zap.Error(err))...)
 	return status.Errorf(codes.Internal, "%s: %s", message, err)
-}
-
-type esDeleteResponse struct {
-	Deleted int `json:"deleted"`
-}
-
-type esIndexDocResponse struct {
-	Id      string           `json:"_id"`
-	Result  string           `json:"result"`
-	Version int              `json:"_version"`
-	Status  int              `json:"status"`
-	Error   *esIndexDocError `json:"error,omitempty"`
-}
-
-type esIndexDocError struct {
-	Type   string `json:"type"`
-	Reason string `json:"reason"`
 }
 
 // contains returns a boolean describing whether or not a string slice contains a particular string

@@ -34,6 +34,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 	"github.com/rode/rode/config"
 	"github.com/rode/rode/mocks"
@@ -365,7 +366,7 @@ var _ = Describe("rode server", func() {
 
 			BeforeEach(func() {
 				randomOccurrence = createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED)
-				mgetResponse := esMultiGetResponse{Docs: []*esMultiGetDocument{
+				mgetResponse := esutil.EsMultiGetResponse{Docs: []*esutil.EsMultiGetDocument{
 					{
 						Found: true,
 					},
@@ -445,16 +446,16 @@ var _ = Describe("rode server", func() {
 				esTransport.preparedHttpResponses = []*http.Response{
 					{
 						StatusCode: http.StatusOK,
-						Body: structToJsonBody(&esMultiGetResponse{
-							Docs: []*esMultiGetDocument{{Found: false}},
+						Body: structToJsonBody(&esutil.EsMultiGetResponse{
+							Docs: []*esutil.EsMultiGetDocument{{Found: false}},
 						}),
 					},
 					{
 						StatusCode: http.StatusOK,
-						Body: structToJsonBody(&esBulkResponse{
-							Items: []*esBulkResponseActionItem{
+						Body: structToJsonBody(&esutil.EsBulkResponse{
+							Items: []*esutil.EsBulkResponseItem{
 								{
-									Create: &esBulkResponseItem{
+									Create: &esutil.EsIndexDocResponse{
 										Id:     expectedResourceName,
 										Status: http.StatusOK,
 									},
@@ -483,7 +484,7 @@ var _ = Describe("rode server", func() {
 					Expect(esTransport.receivedHttpRequests[2].Method).To(Equal(http.MethodGet))
 					Expect(esTransport.receivedHttpRequests[2].URL.Path).To(Equal(fmt.Sprintf("/%s/_mget", rodeElasticsearchGenericResourcesIndex)))
 
-					requestBody := &esMultiGetRequest{}
+					requestBody := &esutil.EsMultiGetRequest{}
 					readResponseBody(esTransport.receivedHttpRequests[2], &requestBody)
 					Expect(requestBody.IDs).To(ConsistOf(expectedResourceName))
 				})
@@ -498,15 +499,15 @@ var _ = Describe("rode server", func() {
 					body, err := ioutil.ReadAll(esTransport.receivedHttpRequests[3].Body)
 					Expect(err).To(BeNil())
 
-					metadata := &esBulkQueryFragment{}
+					metadata := &esutil.EsBulkQueryFragment{}
 					resource := &pb.GenericResource{}
 					pieces := bytes.Split(body, []byte{'\n'})
 
 					Expect(json.Unmarshal(pieces[0], metadata)).To(BeNil())
 					Expect(json.Unmarshal(pieces[1], resource)).To(BeNil())
 
-					Expect(metadata).To(Equal(&esBulkQueryFragment{
-						Create: &esBulkQueryCreateFragment{
+					Expect(metadata).To(Equal(&esutil.EsBulkQueryFragment{
+						Create: &esutil.EsBulkQueryCreateFragment{
 							Id: expectedResourceName,
 						},
 					}))
@@ -526,7 +527,7 @@ var _ = Describe("rode server", func() {
 				})
 
 				It("should only try to make a single resource", func() {
-					requestBody := &esMultiGetRequest{}
+					requestBody := &esutil.EsMultiGetRequest{}
 					readResponseBody(esTransport.receivedHttpRequests[2], &requestBody)
 					Expect(requestBody.IDs).To(HaveLen(1))
 				})
@@ -546,8 +547,8 @@ var _ = Describe("rode server", func() {
 				BeforeEach(func() {
 					esTransport.preparedHttpResponses[0] = &http.Response{
 						StatusCode: http.StatusOK,
-						Body: structToJsonBody(&esMultiGetResponse{
-							Docs: []*esMultiGetDocument{{Found: true}},
+						Body: structToJsonBody(&esutil.EsMultiGetResponse{
+							Docs: []*esutil.EsMultiGetDocument{{Found: true}},
 						}),
 					}
 				})
@@ -642,11 +643,11 @@ var _ = Describe("rode server", func() {
 				BeforeEach(func() {
 					esTransport.preparedHttpResponses[1] = &http.Response{
 						StatusCode: http.StatusOK,
-						Body: structToJsonBody(&esBulkResponse{
-							Items: []*esBulkResponseActionItem{
+						Body: structToJsonBody(&esutil.EsBulkResponse{
+							Items: []*esutil.EsBulkResponseItem{
 								{
-									Create: &esBulkResponseItem{
-										Error: &esBulkResponseItemError{
+									Create: &esutil.EsIndexDocResponse{
+										Error: &esutil.EsIndexDocError{
 											Reason: gofakeit.Word(),
 										},
 										Status: http.StatusInternalServerError,
@@ -666,11 +667,11 @@ var _ = Describe("rode server", func() {
 				BeforeEach(func() {
 					esTransport.preparedHttpResponses[1] = &http.Response{
 						StatusCode: http.StatusOK,
-						Body: structToJsonBody(&esBulkResponse{
-							Items: []*esBulkResponseActionItem{
+						Body: structToJsonBody(&esutil.EsBulkResponse{
+							Items: []*esutil.EsBulkResponseItem{
 								{
-									Create: &esBulkResponseItem{
-										Error: &esBulkResponseItemError{
+									Create: &esutil.EsIndexDocResponse{
+										Error: &esutil.EsIndexDocError{
 											Reason: gofakeit.Word(),
 										},
 										Status: http.StatusConflict,
@@ -728,7 +729,7 @@ var _ = Describe("rode server", func() {
 
 					body := readEsSearchResponse(esTransport.receivedHttpRequests[2])
 
-					Expect(body).To(Equal(&esSearch{}))
+					Expect(body).To(Equal(&esutil.EsSearch{}))
 				})
 
 				It("should return all of the resources", func() {
@@ -771,7 +772,7 @@ var _ = Describe("rode server", func() {
 						It("should include the filter query in the request body", func() {
 							body := readEsSearchResponse(esTransport.receivedHttpRequests[2])
 
-							Expect(body).To(Equal(&esSearch{
+							Expect(body).To(Equal(&esutil.EsSearch{
 								Query: expectedQuery,
 							}))
 						})
@@ -1684,59 +1685,28 @@ func createRandomOccurrence(kind grafeas_common_proto.NoteKind) *grafeas_proto.O
 	}
 }
 
-func createEsIndexResponse(index string) *esIndexResponse {
-	return &esIndexResponse{
+func createEsIndexResponse(index string) *esutil.EsIndexResponse {
+	return &esutil.EsIndexResponse{
 		Acknowledged:       true,
 		ShardsAcknowledged: true,
 		Index:              index,
 	}
 }
 
-type esIndexResponse struct {
-	Acknowledged       bool   `json:"acknowledged"`
-	ShardsAcknowledged bool   `json:"shards_acknowledged"`
-	Index              string `json:"index"`
-}
-
-func createEsDeleteDocResponse() *esDeleteDocResponse {
-	return &esDeleteDocResponse{
-		Took:             int(gofakeit.Int16()),
-		TimedOut:         false,
-		Total:            int(gofakeit.Int16()),
-		Deleted:          int(gofakeit.Int16()),
-		Batches:          int(gofakeit.Int16()),
-		VersionConflicts: int(gofakeit.Int16()),
-		Noops:            int(gofakeit.Int16()),
-		Retries: struct {
-			Bulk   int "json:\"bulk\""
-			Search int "json:\"search\""
-		}{
-			Bulk:   int(gofakeit.Int16()),
-			Search: int(gofakeit.Int16()),
-		},
+func createEsDeleteDocResponse() *esutil.EsDeleteResponse {
+	return &esutil.EsDeleteResponse{
+		Took:                 int(gofakeit.Int16()),
+		TimedOut:             false,
+		Total:                int(gofakeit.Int16()),
+		Deleted:              int(gofakeit.Int16()),
+		Batches:              int(gofakeit.Int16()),
+		VersionConflicts:     int(gofakeit.Int16()),
+		Noops:                int(gofakeit.Int16()),
 		ThrottledMillis:      int(gofakeit.Int16()),
 		RequestsPerSecond:    gofakeit.Float64(),
 		ThrottledUntilMillis: int(gofakeit.Int16()),
 		Failures:             nil,
 	}
-}
-
-type esDeleteDocResponse struct {
-	Took             int  `json:"took"`
-	TimedOut         bool `json:"timed_out"`
-	Total            int  `json:"total"`
-	Deleted          int  `json:"deleted"`
-	Batches          int  `json:"batches"`
-	VersionConflicts int  `json:"version_conflicts"`
-	Noops            int  `json:"noops"`
-	Retries          struct {
-		Bulk   int `json:"bulk"`
-		Search int `json:"search"`
-	} `json:"retries"`
-	ThrottledMillis      int           `json:"throttled_millis"`
-	RequestsPerSecond    float64       `json:"requests_per_second"`
-	ThrottledUntilMillis int           `json:"throttled_until_millis"`
-	Failures             []interface{} `json:"failures"`
 }
 
 func structToJsonBody(i interface{}) io.ReadCloser {
@@ -1747,13 +1717,13 @@ func structToJsonBody(i interface{}) io.ReadCloser {
 }
 
 func createEsSearchResponse(occurrences []*grafeas_proto.Occurrence) io.ReadCloser {
-	var occurrenceHits []*esSearchResponseHit
+	var occurrenceHits []*esutil.EsSearchResponseHit
 
 	for _, occurrence := range occurrences {
 		source, err := protojson.Marshal(proto.MessageV2(occurrence))
 		Expect(err).To(BeNil())
 
-		response := &esSearchResponseHit{
+		response := &esutil.EsSearchResponseHit{
 			ID:     gofakeit.UUID(),
 			Source: source,
 		}
@@ -1761,9 +1731,9 @@ func createEsSearchResponse(occurrences []*grafeas_proto.Occurrence) io.ReadClos
 		occurrenceHits = append(occurrenceHits, response)
 	}
 
-	response := &esSearchResponse{
-		Hits: &esSearchResponseHits{
-			Total: &esSearchResponseTotal{
+	response := &esutil.EsSearchResponse{
+		Hits: &esutil.EsSearchResponseHits{
+			Total: &esutil.EsSearchResponseTotal{
 				Value: len(occurrences),
 			},
 			Hits: occurrenceHits,
@@ -1778,13 +1748,13 @@ func createEsSearchResponse(occurrences []*grafeas_proto.Occurrence) io.ReadClos
 }
 
 func createEsSearchResponseForGenericResource(resources []*pb.GenericResource) io.ReadCloser {
-	var hits []*esSearchResponseHit
+	var hits []*esutil.EsSearchResponseHit
 
 	for _, resource := range resources {
 		source, err := protojson.Marshal(proto.MessageV2(resource))
 		Expect(err).To(BeNil())
 
-		response := &esSearchResponseHit{
+		response := &esutil.EsSearchResponseHit{
 			ID:     resource.Name,
 			Source: source,
 		}
@@ -1792,8 +1762,8 @@ func createEsSearchResponseForGenericResource(resources []*pb.GenericResource) i
 		hits = append(hits, response)
 	}
 
-	response := &esSearchResponse{
-		Hits: &esSearchResponseHits{
+	response := &esutil.EsSearchResponse{
+		Hits: &esutil.EsSearchResponseHits{
 			Hits: hits,
 		},
 		Took: gofakeit.Number(1, 10),
@@ -1806,13 +1776,13 @@ func createEsSearchResponseForGenericResource(resources []*pb.GenericResource) i
 }
 
 func createEsSearchResponseForPolicy(occurrences []*pb.Policy) io.ReadCloser {
-	var occurrenceHits []*esSearchResponseHit
+	var occurrenceHits []*esutil.EsSearchResponseHit
 
 	for _, occurrence := range occurrences {
 		source, err := protojson.Marshal(proto.MessageV2(occurrence))
 		Expect(err).To(BeNil())
 
-		response := &esSearchResponseHit{
+		response := &esutil.EsSearchResponseHit{
 			ID:     gofakeit.UUID(),
 			Source: source,
 		}
@@ -1820,9 +1790,9 @@ func createEsSearchResponseForPolicy(occurrences []*pb.Policy) io.ReadCloser {
 		occurrenceHits = append(occurrenceHits, response)
 	}
 
-	response := &esSearchResponse{
-		Hits: &esSearchResponseHits{
-			Total: &esSearchResponseTotal{
+	response := &esutil.EsSearchResponse{
+		Hits: &esutil.EsSearchResponseHits{
+			Total: &esutil.EsSearchResponseTotal{
 				Value: len(occurrences),
 			},
 			Hits: occurrenceHits,
@@ -1836,8 +1806,8 @@ func createEsSearchResponseForPolicy(occurrences []*pb.Policy) io.ReadCloser {
 	return ioutil.NopCloser(bytes.NewReader(responseBody))
 }
 
-func readEsSearchResponse(request *http.Request) *esSearch {
-	search := &esSearch{}
+func readEsSearchResponse(request *http.Request) *esutil.EsSearch {
+	search := &esutil.EsSearch{}
 	readResponseBody(request, search)
 
 	return search

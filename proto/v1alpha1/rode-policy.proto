@@ -96,5 +96,7 @@ message PolicyEntity {
 message Policy {
   // Unique autogenerate id
   string id = 1;
-  PolicyEntity policy = 3;
+  PolicyEntity policy = 2;
+  google.protobuf.Timestamp created = 3;
+  google.protobuf.Timestamp updated = 4;
 }
