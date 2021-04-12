@@ -68,10 +68,13 @@ message DeletePolicyRequest {
 
 message ListPoliciesRequest {
   string filter = 1;
+  int32 page_size = 2;
+  string page_token = 3;
 }
 
 message ListPoliciesResponse {
   repeated Policy policies = 1;
+  string next_page_token = 2;
 }
 
 message UpdatePolicyRequest {

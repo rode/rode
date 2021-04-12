@@ -625,52 +625,21 @@ func (r *rodeServer) DeletePolicy(ctx context.Context, deletePolicyRequest *pb.D
 
 func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.ListPoliciesRequest) (*pb.ListPoliciesResponse, error) {
 	log := r.logger.Named("List Policies")
-
-	body := &esutil.EsSearch{}
-	if listPoliciesRequest.Filter != "" {
-		log = log.With(zap.String("filter", listPoliciesRequest.Filter))
-		filterQuery, err := r.filterer.ParseExpression(listPoliciesRequest.Filter)
-		if err != nil {
-			return nil, createError(log, "error while parsing filter expression", err)
-		}
-
-		body.Query = filterQuery
-	}
-
-	body.Sort = map[string]esutil.EsSortOrder{
-		"created": esutil.EsSortOrderDescending,
-	}
-
-	encodedBody, requestJson := esutil.EncodeRequest(body)
-	log = log.With(zap.String("request", requestJson))
-	log.Debug("performing search")
-
-	var policies []*pb.Policy
-	res, err := r.esClient.Search(
-		r.esClient.Search.WithContext(ctx),
-		r.esClient.Search.WithIndex(rodeElasticsearchPoliciesIndex),
-		r.esClient.Search.WithBody(encodedBody),
-		r.esClient.Search.WithSize(maxPageSize),
-	)
+	hits, nextPageToken, err := r.genericList(ctx, log, &genericListOptions{
+		index:         rodeElasticsearchPoliciesIndex,
+		filter:        listPoliciesRequest.Filter,
+		pageSize:      listPoliciesRequest.PageSize,
+		pageToken:     listPoliciesRequest.PageToken,
+		sortDirection: esutil.EsSortOrderDescending,
+		sortField:     "created",
+	})
 
 	if err != nil {
-		return nil, createError(log, "error sending request to elasticsearch", err)
-	}
-	if res.IsError() {
-		return nil, createError(log, "error searching elasticsearch for document", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
+		return nil, err
 	}
 
-	var searchResults esutil.EsSearchResponse
-	if err := esutil.DecodeResponse(res.Body, &searchResults); err != nil {
-		return nil, createError(log, "error unmarshalling elasticsearch response", err)
-	}
-
-	if searchResults.Hits.Total.Value == 0 {
-		log.Debug("document not found", zap.Any("search", "filter replace here"))
-		return &pb.ListPoliciesResponse{}, nil
-	}
-
-	for _, hit := range searchResults.Hits.Hits {
+	var policies []*pb.Policy
+	for _, hit := range hits.Hits {
 		hitLogger := log.With(zap.String("policy raw", string(hit.Source)))
 
 		policy := &pb.Policy{}
@@ -685,7 +654,10 @@ func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.L
 		policies = append(policies, policy)
 	}
 
-	return &pb.ListPoliciesResponse{Policies: policies}, nil
+	return &pb.ListPoliciesResponse{
+		Policies: policies,
+		NextPageToken: nextPageToken,
+	}, nil
 }
 
 // UpdatePolicy will update only the fields provided by the user
