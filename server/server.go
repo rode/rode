@@ -406,7 +406,7 @@ func (r *rodeServer) ListOccurrences(ctx context.Context, occurrenceRequest *pb.
 		Parent:    rodeProjectSlug,
 		Filter:    occurrenceRequest.Filter,
 		PageToken: occurrenceRequest.PageToken,
-		//PageSize: occurrenceRequest.PageSize, // TODO: test passing in page size
+		PageSize: occurrenceRequest.PageSize,
 	}
 
 	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, request)

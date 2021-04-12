@@ -860,6 +860,7 @@ var _ = Describe("rode server", func() {
 				randomOccurrence               *grafeas_proto.Occurrence
 				nextPageToken                  string
 				currentPageToken               string
+				pageSize 					   int32
 				grafeasListOccurrencesRequest  *grafeas_proto.ListOccurrencesRequest
 				grafeasListOccurrencesResponse *grafeas_proto.ListOccurrencesResponse
 				uri                            string
@@ -871,12 +872,14 @@ var _ = Describe("rode server", func() {
 				uri = randomOccurrence.Resource.Uri
 				nextPageToken = gofakeit.Word()
 				currentPageToken = gofakeit.Word()
+				pageSize = gofakeit.Int32()
 
 				// expected Grafeas ListOccurrencesRequest request
 				grafeasListOccurrencesRequest = &grafeas_proto.ListOccurrencesRequest{
 					Parent: "projects/rode",
 					Filter: fmt.Sprintf(`"resource.uri" == "%s"`, uri),
 					PageToken: currentPageToken,
+					PageSize: pageSize,
 				}
 
 				// mocked Grafeas ListOccurrencesResponse response
@@ -896,6 +899,7 @@ var _ = Describe("rode server", func() {
 				listOccurrencesRequest := &pb.ListOccurrencesRequest{
 					Filter: fmt.Sprintf(`"resource.uri" == "%s"`, uri),
 					PageToken: currentPageToken,
+					PageSize: pageSize,
 				}
 				response, err := rodeServer.ListOccurrences(context.Background(), listOccurrencesRequest)
 				Expect(err).ToNot(HaveOccurred())
@@ -912,6 +916,7 @@ var _ = Describe("rode server", func() {
 					listOccurrencesRequest := &pb.ListOccurrencesRequest{
 						Filter: fmt.Sprintf(`"resource.uri" == "%s"`, uri),
 						PageToken: currentPageToken,
+						PageSize: pageSize,
 					}
 					response, err := rodeServer.ListOccurrences(context.Background(), listOccurrencesRequest)
 					Expect(err).ToNot(BeNil())
