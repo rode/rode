@@ -286,47 +286,26 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 	log := r.logger.Named("ListResources")
 	log.Debug("received request", zap.Any("ListResourcesRequest", request))
 
-	searchQuery := esutil.EsSearch{
-		Collapse: &esutil.EsSearchCollapse{
-			Field: "resource.uri",
+	hits, nextPageToken, err := r.genericList(ctx, log, &genericListOptions{
+		index:         rodeElasticsearchOccurrencesAlias,
+		filter:        request.Filter,
+		pageSize:      request.PageSize,
+		pageToken:     request.PageToken,
+		query: &esutil.EsSearch{
+			Collapse: &esutil.EsSearchCollapse{
+				Field: "resource.uri",
+			},
 		},
-	}
-
-	if request.Filter != "" {
-		parsedQuery, err := r.filterer.ParseExpression(request.Filter)
-		if err != nil {
-			log.Error("failed to parse query", zap.Error(err))
-			return nil, err
-		}
-
-		searchQuery.Query = parsedQuery
-	}
-	searchQuery.Sort = map[string]esutil.EsSortOrder{
-		"resource.uri": esutil.EsSortOrderAscending,
-	}
-	encodedBody, requestJSON := esutil.EncodeRequest(searchQuery)
-	log.Debug("es request payload", zap.Any("payload", requestJSON))
-	res, err := r.esClient.Search(
-		r.esClient.Search.WithContext(ctx),
-		r.esClient.Search.WithIndex(rodeElasticsearchOccurrencesAlias),
-		r.esClient.Search.WithBody(encodedBody),
-		r.esClient.Search.WithSize(maxPageSize),
-	)
+		sortDirection: esutil.EsSortOrderAscending,
+		sortField:     "resource.uri",
+	})
 
 	if err != nil {
 		return nil, err
 	}
 
-	if res.IsError() {
-		return nil, fmt.Errorf("error occurred during ES query %v", res)
-	}
-
-	var searchResults esutil.EsSearchResponse
-	if err := esutil.DecodeResponse(res.Body, &searchResults); err != nil {
-		return nil, err
-	}
 	var resources []*grafeas_proto.Resource
-	for _, hit := range searchResults.Hits.Hits {
+	for _, hit := range hits.Hits {
 		occurrence := &grafeas_proto.Occurrence{}
 		err := protojson.Unmarshal(hit.Source, proto.MessageV2(occurrence))
 		if err != nil {
@@ -339,7 +318,7 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 
 	return &pb.ListResourcesResponse{
 		Resources:     resources,
-		NextPageToken: "",
+		NextPageToken: nextPageToken,
 	}, nil
 }
 
@@ -822,9 +801,12 @@ type genericListOptions struct {
 	sortField     string
 }
 
-//func (r *rodeServer) genericList(ctx context.Context, log *zap.Logger, index, filter string, sort bool, pageToken string, pageSize int32) (*esutil.EsSearchResponseHits, string, error) {
 func (r *rodeServer) genericList(ctx context.Context, log *zap.Logger, options *genericListOptions) (*esutil.EsSearchResponseHits, string, error) {
 	body := &esutil.EsSearch{}
+	if options.query != nil {
+		body = options.query
+	}
+
 	if options.filter != "" {
 		log = log.With(zap.String("filter", options.filter))
 		filterQuery, err := r.filterer.ParseExpression(options.filter)
