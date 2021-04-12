@@ -25,7 +25,7 @@ require (
 	github.com/open-policy-agent/opa v0.27.1
 	github.com/pquerna/cachecontrol v0.1.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
-	github.com/rode/grafeas-elasticsearch v0.6.1
+	github.com/rode/grafeas-elasticsearch v0.6.2-0.20210412021700-c598ee93e9e4
 	go.uber.org/zap v1.16.0
 	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2 // indirect
 	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4 // indirect

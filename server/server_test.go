@@ -725,11 +725,14 @@ var _ = Describe("rode server", func() {
 					Expect(esTransport.receivedHttpRequests[2].Method).To(Equal(http.MethodGet))
 					Expect(esTransport.receivedHttpRequests[2].URL.Path).To(Equal(fmt.Sprintf("/%s/_search", rodeElasticsearchGenericResourcesIndex)))
 					Expect(esTransport.receivedHttpRequests[2].URL.Query().Get("size")).To(Equal(strconv.Itoa(maxPageSize)))
-					Expect(esTransport.receivedHttpRequests[2].URL.Query().Get("sort")).To(Equal("name:asc"))
 
 					body := readEsSearchResponse(esTransport.receivedHttpRequests[2])
 
-					Expect(body).To(Equal(&esutil.EsSearch{}))
+					Expect(body).To(Equal(&esutil.EsSearch{
+						Sort: map[string]esutil.EsSortOrder{
+							"name": esutil.EsSortOrderAscending,
+						},
+					}))
 				})
 
 				It("should return all of the resources", func() {
@@ -774,6 +777,9 @@ var _ = Describe("rode server", func() {
 
 							Expect(body).To(Equal(&esutil.EsSearch{
 								Query: expectedQuery,
+								Sort: map[string]esutil.EsSortOrder{
+									"name": esutil.EsSortOrderAscending,
+								},
 							}))
 						})
 					})
