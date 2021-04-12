@@ -287,10 +287,10 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 	log.Debug("received request", zap.Any("ListResourcesRequest", request))
 
 	hits, nextPageToken, err := r.genericList(ctx, log, &genericListOptions{
-		index:         rodeElasticsearchOccurrencesAlias,
-		filter:        request.Filter,
-		pageSize:      request.PageSize,
-		pageToken:     request.PageToken,
+		index:     rodeElasticsearchOccurrencesAlias,
+		filter:    request.Filter,
+		pageSize:  request.PageSize,
+		pageToken: request.PageToken,
 		query: &esutil.EsSearch{
 			Collapse: &esutil.EsSearchCollapse{
 				Field: "resource.uri",
@@ -385,7 +385,7 @@ func (r *rodeServer) ListOccurrences(ctx context.Context, occurrenceRequest *pb.
 		Parent:    rodeProjectSlug,
 		Filter:    occurrenceRequest.Filter,
 		PageToken: occurrenceRequest.PageToken,
-		PageSize: occurrenceRequest.PageSize,
+		PageSize:  occurrenceRequest.PageSize,
 	}
 
 	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, request)
@@ -634,7 +634,7 @@ func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.L
 	}
 
 	return &pb.ListPoliciesResponse{
-		Policies: policies,
+		Policies:      policies,
 		NextPageToken: nextPageToken,
 	}, nil
 }
