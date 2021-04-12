@@ -1655,9 +1655,9 @@ var _ = Describe("rode server", func() {
 
 		When("listing policies with pagination", func() {
 			var (
-				listRequest   *pb.ListPoliciesRequest
-				listResponse  *pb.ListPoliciesResponse
-				actualError error
+				listRequest  *pb.ListPoliciesRequest
+				listResponse *pb.ListPoliciesResponse
+				actualError  error
 
 				expectedPageToken string
 				expectedPageSize  int32
@@ -1677,9 +1677,9 @@ var _ = Describe("rode server", func() {
 				esTransport.preparedHttpResponses = []*http.Response{
 					{
 						StatusCode: http.StatusOK,
-						Body:       createEsSearchResponseForPolicy([]*pb.Policy{
+						Body: createEsSearchResponseForPolicy([]*pb.Policy{
 							{
-								Id: gofakeit.UUID(),
+								Id:     gofakeit.UUID(),
 								Policy: createRandomPolicyEntity(goodPolicy),
 							},
 						}),
