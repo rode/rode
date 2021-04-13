@@ -290,6 +290,7 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 
 	if request.Filter != "" {
 		log = log.With(zap.String("filter", request.Filter))
+
 		parsedQuery, err := r.filterer.ParseExpression(request.Filter)
 		if err != nil {
 			return nil, createError(log, "error parsing filter expression", err)
@@ -313,7 +314,7 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 		return nil, createError(log, "error sending request to elasticsearch", err)
 	}
 	if res.IsError() {
-		return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()))
+		return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
 	}
 
 	var searchResults esutil.EsSearchResponse
@@ -344,10 +345,11 @@ func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListG
 
 	searchQuery := esutil.EsSearch{}
 	if request.Filter != "" {
+		log = log.With(zap.String("filter", request.Filter))
+
 		parsedQuery, err := r.filterer.ParseExpression(request.Filter)
 		if err != nil {
-			log.Error("failed to parse query", zap.Error(err))
-			return nil, status.Errorf(codes.Internal, "failed to parse query: %s", err)
+			return nil, createError(log, "error parsing filter expression", err)
 		}
 
 		searchQuery.Query = parsedQuery
@@ -362,19 +364,18 @@ func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListG
 		r.esClient.Search.WithSize(maxPageSize),
 		r.esClient.Search.WithSort("name:asc"),
 	)
-
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "error occurred during query: %s", err)
+		return nil, createError(log, "error sending request to elasticsearch", err)
 	}
-
 	if res.IsError() {
-		return nil, status.Errorf(codes.Internal, "unexpected status code from Elasticsearch: %v", res)
+		return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
 	}
 
 	var searchResults esutil.EsSearchResponse
 	if err := decodeResponse(res.Body, &searchResults); err != nil {
-		return nil, status.Errorf(codes.Internal, "error occurred decoding response: %s", err)
+		return nil, createError(log, "error decoding elasticsearch response", err)
 	}
+
 	var resources []*pb.GenericResource
 	for _, hit := range searchResults.Hits.Hits {
 		resources = append(resources, &pb.GenericResource{Name: hit.ID})
@@ -435,9 +436,9 @@ func (r *rodeServer) ListOccurrences(ctx context.Context, occurrenceRequest *pb.
 
 	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{Parent: "projects/rode", Filter: requestedFilter})
 	if err != nil {
-		log.Error("list occurrences failed", zap.Error(err), zap.String("filter", occurrenceRequest.Filter))
-		return nil, status.Error(codes.Internal, "list occurrences failed")
+		return nil, createError(log, "error listing occurrences", err)
 	}
+
 	return &pb.ListOccurrencesResponse{
 		Occurrences:   listOccurrencesResponse.GetOccurrences(),
 		NextPageToken: "",
@@ -451,8 +452,8 @@ func (r *rodeServer) UpdateOccurrence(ctx context.Context, occurrenceRequest *pb
 	name := fmt.Sprintf("projects/rode/occurrences/%s", occurrenceRequest.Id)
 
 	if occurrenceRequest.Occurrence.Name != name {
-		log.Error("Occurrence name does not contain the occurrence id", zap.String("occurrenceName", occurrenceRequest.Occurrence.Name), zap.String("id", occurrenceRequest.Id))
-		return nil, status.Error(codes.InvalidArgument, "Occurrence name does not contain the occurrence id")
+		log.Error("occurrence name does not contain the occurrence id", zap.String("occurrenceName", occurrenceRequest.Occurrence.Name), zap.String("id", occurrenceRequest.Id))
+		return nil, status.Error(codes.InvalidArgument, "occurrence name does not contain the occurrence id")
 	}
 
 	updatedOccurrence, err := r.grafeasCommon.UpdateOccurrence(ctx, &grafeas_proto.UpdateOccurrenceRequest{
@@ -460,10 +461,8 @@ func (r *rodeServer) UpdateOccurrence(ctx context.Context, occurrenceRequest *pb
 		Occurrence: occurrenceRequest.Occurrence,
 		UpdateMask: occurrenceRequest.UpdateMask,
 	})
-
 	if err != nil {
-		log.Error("update occurrences failed", zap.Error(err))
-		return nil, status.Error(codes.Internal, "update occurrences failed")
+		return nil, createError(log, "error updating occurrence", err)
 	}
 
 	return updatedOccurrence, nil
@@ -477,7 +476,7 @@ func (r *rodeServer) ValidatePolicy(ctx context.Context, policy *pb.ValidatePoli
 	}
 
 	// Generate the AST
-	mod, err := ast.ParseModule("validate_module", string(policy.Policy))
+	mod, err := ast.ParseModule("validate_module", policy.Policy)
 	if err != nil {
 		log.Debug("failed to parse the policy", zap.Any("policy", err))
 		message := &pb.ValidatePolicyResponse{
@@ -568,20 +567,20 @@ func (r *rodeServer) CreatePolicy(ctx context.Context, policyEntity *pb.PolicyEn
 	if err != nil {
 		return nil, createError(log, fmt.Sprintf("error marshalling %T to json", policy), err)
 	}
+
 	res, err := r.esClient.Index(
 		rodeElasticsearchPoliciesIndex,
 		bytes.NewReader(str),
 		r.esClient.Index.WithContext(ctx),
-		r.esClient.Index.WithRefresh(string(r.elasticsearchConfig.Refresh.String())),
+		r.esClient.Index.WithRefresh(r.elasticsearchConfig.Refresh.String()),
 	)
-
 	if err != nil {
 		return nil, createError(log, "error sending request to elasticsearch", err)
 	}
-
 	if res.IsError() {
 		return nil, createError(log, "error indexing document in elasticsearch", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
 	}
+
 	return policy, nil
 }
 
@@ -600,7 +599,7 @@ func (r *rodeServer) GetPolicy(ctx context.Context, getPolicyRequest *pb.GetPoli
 
 	_, err := r.genericGet(ctx, log, search, rodeElasticsearchPoliciesIndex, policy)
 	if err != nil {
-		return nil, err
+		return nil, createError(log, "error getting policy", err)
 	}
 
 	return policy, nil
@@ -631,7 +630,7 @@ func (r *rodeServer) DeletePolicy(ctx context.Context, deletePolicyRequest *pb.D
 		return nil, createError(log, "error sending request to elasticsearch", err)
 	}
 	if res.IsError() {
-		return nil, createError(log, "received unexpected response from elasticsearch", nil)
+		return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
 	}
 
 	var deletedResults esutil.EsDeleteResponse
@@ -652,9 +651,10 @@ func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.L
 	body := &esutil.EsSearch{}
 	if listPoliciesRequest.Filter != "" {
 		log = log.With(zap.String("filter", listPoliciesRequest.Filter))
+
 		filterQuery, err := r.filterer.ParseExpression(listPoliciesRequest.Filter)
 		if err != nil {
-			return nil, createError(log, "error while parsing filter expression", err)
+			return nil, createError(log, "error parsing filter expression", err)
 		}
 
 		body.Query = filterQuery
@@ -680,7 +680,7 @@ func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.L
 		return nil, createError(log, "error sending request to elasticsearch", err)
 	}
 	if res.IsError() {
-		return nil, createError(log, "error searching elasticsearch for document", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
+		return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
 	}
 
 	var searchResults esutil.EsSearchResponse
@@ -699,7 +699,6 @@ func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.L
 		policy := &pb.Policy{}
 		err := protojson.Unmarshal(hit.Source, proto.MessageV2(policy))
 		if err != nil {
-			log.Error("failed to convert _doc to policy", zap.Error(err))
 			return nil, createError(hitLogger, "error converting _doc to policy", err)
 		}
 
@@ -727,25 +726,28 @@ func (r *rodeServer) UpdatePolicy(ctx context.Context, updatePolicyRequest *pb.U
 	policy := &pb.Policy{}
 	targetDocumentID, err := r.genericGet(ctx, log, search, rodeElasticsearchPoliciesIndex, policy)
 	if err != nil {
-		return nil, err
+		return nil, createError(log, "error fetching policy", err)
 	}
 
 	log.Debug("field masks", zap.Any("response", updatePolicyRequest.UpdateMask.Paths))
 	// if one of the fields being updated is the rego policy, revalidate the policy
 	if contains(updatePolicyRequest.UpdateMask.Paths, "rego_content") {
 		_, err = r.ValidatePolicy(ctx, &pb.ValidatePolicyRequest{Policy: updatePolicyRequest.Policy.RegoContent})
-	}
-	if err != nil {
-		return nil, err
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	m, err := fieldmask_utils.MaskFromPaths(updatePolicyRequest.UpdateMask.Paths, generator.CamelCase)
 	if err != nil {
-		log.Info("errors while mapping masks", zap.Any("errors", err))
-		return policy, err
+		return nil, createError(log, "error mapping field masks", err)
 	}
 
-	fieldmask_utils.StructToStruct(m, updatePolicyRequest.Policy, policy.Policy)
+	err = fieldmask_utils.StructToStruct(m, updatePolicyRequest.Policy, policy.Policy)
+	if err != nil {
+		return nil, createError(log, "error copying struct via field masks", err)
+	}
+
 	policy.Updated = timestamppb.Now()
 	str, err := protojson.MarshalOptions{EmitUnpopulated: true}.Marshal(proto.MessageV2(policy))
 	if err != nil {
@@ -762,9 +764,8 @@ func (r *rodeServer) UpdatePolicy(ctx context.Context, updatePolicyRequest *pb.U
 	if err != nil {
 		return nil, createError(log, "error sending request to elasticsearch", err)
 	}
-
 	if res.IsError() {
-		return nil, createError(log, "error indexing document in elasticsearch", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
+		return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
 	}
 
 	return policy, nil
