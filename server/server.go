@@ -289,14 +289,15 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 	}
 
 	if request.Filter != "" {
+		log = log.With(zap.String("filter", request.Filter))
 		parsedQuery, err := r.filterer.ParseExpression(request.Filter)
 		if err != nil {
-			log.Error("failed to parse query", zap.Error(err))
-			return nil, err
+			return nil, createError(log, "error parsing filter expression", err)
 		}
 
 		searchQuery.Query = parsedQuery
 	}
+
 	searchQuery.Sort = map[string]esutil.EsSortOrder{
 		"resource.uri": esutil.EsSortOrderAscending,
 	}
@@ -308,26 +309,24 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 		r.esClient.Search.WithBody(encodedBody),
 		r.esClient.Search.WithSize(maxPageSize),
 	)
-
 	if err != nil {
-		return nil, err
+		return nil, createError(log, "error sending request to elasticsearch", err)
 	}
-
 	if res.IsError() {
-		return nil, fmt.Errorf("error occurred during ES query %v", res)
+		return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()))
 	}
 
 	var searchResults esutil.EsSearchResponse
 	if err := decodeResponse(res.Body, &searchResults); err != nil {
-		return nil, err
+		return nil, createError(log, "error decoding elasticsearch response", err)
 	}
+
 	var resources []*grafeas_proto.Resource
 	for _, hit := range searchResults.Hits.Hits {
 		occurrence := &grafeas_proto.Occurrence{}
 		err := protojson.Unmarshal(hit.Source, proto.MessageV2(occurrence))
 		if err != nil {
-			log.Error("failed to convert", zap.Error(err))
-			return nil, err
+			return nil, createError(log, "error unmarshalling search result", err)
 		}
 
 		resources = append(resources, occurrence.Resource)
