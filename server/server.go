@@ -109,16 +109,16 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 
 	mgetBody, _ := encodeRequest(&esutil.EsMultiGetRequest{IDs: resourceNames})
 
-	response, err := r.esClient.Mget(mgetBody, r.esClient.Mget.WithContext(ctx), r.esClient.Mget.WithIndex(rodeElasticsearchGenericResourcesIndex))
+	res, err := r.esClient.Mget(mgetBody, r.esClient.Mget.WithContext(ctx), r.esClient.Mget.WithIndex(rodeElasticsearchGenericResourcesIndex))
 	if err != nil {
-		log.Error("failed to mget documents", zap.Error(err))
 		return err
 	}
-	if response.IsError() {
-		return fmt.Errorf("unexpected status code from mget request: %d", response.StatusCode)
+	if res.IsError() {
+		return fmt.Errorf("unexpected response from elasticsearch: %s [%d]", res.String(), res.StatusCode)
 	}
+
 	mGetResponse := esutil.EsMultiGetResponse{}
-	if err := decodeResponse(response.Body, &mGetResponse); err != nil {
+	if err := decodeResponse(res.Body, &mGetResponse); err != nil {
 		return err
 	}
 
@@ -153,23 +153,20 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 		return nil
 	}
 
-	response, err = r.esClient.Bulk(
+	res, err = r.esClient.Bulk(
 		bytes.NewReader(body.Bytes()),
 		r.esClient.Bulk.WithContext(ctx),
 		r.esClient.Bulk.WithRefresh(r.elasticsearchConfig.Refresh.String()),
 		r.esClient.Bulk.WithIndex(rodeElasticsearchGenericResourcesIndex))
-
 	if err != nil {
-		log.Error("failed to create generic resources", zap.Error(err))
-		return fmt.Errorf("failed to create generic resources: %s", err)
+		return err
 	}
-
-	if response.IsError() {
-		return fmt.Errorf("unexpected status code while creating generic resources: %d", response.StatusCode)
+	if res.IsError() {
+		return fmt.Errorf("unexpected response from elasticsearch: %s [%d]", res.String(), res.StatusCode)
 	}
 
 	bulkResponse := &esutil.EsBulkResponse{}
-	err = esutil.DecodeResponse(response.Body, bulkResponse)
+	err = esutil.DecodeResponse(res.Body, bulkResponse)
 	if err != nil {
 		return err
 	}
@@ -184,7 +181,6 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 	}
 
 	if len(bulkItemErrors) > 0 {
-		log.Error("Failed to create all resources", zap.Any("errors", bulkItemErrors))
 		return fmt.Errorf("failed to create all resources: %v", bulkItemErrors)
 	}
 
@@ -196,7 +192,7 @@ func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceReque
 	log.Debug("received request", zap.Any("BatchCreateOccurrencesRequest", occurrenceRequest))
 
 	if err := r.batchCreateGenericResources(ctx, occurrenceRequest); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to create generic resources: %s", err)
+		return nil, createError(log, "error creating generic resources", err)
 	}
 
 	occurrenceResponse, err := r.grafeasCommon.BatchCreateOccurrences(ctx, &grafeas_proto.BatchCreateOccurrencesRequest{
@@ -204,8 +200,7 @@ func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceReque
 		Occurrences: occurrenceRequest.GetOccurrences(),
 	})
 	if err != nil {
-		log.Error("failed to create occurrences", zap.NamedError("error", err))
-		return nil, err
+		return nil, createError(log, "error creating occurrences", err)
 	}
 
 	return &pb.BatchCreateOccurrencesResponse{
