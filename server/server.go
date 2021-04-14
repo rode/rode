@@ -114,7 +114,7 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 		return err
 	}
 	if res.IsError() {
-		return fmt.Errorf("unexpected response from elasticsearch: %s [%d]", res.String(), res.StatusCode)
+		return fmt.Errorf("unexpected response from elasticsearch: %s", res.String())
 	}
 
 	mGetResponse := esutil.EsMultiGetResponse{}
@@ -162,7 +162,7 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 		return err
 	}
 	if res.IsError() {
-		return fmt.Errorf("unexpected response from elasticsearch: %s [%d]", res.String(), res.StatusCode)
+		return fmt.Errorf("unexpected response from elasticsearch: %s", res.String())
 	}
 
 	bulkResponse := &esutil.EsBulkResponse{}
@@ -314,7 +314,7 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 		return nil, createError(log, "error sending request to elasticsearch", err)
 	}
 	if res.IsError() {
-		return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
+		return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()))
 	}
 
 	var searchResults esutil.EsSearchResponse
@@ -368,7 +368,7 @@ func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListG
 		return nil, createError(log, "error sending request to elasticsearch", err)
 	}
 	if res.IsError() {
-		return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
+		return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()))
 	}
 
 	var searchResults esutil.EsSearchResponse
@@ -630,7 +630,7 @@ func (r *rodeServer) DeletePolicy(ctx context.Context, deletePolicyRequest *pb.D
 		return nil, createError(log, "error sending request to elasticsearch", err)
 	}
 	if res.IsError() {
-		return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
+		return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()))
 	}
 
 	var deletedResults esutil.EsDeleteResponse
@@ -680,7 +680,7 @@ func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.L
 		return nil, createError(log, "error sending request to elasticsearch", err)
 	}
 	if res.IsError() {
-		return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
+		return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()))
 	}
 
 	var searchResults esutil.EsSearchResponse
