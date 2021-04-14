@@ -52,9 +52,8 @@ func TestConfig(t *testing.T) {
 				Opa: &OpaConfig{
 					Host: "http://localhost:8181",
 				},
-				GrpcPort: 50051,
-				HttpPort: 50052,
-				Debug:    false,
+				Port:  50051,
+				Debug: false,
 			},
 		},
 		{
@@ -93,9 +92,8 @@ func TestConfig(t *testing.T) {
 				Opa: &OpaConfig{
 					Host: "http://localhost:8181",
 				},
-				GrpcPort: 50051,
-				HttpPort: 50052,
-				Debug:    false,
+				Port:  50051,
+				Debug: false,
 			},
 		},
 		{
@@ -131,9 +129,8 @@ func TestConfig(t *testing.T) {
 				Opa: &OpaConfig{
 					Host: "opa.test.na:8181",
 				},
-				GrpcPort: 50051,
-				HttpPort: 50052,
-				Debug:    false,
+				Port:  50051,
+				Debug: false,
 			},
 		},
 		{

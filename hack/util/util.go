@@ -36,8 +36,7 @@ func CreateOccurrences(c pb.RodeClient) {
 	occurrence := &grafeas_go_proto.Occurrence{
 		Name: "abc",
 		Resource: &grafeas_go_proto.Resource{
-			Name: "testResource",
-			Uri:  "test",
+			Uri: "harbor.localhost/library/nginx@sha256:abc123",
 		},
 		NoteName:    "projects/abc/notes/123",
 		Kind:        common_go_proto.NoteKind_VULNERABILITY,
@@ -78,7 +77,7 @@ func CreateOccurrences(c pb.RodeClient) {
 			},
 		},
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*120)
 	defer cancel()
 	response, err := c.BatchCreateOccurrences(ctx, &pb.BatchCreateOccurrencesRequest{
 		Occurrences: []*grafeas_go_proto.Occurrence{occurrence},
