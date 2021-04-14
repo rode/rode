@@ -109,16 +109,16 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 
 	mgetBody, _ := encodeRequest(&esutil.EsMultiGetRequest{IDs: resourceNames})
 
-	response, err := r.esClient.Mget(mgetBody, r.esClient.Mget.WithContext(ctx), r.esClient.Mget.WithIndex(rodeElasticsearchGenericResourcesIndex))
+	res, err := r.esClient.Mget(mgetBody, r.esClient.Mget.WithContext(ctx), r.esClient.Mget.WithIndex(rodeElasticsearchGenericResourcesIndex))
 	if err != nil {
-		log.Error("failed to mget documents", zap.Error(err))
 		return err
 	}
-	if response.IsError() {
-		return fmt.Errorf("unexpected status code from mget request: %d", response.StatusCode)
+	if res.IsError() {
+		return fmt.Errorf("unexpected response from elasticsearch: %s", res.String())
 	}
+
 	mGetResponse := esutil.EsMultiGetResponse{}
-	if err := decodeResponse(response.Body, &mGetResponse); err != nil {
+	if err := decodeResponse(res.Body, &mGetResponse); err != nil {
 		return err
 	}
 
@@ -153,23 +153,20 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 		return nil
 	}
 
-	response, err = r.esClient.Bulk(
+	res, err = r.esClient.Bulk(
 		bytes.NewReader(body.Bytes()),
 		r.esClient.Bulk.WithContext(ctx),
 		r.esClient.Bulk.WithRefresh(r.elasticsearchConfig.Refresh.String()),
 		r.esClient.Bulk.WithIndex(rodeElasticsearchGenericResourcesIndex))
-
 	if err != nil {
-		log.Error("failed to create generic resources", zap.Error(err))
-		return fmt.Errorf("failed to create generic resources: %s", err)
+		return err
 	}
-
-	if response.IsError() {
-		return fmt.Errorf("unexpected status code while creating generic resources: %d", response.StatusCode)
+	if res.IsError() {
+		return fmt.Errorf("unexpected response from elasticsearch: %s", res.String())
 	}
 
 	bulkResponse := &esutil.EsBulkResponse{}
-	err = esutil.DecodeResponse(response.Body, bulkResponse)
+	err = esutil.DecodeResponse(res.Body, bulkResponse)
 	if err != nil {
 		return err
 	}
@@ -184,7 +181,6 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 	}
 
 	if len(bulkItemErrors) > 0 {
-		log.Error("Failed to create all resources", zap.Any("errors", bulkItemErrors))
 		return fmt.Errorf("failed to create all resources: %v", bulkItemErrors)
 	}
 
@@ -196,7 +192,7 @@ func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceReque
 	log.Debug("received request", zap.Any("BatchCreateOccurrencesRequest", occurrenceRequest))
 
 	if err := r.batchCreateGenericResources(ctx, occurrenceRequest); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to create generic resources: %s", err)
+		return nil, createError(log, "error creating generic resources", err)
 	}
 
 	occurrenceResponse, err := r.grafeasCommon.BatchCreateOccurrences(ctx, &grafeas_proto.BatchCreateOccurrencesRequest{
@@ -204,8 +200,7 @@ func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceReque
 		Occurrences: occurrenceRequest.GetOccurrences(),
 	})
 	if err != nil {
-		log.Error("failed to create occurrences", zap.NamedError("error", err))
-		return nil, err
+		return nil, createError(log, "error creating occurrences", err)
 	}
 
 	return &pb.BatchCreateOccurrencesResponse{
@@ -218,20 +213,23 @@ func (r *rodeServer) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePol
 	log := r.logger.Named("EvaluatePolicy").With(zap.String("policy", request.Policy), zap.String("resource", request.ResourceUri))
 	log.Debug("evaluate policy request received")
 
-	policy, _ := r.GetPolicy(ctx, &pb.GetPolicyRequest{Id: request.Policy})
+	policy, err := r.GetPolicy(ctx, &pb.GetPolicyRequest{Id: request.Policy})
+	if err != nil {
+		return nil, createError(log, "error fetching policy", err)
+	}
+
 	// check OPA policy has been loaded, using the policy id
 	err = r.opa.InitializePolicy(request.Policy, policy.Policy.RegoContent)
 	if err != nil {
-		log.Error("error checking if policy exists", zap.Error(err))
-		return nil, status.Error(codes.Internal, "check if policy exists failed")
+		return nil, createError(log, "error initializing policy in OPA", err)
 	}
 
 	// fetch occurrences from grafeas
 	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{Parent: "projects/rode", Filter: fmt.Sprintf(`"resource.uri" == "%s"`, request.ResourceUri)})
 	if err != nil {
-		log.Error("list occurrences failed", zap.Error(err), zap.String("resource", request.ResourceUri))
-		return nil, status.Error(codes.Internal, "list occurrences failed")
+		return nil, createError(log, "error listing occurrences", err)
 	}
+
 	log.Debug("Occurrences found", zap.Any("occurrences", listOccurrencesResponse))
 
 	input, _ := protojson.Marshal(proto.MessageV2(listOccurrencesResponse))
@@ -245,9 +243,9 @@ func (r *rodeServer) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePol
 	// evalute OPA policy
 	evaluatePolicyResponse, err = r.opa.EvaluatePolicy(policy.Policy.RegoContent, input)
 	if err != nil {
-		log.Error("evaluate OPA policy failed")
-		return nil, status.Error(codes.Internal, "evaluate OPA policy failed")
+		return nil, createError(log, "error evaluating policy", err)
 	}
+
 	log.Debug("Evalute policy result", zap.Any("policy result", evaluatePolicyResponse))
 
 	attestation := &pb.EvaluatePolicyResult{}
@@ -291,14 +289,16 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 	}
 
 	if request.Filter != "" {
+		log = log.With(zap.String("filter", request.Filter))
+
 		parsedQuery, err := r.filterer.ParseExpression(request.Filter)
 		if err != nil {
-			log.Error("failed to parse query", zap.Error(err))
-			return nil, err
+			return nil, createError(log, "error parsing filter expression", err)
 		}
 
 		searchQuery.Query = parsedQuery
 	}
+
 	searchQuery.Sort = map[string]esutil.EsSortOrder{
 		"resource.uri": esutil.EsSortOrderAscending,
 	}
@@ -310,26 +310,24 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 		r.esClient.Search.WithBody(encodedBody),
 		r.esClient.Search.WithSize(maxPageSize),
 	)
-
 	if err != nil {
-		return nil, err
+		return nil, createError(log, "error sending request to elasticsearch", err)
 	}
-
 	if res.IsError() {
-		return nil, fmt.Errorf("error occurred during ES query %v", res)
+		return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()))
 	}
 
 	var searchResults esutil.EsSearchResponse
 	if err := decodeResponse(res.Body, &searchResults); err != nil {
-		return nil, err
+		return nil, createError(log, "error decoding elasticsearch response", err)
 	}
+
 	var resources []*grafeas_proto.Resource
 	for _, hit := range searchResults.Hits.Hits {
 		occurrence := &grafeas_proto.Occurrence{}
 		err := protojson.Unmarshal(hit.Source, proto.MessageV2(occurrence))
 		if err != nil {
-			log.Error("failed to convert", zap.Error(err))
-			return nil, err
+			return nil, createError(log, "error unmarshalling search result", err)
 		}
 
 		resources = append(resources, occurrence.Resource)
@@ -347,10 +345,11 @@ func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListG
 
 	searchQuery := esutil.EsSearch{}
 	if request.Filter != "" {
+		log = log.With(zap.String("filter", request.Filter))
+
 		parsedQuery, err := r.filterer.ParseExpression(request.Filter)
 		if err != nil {
-			log.Error("failed to parse query", zap.Error(err))
-			return nil, status.Errorf(codes.Internal, "failed to parse query: %s", err)
+			return nil, createError(log, "error parsing filter expression", err)
 		}
 
 		searchQuery.Query = parsedQuery
@@ -365,19 +364,18 @@ func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListG
 		r.esClient.Search.WithSize(maxPageSize),
 		r.esClient.Search.WithSort("name:asc"),
 	)
-
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "error occurred during query: %s", err)
+		return nil, createError(log, "error sending request to elasticsearch", err)
 	}
-
 	if res.IsError() {
-		return nil, status.Errorf(codes.Internal, "unexpected status code from Elasticsearch: %v", res)
+		return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()))
 	}
 
 	var searchResults esutil.EsSearchResponse
 	if err := decodeResponse(res.Body, &searchResults); err != nil {
-		return nil, status.Errorf(codes.Internal, "error occurred decoding response: %s", err)
+		return nil, createError(log, "error decoding elasticsearch response", err)
 	}
+
 	var resources []*pb.GenericResource
 	for _, hit := range searchResults.Hits.Hits {
 		resources = append(resources, &pb.GenericResource{Name: hit.ID})
@@ -438,9 +436,9 @@ func (r *rodeServer) ListOccurrences(ctx context.Context, occurrenceRequest *pb.
 
 	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{Parent: "projects/rode", Filter: requestedFilter})
 	if err != nil {
-		log.Error("list occurrences failed", zap.Error(err), zap.String("filter", occurrenceRequest.Filter))
-		return nil, status.Error(codes.Internal, "list occurrences failed")
+		return nil, createError(log, "error listing occurrences", err)
 	}
+
 	return &pb.ListOccurrencesResponse{
 		Occurrences:   listOccurrencesResponse.GetOccurrences(),
 		NextPageToken: "",
@@ -454,8 +452,8 @@ func (r *rodeServer) UpdateOccurrence(ctx context.Context, occurrenceRequest *pb
 	name := fmt.Sprintf("projects/rode/occurrences/%s", occurrenceRequest.Id)
 
 	if occurrenceRequest.Occurrence.Name != name {
-		log.Error("Occurrence name does not contain the occurrence id", zap.String("occurrenceName", occurrenceRequest.Occurrence.Name), zap.String("id", occurrenceRequest.Id))
-		return nil, status.Error(codes.InvalidArgument, "Occurrence name does not contain the occurrence id")
+		log.Error("occurrence name does not contain the occurrence id", zap.String("occurrenceName", occurrenceRequest.Occurrence.Name), zap.String("id", occurrenceRequest.Id))
+		return nil, status.Error(codes.InvalidArgument, "occurrence name does not contain the occurrence id")
 	}
 
 	updatedOccurrence, err := r.grafeasCommon.UpdateOccurrence(ctx, &grafeas_proto.UpdateOccurrenceRequest{
@@ -463,10 +461,8 @@ func (r *rodeServer) UpdateOccurrence(ctx context.Context, occurrenceRequest *pb
 		Occurrence: occurrenceRequest.Occurrence,
 		UpdateMask: occurrenceRequest.UpdateMask,
 	})
-
 	if err != nil {
-		log.Error("update occurrences failed", zap.Error(err))
-		return nil, status.Error(codes.Internal, "update occurrences failed")
+		return nil, createError(log, "error updating occurrence", err)
 	}
 
 	return updatedOccurrence, nil
@@ -480,7 +476,7 @@ func (r *rodeServer) ValidatePolicy(ctx context.Context, policy *pb.ValidatePoli
 	}
 
 	// Generate the AST
-	mod, err := ast.ParseModule("validate_module", string(policy.Policy))
+	mod, err := ast.ParseModule("validate_module", policy.Policy)
 	if err != nil {
 		log.Debug("failed to parse the policy", zap.Any("policy", err))
 		message := &pb.ValidatePolicyResponse{
@@ -571,20 +567,20 @@ func (r *rodeServer) CreatePolicy(ctx context.Context, policyEntity *pb.PolicyEn
 	if err != nil {
 		return nil, createError(log, fmt.Sprintf("error marshalling %T to json", policy), err)
 	}
+
 	res, err := r.esClient.Index(
 		rodeElasticsearchPoliciesIndex,
 		bytes.NewReader(str),
 		r.esClient.Index.WithContext(ctx),
-		r.esClient.Index.WithRefresh(string(r.elasticsearchConfig.Refresh.String())),
+		r.esClient.Index.WithRefresh(r.elasticsearchConfig.Refresh.String()),
 	)
-
 	if err != nil {
 		return nil, createError(log, "error sending request to elasticsearch", err)
 	}
-
 	if res.IsError() {
 		return nil, createError(log, "error indexing document in elasticsearch", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
 	}
+
 	return policy, nil
 }
 
@@ -603,7 +599,7 @@ func (r *rodeServer) GetPolicy(ctx context.Context, getPolicyRequest *pb.GetPoli
 
 	_, err := r.genericGet(ctx, log, search, rodeElasticsearchPoliciesIndex, policy)
 	if err != nil {
-		return nil, err
+		return nil, createError(log, "error getting policy", err)
 	}
 
 	return policy, nil
@@ -634,7 +630,7 @@ func (r *rodeServer) DeletePolicy(ctx context.Context, deletePolicyRequest *pb.D
 		return nil, createError(log, "error sending request to elasticsearch", err)
 	}
 	if res.IsError() {
-		return nil, createError(log, "received unexpected response from elasticsearch", nil)
+		return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()))
 	}
 
 	var deletedResults esutil.EsDeleteResponse
@@ -655,9 +651,10 @@ func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.L
 	body := &esutil.EsSearch{}
 	if listPoliciesRequest.Filter != "" {
 		log = log.With(zap.String("filter", listPoliciesRequest.Filter))
+
 		filterQuery, err := r.filterer.ParseExpression(listPoliciesRequest.Filter)
 		if err != nil {
-			return nil, createError(log, "error while parsing filter expression", err)
+			return nil, createError(log, "error parsing filter expression", err)
 		}
 
 		body.Query = filterQuery
@@ -683,7 +680,7 @@ func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.L
 		return nil, createError(log, "error sending request to elasticsearch", err)
 	}
 	if res.IsError() {
-		return nil, createError(log, "error searching elasticsearch for document", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
+		return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()))
 	}
 
 	var searchResults esutil.EsSearchResponse
@@ -702,7 +699,6 @@ func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.L
 		policy := &pb.Policy{}
 		err := protojson.Unmarshal(hit.Source, proto.MessageV2(policy))
 		if err != nil {
-			log.Error("failed to convert _doc to policy", zap.Error(err))
 			return nil, createError(hitLogger, "error converting _doc to policy", err)
 		}
 
@@ -730,25 +726,28 @@ func (r *rodeServer) UpdatePolicy(ctx context.Context, updatePolicyRequest *pb.U
 	policy := &pb.Policy{}
 	targetDocumentID, err := r.genericGet(ctx, log, search, rodeElasticsearchPoliciesIndex, policy)
 	if err != nil {
-		return nil, err
+		return nil, createError(log, "error fetching policy", err)
 	}
 
 	log.Debug("field masks", zap.Any("response", updatePolicyRequest.UpdateMask.Paths))
 	// if one of the fields being updated is the rego policy, revalidate the policy
 	if contains(updatePolicyRequest.UpdateMask.Paths, "rego_content") {
 		_, err = r.ValidatePolicy(ctx, &pb.ValidatePolicyRequest{Policy: updatePolicyRequest.Policy.RegoContent})
-	}
-	if err != nil {
-		return nil, err
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	m, err := fieldmask_utils.MaskFromPaths(updatePolicyRequest.UpdateMask.Paths, generator.CamelCase)
 	if err != nil {
-		log.Info("errors while mapping masks", zap.Any("errors", err))
-		return policy, err
+		return nil, createError(log, "error mapping field masks", err)
 	}
 
-	fieldmask_utils.StructToStruct(m, updatePolicyRequest.Policy, policy.Policy)
+	err = fieldmask_utils.StructToStruct(m, updatePolicyRequest.Policy, policy.Policy)
+	if err != nil {
+		return nil, createError(log, "error copying struct via field masks", err)
+	}
+
 	policy.Updated = timestamppb.Now()
 	str, err := protojson.MarshalOptions{EmitUnpopulated: true}.Marshal(proto.MessageV2(policy))
 	if err != nil {
@@ -765,9 +764,8 @@ func (r *rodeServer) UpdatePolicy(ctx context.Context, updatePolicyRequest *pb.U
 	if err != nil {
 		return nil, createError(log, "error sending request to elasticsearch", err)
 	}
-
 	if res.IsError() {
-		return nil, createError(log, "error indexing document in elasticsearch", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
+		return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
 	}
 
 	return policy, nil
