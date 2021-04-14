@@ -1111,7 +1111,7 @@ var _ = Describe("rode server", func() {
 					Expect(ok).To(BeTrue(), "Expected error to be a gRPC status")
 
 					Expect(s.Code()).To(Equal(codes.InvalidArgument))
-					Expect(s.Message()).To(ContainSubstring("Occurrence name does not contain the occurrence id"))
+					Expect(s.Message()).To(ContainSubstring("occurrence name does not contain the occurrence id"))
 				})
 			})
 		})
@@ -1217,7 +1217,7 @@ var _ = Describe("rode server", func() {
 
 							_, evaluatePolicyError := rodeServer.EvaluatePolicy(context.Background(), evaluatePolicyRequest)
 							Expect(evaluatePolicyError).To(HaveOccurred())
-							Expect(evaluatePolicyError.Error()).To(ContainSubstring("evaluate OPA policy failed"))
+							Expect(evaluatePolicyError.Error()).To(ContainSubstring("error evaluating policy"))
 						})
 					})
 				})

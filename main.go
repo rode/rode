@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/soheilhy/cmux"
 	"log"
 	"net"
 	"net/http"
@@ -25,6 +26,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
@@ -56,7 +59,8 @@ func main() {
 		log.Fatalf("failed to create logger: %v", err)
 	}
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", c.GrpcPort))
+	address := fmt.Sprintf(":%d", c.Port)
+	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		logger.Fatal("failed to listen", zap.Error(err))
 	}
@@ -94,20 +98,32 @@ func main() {
 	pb.RegisterRodeServer(s, rodeServer)
 	grpc_health_v1.RegisterHealthServer(s, healthzServer)
 
-	go func() {
-		if err := s.Serve(lis); err != nil {
-			logger.Fatal("failed to serve", zap.Error(err))
-		}
-	}()
+	mux := cmux.New(lis)
+	grpcListener := mux.Match(cmux.HTTP2())
+	httpListener := mux.Match(cmux.HTTP1())
 
-	httpServer, err := createGrpcGateway(context.Background(), lis.Addr().String(), fmt.Sprintf(":%d", c.HttpPort))
+	grpcGateway, err := createGrpcGateway(context.Background(), lis.Addr().String())
 	if err != nil {
 		logger.Fatal("failed to start gateway", zap.Error(err))
 	}
 
-	go func() {
-		httpServer.ListenAndServe()
-	}()
+	httpMux := http.NewServeMux()
+	httpMux.Handle("/", grpcGateway)
+
+	httpServer := &http.Server{
+		Handler: httpMux,
+	}
+
+	servers := new(errgroup.Group)
+	servers.Go(func() error {
+		return s.Serve(grpcListener)
+	})
+	servers.Go(func() error {
+		return httpServer.Serve(httpListener)
+	})
+	servers.Go(func() error {
+		return mux.Serve()
+	})
 
 	logger.Info("listening", zap.String("host", lis.Addr().String()))
 	healthzServer.Ready()
@@ -139,11 +155,10 @@ func createGrafeasClients(grafeasEndpoint string) (grafeas_proto.GrafeasV1Beta1C
 	return grafeasClient, projectsClient, nil
 }
 
-func createGrpcGateway(ctx context.Context, grpcAddress, httpPort string) (*http.Server, error) {
+func createGrpcGateway(ctx context.Context, grpcAddress string) (http.Handler, error) {
 	conn, err := grpc.DialContext(
 		context.Background(),
 		grpcAddress,
-		grpc.WithBlock(),
 		grpc.WithInsecure(),
 	)
 	if err != nil {
@@ -154,10 +169,7 @@ func createGrpcGateway(ctx context.Context, grpcAddress, httpPort string) (*http
 		return nil, err
 	}
 
-	return &http.Server{
-		Addr:    httpPort,
-		Handler: gwmux,
-	}, nil
+	return http.Handler(gwmux), nil
 }
 
 func createLogger(debug bool) (*zap.Logger, error) {
