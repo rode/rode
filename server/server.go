@@ -20,10 +20,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/elastic/go-elasticsearch/v7"
+	"github.com/elastic/go-elasticsearch/v7/esapi"
 	"github.com/gogo/protobuf/protoc-gen-gogo/generator"
 	"github.com/google/uuid"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
@@ -46,10 +46,12 @@ import (
 )
 
 const (
+	rodeProjectSlug                        = "projects/rode"
 	rodeElasticsearchOccurrencesAlias      = "grafeas-rode-occurrences"
 	rodeElasticsearchPoliciesIndex         = "rode-v1alpha1-policies"
 	rodeElasticsearchGenericResourcesIndex = "rode-v1alpha1-generic-resources"
 	maxPageSize                            = 1000
+	pitKeepAlive                           = "1m"
 )
 
 // NewRodeServer constructor for rodeServer
@@ -107,7 +109,7 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 		resourceNames = append(resourceNames, resourceName)
 	}
 
-	mgetBody, _ := encodeRequest(&esutil.EsMultiGetRequest{IDs: resourceNames})
+	mgetBody, _ := esutil.EncodeRequest(&esutil.EsMultiGetRequest{IDs: resourceNames})
 
 	res, err := r.esClient.Mget(mgetBody, r.esClient.Mget.WithContext(ctx), r.esClient.Mget.WithIndex(rodeElasticsearchGenericResourcesIndex))
 	if err != nil {
@@ -118,7 +120,7 @@ func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrence
 	}
 
 	mGetResponse := esutil.EsMultiGetResponse{}
-	if err := decodeResponse(res.Body, &mGetResponse); err != nil {
+	if err := esutil.DecodeResponse(res.Body, &mGetResponse); err != nil {
 		return err
 	}
 
@@ -196,7 +198,7 @@ func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceReque
 	}
 
 	occurrenceResponse, err := r.grafeasCommon.BatchCreateOccurrences(ctx, &grafeas_proto.BatchCreateOccurrencesRequest{
-		Parent:      "projects/rode",
+		Parent:      rodeProjectSlug,
 		Occurrences: occurrenceRequest.GetOccurrences(),
 	})
 	if err != nil {
@@ -225,7 +227,7 @@ func (r *rodeServer) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePol
 	}
 
 	// fetch occurrences from grafeas
-	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{Parent: "projects/rode", Filter: fmt.Sprintf(`"resource.uri" == "%s"`, request.ResourceUri)})
+	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{Parent: rodeProjectSlug, Filter: fmt.Sprintf(`"resource.uri" == "%s"`, request.ResourceUri)})
 	if err != nil {
 		return nil, createError(log, "error listing occurrences", err)
 	}
@@ -240,13 +242,13 @@ func (r *rodeServer) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePol
 			Violations: []*opa.EvaluatePolicyViolation{},
 		},
 	}
-	// evalute OPA policy
+	// evaluate OPA policy
 	evaluatePolicyResponse, err = r.opa.EvaluatePolicy(policy.Policy.RegoContent, input)
 	if err != nil {
 		return nil, createError(log, "error evaluating policy", err)
 	}
 
-	log.Debug("Evalute policy result", zap.Any("policy result", evaluatePolicyResponse))
+	log.Debug("Evaluate policy result", zap.Any("policy result", evaluatePolicyResponse))
 
 	attestation := &pb.EvaluatePolicyResult{}
 	attestation.Created = timestamppb.Now()
@@ -282,48 +284,26 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 	log := r.logger.Named("ListResources")
 	log.Debug("received request", zap.Any("ListResourcesRequest", request))
 
-	searchQuery := esutil.EsSearch{
-		Collapse: &esutil.EsSearchCollapse{
-			Field: "resource.uri",
+	hits, nextPageToken, err := r.genericList(ctx, log, &genericListOptions{
+		index:     rodeElasticsearchOccurrencesAlias,
+		filter:    request.Filter,
+		pageSize:  request.PageSize,
+		pageToken: request.PageToken,
+		query: &esutil.EsSearch{
+			Collapse: &esutil.EsSearchCollapse{
+				Field: "resource.uri",
+			},
 		},
-	}
+		sortDirection: esutil.EsSortOrderAscending,
+		sortField:     "resource.uri",
+	})
 
-	if request.Filter != "" {
-		log = log.With(zap.String("filter", request.Filter))
-
-		parsedQuery, err := r.filterer.ParseExpression(request.Filter)
-		if err != nil {
-			return nil, createError(log, "error parsing filter expression", err)
-		}
-
-		searchQuery.Query = parsedQuery
-	}
-
-	searchQuery.Sort = map[string]esutil.EsSortOrder{
-		"resource.uri": esutil.EsSortOrderAscending,
-	}
-	encodedBody, requestJSON := encodeRequest(searchQuery)
-	log.Debug("es request payload", zap.Any("payload", requestJSON))
-	res, err := r.esClient.Search(
-		r.esClient.Search.WithContext(ctx),
-		r.esClient.Search.WithIndex(rodeElasticsearchOccurrencesAlias),
-		r.esClient.Search.WithBody(encodedBody),
-		r.esClient.Search.WithSize(maxPageSize),
-	)
 	if err != nil {
-		return nil, createError(log, "error sending request to elasticsearch", err)
-	}
-	if res.IsError() {
-		return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()))
-	}
-
-	var searchResults esutil.EsSearchResponse
-	if err := decodeResponse(res.Body, &searchResults); err != nil {
-		return nil, createError(log, "error decoding elasticsearch response", err)
+		return nil, err
 	}
 
 	var resources []*grafeas_proto.Resource
-	for _, hit := range searchResults.Hits.Hits {
+	for _, hit := range hits.Hits {
 		occurrence := &grafeas_proto.Occurrence{}
 		err := protojson.Unmarshal(hit.Source, proto.MessageV2(occurrence))
 		if err != nil {
@@ -335,7 +315,7 @@ func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResource
 
 	return &pb.ListResourcesResponse{
 		Resources:     resources,
-		NextPageToken: "",
+		NextPageToken: nextPageToken,
 	}, nil
 }
 
@@ -343,71 +323,37 @@ func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListG
 	log := r.logger.Named("ListGenericResources")
 	log.Debug("received request", zap.Any("request", request))
 
-	searchQuery := esutil.EsSearch{}
-	if request.Filter != "" {
-		log = log.With(zap.String("filter", request.Filter))
+	hits, nextPageToken, err := r.genericList(ctx, log, &genericListOptions{
+		index:         rodeElasticsearchGenericResourcesIndex,
+		filter:        request.Filter,
+		pageSize:      request.PageSize,
+		pageToken:     request.PageToken,
+		sortDirection: esutil.EsSortOrderAscending,
+		sortField:     "name",
+	})
 
-		parsedQuery, err := r.filterer.ParseExpression(request.Filter)
-		if err != nil {
-			return nil, createError(log, "error parsing filter expression", err)
-		}
-
-		searchQuery.Query = parsedQuery
-	}
-
-	encodedBody, requestJSON := encodeRequest(searchQuery)
-	log.Debug("es request payload", zap.String("payload", requestJSON))
-	res, err := r.esClient.Search(
-		r.esClient.Search.WithContext(ctx),
-		r.esClient.Search.WithIndex(rodeElasticsearchGenericResourcesIndex),
-		r.esClient.Search.WithBody(encodedBody),
-		r.esClient.Search.WithSize(maxPageSize),
-		r.esClient.Search.WithSort("name:asc"),
-	)
 	if err != nil {
-		return nil, createError(log, "error sending request to elasticsearch", err)
-	}
-	if res.IsError() {
-		return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()))
-	}
-
-	var searchResults esutil.EsSearchResponse
-	if err := decodeResponse(res.Body, &searchResults); err != nil {
-		return nil, createError(log, "error decoding elasticsearch response", err)
+		return nil, err
 	}
 
 	var resources []*pb.GenericResource
-	for _, hit := range searchResults.Hits.Hits {
+	for _, hit := range hits.Hits {
 		resources = append(resources, &pb.GenericResource{Name: hit.ID})
 	}
 
 	return &pb.ListGenericResourcesResponse{
 		GenericResources: resources,
-		NextPageToken:    "",
+		NextPageToken:    nextPageToken,
 	}, nil
-}
-
-func encodeRequest(body interface{}) (io.Reader, string) {
-	b, err := json.Marshal(body)
-	if err != nil {
-		// we should know that `body` is a serializable struct before invoking `encodeRequest`
-		panic(err)
-	}
-
-	return bytes.NewReader(b), string(b)
-}
-
-func decodeResponse(r io.ReadCloser, i interface{}) error {
-	return json.NewDecoder(r).Decode(i)
 }
 
 func (r *rodeServer) initialize(ctx context.Context) error {
 	log := r.logger.Named("initialize")
 
-	_, err := r.grafeasProjects.GetProject(ctx, &grafeas_project_proto.GetProjectRequest{Name: "projects/rode"})
+	_, err := r.grafeasProjects.GetProject(ctx, &grafeas_project_proto.GetProjectRequest{Name: rodeProjectSlug})
 	if err != nil {
 		if status.Code(err) == codes.NotFound {
-			_, err := r.grafeasProjects.CreateProject(ctx, &grafeas_project_proto.CreateProjectRequest{Project: &grafeas_project_proto.Project{Name: "projects/rode"}})
+			_, err := r.grafeasProjects.CreateProject(ctx, &grafeas_project_proto.CreateProjectRequest{Project: &grafeas_project_proto.Project{Name: rodeProjectSlug}})
 			if err != nil {
 				log.Error("failed to create rode project", zap.Error(err))
 				return err
@@ -432,16 +378,21 @@ func (r *rodeServer) ListOccurrences(ctx context.Context, occurrenceRequest *pb.
 	log := r.logger.Named("ListOccurrences")
 	log.Debug("received request", zap.Any("ListOccurrencesRequest", occurrenceRequest))
 
-	requestedFilter := occurrenceRequest.Filter
+	request := &grafeas_proto.ListOccurrencesRequest{
+		Parent:    rodeProjectSlug,
+		Filter:    occurrenceRequest.Filter,
+		PageToken: occurrenceRequest.PageToken,
+		PageSize:  occurrenceRequest.PageSize,
+	}
 
-	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{Parent: "projects/rode", Filter: requestedFilter})
+	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, request)
 	if err != nil {
 		return nil, createError(log, "error listing occurrences", err)
 	}
 
 	return &pb.ListOccurrencesResponse{
 		Occurrences:   listOccurrencesResponse.GetOccurrences(),
-		NextPageToken: "",
+		NextPageToken: listOccurrencesResponse.GetNextPageToken(),
 	}, nil
 }
 
@@ -617,7 +568,7 @@ func (r *rodeServer) DeletePolicy(ctx context.Context, deletePolicyRequest *pb.D
 		},
 	}
 
-	encodedBody, requestJSON := encodeRequest(search)
+	encodedBody, requestJSON := esutil.EncodeRequest(search)
 	log.Debug("es request payload", zap.Any("payload", requestJSON))
 
 	res, err := r.esClient.DeleteByQuery(
@@ -634,7 +585,7 @@ func (r *rodeServer) DeletePolicy(ctx context.Context, deletePolicyRequest *pb.D
 	}
 
 	var deletedResults esutil.EsDeleteResponse
-	if err = decodeResponse(res.Body, &deletedResults); err != nil {
+	if err = esutil.DecodeResponse(res.Body, &deletedResults); err != nil {
 		return nil, createError(log, "error unmarshalling elasticsearch response", err)
 	}
 
@@ -647,53 +598,21 @@ func (r *rodeServer) DeletePolicy(ctx context.Context, deletePolicyRequest *pb.D
 
 func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.ListPoliciesRequest) (*pb.ListPoliciesResponse, error) {
 	log := r.logger.Named("List Policies")
-
-	body := &esutil.EsSearch{}
-	if listPoliciesRequest.Filter != "" {
-		log = log.With(zap.String("filter", listPoliciesRequest.Filter))
-
-		filterQuery, err := r.filterer.ParseExpression(listPoliciesRequest.Filter)
-		if err != nil {
-			return nil, createError(log, "error parsing filter expression", err)
-		}
-
-		body.Query = filterQuery
-	}
-
-	body.Sort = map[string]esutil.EsSortOrder{
-		"created": esutil.EsSortOrderDecending,
-	}
-
-	encodedBody, requestJson := esutil.EncodeRequest(body)
-	log = log.With(zap.String("request", requestJson))
-	log.Debug("performing search")
-
-	var policies []*pb.Policy
-	res, err := r.esClient.Search(
-		r.esClient.Search.WithContext(ctx),
-		r.esClient.Search.WithIndex(rodeElasticsearchPoliciesIndex),
-		r.esClient.Search.WithBody(encodedBody),
-		r.esClient.Search.WithSize(maxPageSize),
-	)
+	hits, nextPageToken, err := r.genericList(ctx, log, &genericListOptions{
+		index:         rodeElasticsearchPoliciesIndex,
+		filter:        listPoliciesRequest.Filter,
+		pageSize:      listPoliciesRequest.PageSize,
+		pageToken:     listPoliciesRequest.PageToken,
+		sortDirection: esutil.EsSortOrderDescending,
+		sortField:     "created",
+	})
 
 	if err != nil {
-		return nil, createError(log, "error sending request to elasticsearch", err)
-	}
-	if res.IsError() {
-		return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()))
+		return nil, err
 	}
 
-	var searchResults esutil.EsSearchResponse
-	if err := decodeResponse(res.Body, &searchResults); err != nil {
-		return nil, createError(log, "error unmarshalling elasticsearch response", err)
-	}
-
-	if searchResults.Hits.Total.Value == 0 {
-		log.Debug("document not found", zap.Any("search", "filter replace here"))
-		return &pb.ListPoliciesResponse{}, nil
-	}
-
-	for _, hit := range searchResults.Hits.Hits {
+	var policies []*pb.Policy
+	for _, hit := range hits.Hits {
 		hitLogger := log.With(zap.String("policy raw", string(hit.Source)))
 
 		policy := &pb.Policy{}
@@ -707,7 +626,10 @@ func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.L
 		policies = append(policies, policy)
 	}
 
-	return &pb.ListPoliciesResponse{Policies: policies}, nil
+	return &pb.ListPoliciesResponse{
+		Policies:      policies,
+		NextPageToken: nextPageToken,
+	}, nil
 }
 
 // UpdatePolicy will update only the fields provided by the user
@@ -790,7 +712,7 @@ func (r *rodeServer) createIndex(ctx context.Context, indexName string) error {
 			},
 		},
 	}
-	body, _ := encodeRequest(mappings)
+	body, _ := esutil.EncodeRequest(mappings)
 	response, err := r.esClient.Indices.Create(indexName, r.esClient.Indices.Create.WithBody(body), r.esClient.Indices.Create.WithContext(ctx))
 
 	if err != nil {
@@ -862,6 +784,129 @@ func (r *rodeServer) genericGet(ctx context.Context, log *zap.Logger, search *es
 	}
 
 	return searchResults.Hits.Hits[0].ID, protojson.Unmarshal(searchResults.Hits.Hits[0].Source, proto.MessageV2(protoMessage))
+}
+
+type genericListOptions struct {
+	index         string
+	filter        string
+	query         *esutil.EsSearch
+	pageSize      int32
+	pageToken     string
+	sortDirection esutil.EsSortOrder
+	sortField     string
+}
+
+func (r *rodeServer) genericList(ctx context.Context, log *zap.Logger, options *genericListOptions) (*esutil.EsSearchResponseHits, string, error) {
+	body := &esutil.EsSearch{}
+	if options.query != nil {
+		body = options.query
+	}
+
+	if options.filter != "" {
+		log = log.With(zap.String("filter", options.filter))
+		filterQuery, err := r.filterer.ParseExpression(options.filter)
+		if err != nil {
+			return nil, "", createError(log, "error while parsing filter expression", err)
+		}
+
+		body.Query = filterQuery
+	}
+
+	if options.sortField != "" {
+		body.Sort = map[string]esutil.EsSortOrder{
+			options.sortField: options.sortDirection,
+		}
+	}
+
+	searchOptions := []func(*esapi.SearchRequest){
+		r.esClient.Search.WithContext(ctx),
+	}
+
+	var nextPageToken string
+	if options.pageToken != "" || options.pageSize != 0 { // handle pagination
+		next, extraSearchOptions, err := r.handlePagination(ctx, log, body, options.index, options.pageToken, options.pageSize)
+		if err != nil {
+			return nil, "", createError(log, "error while handling pagination", err)
+		}
+
+		nextPageToken = next
+		searchOptions = append(searchOptions, extraSearchOptions...)
+	} else {
+		searchOptions = append(searchOptions,
+			r.esClient.Search.WithIndex(options.index),
+			r.esClient.Search.WithSize(maxPageSize),
+		)
+	}
+
+	encodedBody, requestJson := esutil.EncodeRequest(body)
+	log = log.With(zap.String("request", requestJson))
+	log.Debug("performing search")
+
+	res, err := r.esClient.Search(
+		append(searchOptions, r.esClient.Search.WithBody(encodedBody))...,
+	)
+	if err != nil {
+		return nil, "", createError(log, "error sending request to elasticsearch", err)
+	}
+	if res.IsError() {
+		return nil, "", createError(log, "unexpected response from elasticsearch", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
+	}
+
+	var searchResults esutil.EsSearchResponse
+	if err := esutil.DecodeResponse(res.Body, &searchResults); err != nil {
+		return nil, "", createError(log, "error decoding elasticsearch response", err)
+	}
+
+	return searchResults.Hits, nextPageToken, nil
+}
+
+func (r *rodeServer) handlePagination(ctx context.Context, log *zap.Logger, body *esutil.EsSearch, index, pageToken string, pageSize int32) (string, []func(*esapi.SearchRequest), error) {
+	log = log.With(zap.String("pageToken", pageToken), zap.Int32("pageSize", pageSize))
+
+	var (
+		pit  string
+		from int
+		err  error
+	)
+
+	// if no pageToken is specified, we need to create a new PIT
+	if pageToken == "" {
+		res, err := r.esClient.OpenPointInTime(
+			r.esClient.OpenPointInTime.WithContext(ctx),
+			r.esClient.OpenPointInTime.WithIndex(index),
+			r.esClient.OpenPointInTime.WithKeepAlive(pitKeepAlive),
+		)
+		if err != nil {
+			return "", nil, createError(log, "error sending request to elasticsearch", err)
+		}
+		if res.IsError() {
+			return "", nil, createError(log, "unexpected response from elasticsearch", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
+		}
+
+		var pitResponse esutil.ESPitResponse
+		if err = esutil.DecodeResponse(res.Body, &pitResponse); err != nil {
+			return "", nil, createError(log, "error decoding elasticsearch response", err)
+		}
+
+		pit = pitResponse.Id
+		from = 0
+	} else {
+		// get the PIT from the provided pageToken
+		pit, from, err = esutil.ParsePageToken(pageToken)
+		if err != nil {
+			return "", nil, createError(log, "error parsing page token", err)
+		}
+	}
+
+	body.Pit = &esutil.EsSearchPit{
+		Id:        pit,
+		KeepAlive: pitKeepAlive,
+	}
+
+	return esutil.CreatePageToken(pit, from+int(pageSize)), []func(*esapi.SearchRequest){
+		r.esClient.Search.WithSize(int(pageSize)),
+		r.esClient.Search.WithFrom(from),
+	}, err
 }
 
 // createError is a helper function that allows you to easily log an error and return a gRPC formatted error.

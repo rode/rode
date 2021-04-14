@@ -725,11 +725,14 @@ var _ = Describe("rode server", func() {
 					Expect(esTransport.receivedHttpRequests[2].Method).To(Equal(http.MethodGet))
 					Expect(esTransport.receivedHttpRequests[2].URL.Path).To(Equal(fmt.Sprintf("/%s/_search", rodeElasticsearchGenericResourcesIndex)))
 					Expect(esTransport.receivedHttpRequests[2].URL.Query().Get("size")).To(Equal(strconv.Itoa(maxPageSize)))
-					Expect(esTransport.receivedHttpRequests[2].URL.Query().Get("sort")).To(Equal("name:asc"))
 
 					body := readEsSearchResponse(esTransport.receivedHttpRequests[2])
 
-					Expect(body).To(Equal(&esutil.EsSearch{}))
+					Expect(body).To(Equal(&esutil.EsSearch{
+						Sort: map[string]esutil.EsSortOrder{
+							"name": esutil.EsSortOrderAscending,
+						},
+					}))
 				})
 
 				It("should return all of the resources", func() {
@@ -774,6 +777,9 @@ var _ = Describe("rode server", func() {
 
 							Expect(body).To(Equal(&esutil.EsSearch{
 								Query: expectedQuery,
+								Sort: map[string]esutil.EsSortOrder{
+									"name": esutil.EsSortOrderAscending,
+								},
 							}))
 						})
 					})
@@ -846,12 +852,127 @@ var _ = Describe("rode server", func() {
 						Expect(status.Code()).To(Equal(codes.Internal))
 					})
 				})
+
+				When("listing generic resources with pagination", func() {
+					var (
+						expectedPageToken string
+						expectedPageSize  int32
+						expectedPitId     string
+						expectedFrom      int
+					)
+
+					BeforeEach(func() {
+						expectedPageSize = int32(gofakeit.Number(10, 100))
+						expectedPitId = gofakeit.LetterN(20)
+						expectedFrom = gofakeit.Number(10, 100)
+
+						listRequest.PageSize = expectedPageSize
+					})
+
+					When("a page token is not specified", func() {
+						BeforeEach(func() {
+							esTransport.preparedHttpResponses = append([]*http.Response{
+								{
+									StatusCode: http.StatusOK,
+									Body: structToJsonBody(&esutil.ESPitResponse{
+										Id: expectedPitId,
+									}),
+								},
+							}, esTransport.preparedHttpResponses...)
+						})
+
+						It("should create a PIT in Elasticsearch", func() {
+							Expect(esTransport.receivedHttpRequests[2].URL.Path).To(Equal(fmt.Sprintf("/%s/_pit", rodeElasticsearchGenericResourcesIndex)))
+							Expect(esTransport.receivedHttpRequests[2].Method).To(Equal(http.MethodPost))
+							Expect(esTransport.receivedHttpRequests[2].URL.Query().Get("keep_alive")).To(Equal("1m"))
+						})
+
+						It("should query using the PIT", func() {
+							Expect(esTransport.receivedHttpRequests[3].URL.Path).To(Equal("/_search"))
+							Expect(esTransport.receivedHttpRequests[3].Method).To(Equal(http.MethodGet))
+							request := readEsSearchResponse(esTransport.receivedHttpRequests[3])
+							Expect(request.Pit.Id).To(Equal(expectedPitId))
+							Expect(request.Pit.KeepAlive).To(Equal("1m"))
+						})
+
+						It("should not return an error", func() {
+							Expect(actualError).To(BeNil())
+						})
+
+						It("should return the next page token", func() {
+							nextPitId, nextFrom, err := esutil.ParsePageToken(actualResponse.NextPageToken)
+
+							Expect(err).ToNot(HaveOccurred())
+							Expect(nextPitId).To(Equal(expectedPitId))
+							Expect(nextFrom).To(BeEquivalentTo(expectedPageSize))
+						})
+					})
+
+					When("a valid token is specified", func() {
+						BeforeEach(func() {
+							expectedPageToken = esutil.CreatePageToken(expectedPitId, expectedFrom)
+
+							listRequest.PageToken = expectedPageToken
+						})
+
+						It("should query Elasticsearch using the PIT", func() {
+							Expect(esTransport.receivedHttpRequests[2].URL.Path).To(Equal("/_search"))
+							Expect(esTransport.receivedHttpRequests[2].Method).To(Equal(http.MethodGet))
+							request := readEsSearchResponse(esTransport.receivedHttpRequests[2])
+							Expect(request.Pit.Id).To(Equal(expectedPitId))
+							Expect(request.Pit.KeepAlive).To(Equal("1m"))
+						})
+
+						It("should return the next page token", func() {
+							nextPitId, nextFrom, err := esutil.ParsePageToken(actualResponse.NextPageToken)
+
+							Expect(err).ToNot(HaveOccurred())
+							Expect(nextPitId).To(Equal(expectedPitId))
+							Expect(nextFrom).To(BeEquivalentTo(expectedPageSize + int32(expectedFrom)))
+						})
+					})
+
+					When("an invalid token is passed (bad format)", func() {
+						BeforeEach(func() {
+							listRequest.PageToken = gofakeit.LetterN(10)
+						})
+
+						It("should not make any further Elasticsearch queries", func() {
+							Expect(esTransport.receivedHttpRequests).To(HaveLen(2))
+						})
+
+						It("should return an error", func() {
+							Expect(actualError).To(HaveOccurred())
+							Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+							Expect(actualResponse).To(BeNil())
+						})
+					})
+
+					When("an invalid token is passed (bad from)", func() {
+						BeforeEach(func() {
+							listRequest.PageToken = esutil.CreatePageToken(expectedPitId, expectedFrom) + gofakeit.LetterN(5)
+						})
+
+						It("should not make any further Elasticsearch queries", func() {
+							Expect(esTransport.receivedHttpRequests).To(HaveLen(2))
+						})
+
+						It("should return an error", func() {
+							Expect(actualError).To(HaveOccurred())
+							Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+							Expect(actualResponse).To(BeNil())
+						})
+					})
+				})
 			})
 		})
 
-		When("listing occurrences for a resource", func() {
+		When("listing occurrences", func() {
 			var (
 				randomOccurrence               *grafeas_proto.Occurrence
+				nextPageToken                  string
+				currentPageToken               string
+				pageSize                       int32
 				grafeasListOccurrencesRequest  *grafeas_proto.ListOccurrencesRequest
 				grafeasListOccurrencesResponse *grafeas_proto.ListOccurrencesResponse
 				uri                            string
@@ -861,11 +982,16 @@ var _ = Describe("rode server", func() {
 				randomOccurrence = createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED)
 
 				uri = randomOccurrence.Resource.Uri
+				nextPageToken = gofakeit.Word()
+				currentPageToken = gofakeit.Word()
+				pageSize = gofakeit.Int32()
 
 				// expected Grafeas ListOccurrencesRequest request
 				grafeasListOccurrencesRequest = &grafeas_proto.ListOccurrencesRequest{
-					Parent: "projects/rode",
-					Filter: fmt.Sprintf(`"resource.uri" == "%s"`, uri),
+					Parent:    "projects/rode",
+					Filter:    fmt.Sprintf(`"resource.uri" == "%s"`, uri),
+					PageToken: currentPageToken,
+					PageSize:  pageSize,
 				}
 
 				// mocked Grafeas ListOccurrencesResponse response
@@ -873,6 +999,7 @@ var _ = Describe("rode server", func() {
 					Occurrences: []*grafeas_proto.Occurrence{
 						randomOccurrence,
 					},
+					NextPageToken: nextPageToken,
 				}
 
 			})
@@ -882,13 +1009,16 @@ var _ = Describe("rode server", func() {
 				grafeasClient.EXPECT().ListOccurrences(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(grafeasListOccurrencesRequest)).Return(grafeasListOccurrencesResponse, nil)
 
 				listOccurrencesRequest := &pb.ListOccurrencesRequest{
-					Filter: fmt.Sprintf(`"resource.uri" == "%s"`, uri),
+					Filter:    fmt.Sprintf(`"resource.uri" == "%s"`, uri),
+					PageToken: currentPageToken,
+					PageSize:  pageSize,
 				}
 				response, err := rodeServer.ListOccurrences(context.Background(), listOccurrencesRequest)
 				Expect(err).ToNot(HaveOccurred())
 
 				// check response
 				Expect(response.Occurrences).To(BeEquivalentTo(grafeasListOccurrencesResponse.Occurrences))
+				Expect(response.NextPageToken).To(Equal(nextPageToken))
 			})
 
 			When("Grafeas returns an error", func() {
@@ -896,7 +1026,9 @@ var _ = Describe("rode server", func() {
 					grafeasClient.EXPECT().ListOccurrences(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(grafeasListOccurrencesRequest)).Return(nil, fmt.Errorf("error occurred"))
 
 					listOccurrencesRequest := &pb.ListOccurrencesRequest{
-						Filter: fmt.Sprintf(`"resource.uri" == "%s"`, uri),
+						Filter:    fmt.Sprintf(`"resource.uri" == "%s"`, uri),
+						PageToken: currentPageToken,
+						PageSize:  pageSize,
 					}
 					response, err := rodeServer.ListOccurrences(context.Background(), listOccurrencesRequest)
 					Expect(err).ToNot(BeNil())
@@ -1226,6 +1358,125 @@ var _ = Describe("rode server", func() {
 					Expect(listResourcesResponse).To(BeNil())
 				})
 			})
+
+			When("listing resources with pagination", func() {
+				var (
+					actualResponse *pb.ListResourcesResponse
+					actualError    error
+
+					expectedPageToken string
+					expectedPageSize  int32
+					expectedPitId     string
+					expectedFrom      int
+				)
+
+				BeforeEach(func() {
+					expectedPageSize = int32(gofakeit.Number(10, 100))
+					expectedPitId = gofakeit.LetterN(20)
+					expectedFrom = gofakeit.Number(10, 100)
+
+					request.PageSize = expectedPageSize
+				})
+
+				JustBeforeEach(func() {
+					actualResponse, actualError = rodeServer.ListResources(context.Background(), request)
+				})
+
+				When("a page token is not specified", func() {
+					BeforeEach(func() {
+						esTransport.preparedHttpResponses = append([]*http.Response{
+							{
+								StatusCode: http.StatusOK,
+								Body: structToJsonBody(&esutil.ESPitResponse{
+									Id: expectedPitId,
+								}),
+							},
+						}, esTransport.preparedHttpResponses...)
+					})
+
+					It("should create a PIT in Elasticsearch", func() {
+						Expect(esTransport.receivedHttpRequests[2].URL.Path).To(Equal(fmt.Sprintf("/%s/_pit", rodeElasticsearchOccurrencesAlias)))
+						Expect(esTransport.receivedHttpRequests[2].Method).To(Equal(http.MethodPost))
+						Expect(esTransport.receivedHttpRequests[2].URL.Query().Get("keep_alive")).To(Equal("1m"))
+					})
+
+					It("should query using the PIT", func() {
+						Expect(esTransport.receivedHttpRequests[3].URL.Path).To(Equal("/_search"))
+						Expect(esTransport.receivedHttpRequests[3].Method).To(Equal(http.MethodGet))
+						request := readEsSearchResponse(esTransport.receivedHttpRequests[3])
+						Expect(request.Pit.Id).To(Equal(expectedPitId))
+						Expect(request.Pit.KeepAlive).To(Equal("1m"))
+					})
+
+					It("should not return an error", func() {
+						Expect(actualError).To(BeNil())
+					})
+
+					It("should return the next page token", func() {
+						nextPitId, nextFrom, err := esutil.ParsePageToken(actualResponse.NextPageToken)
+
+						Expect(err).ToNot(HaveOccurred())
+						Expect(nextPitId).To(Equal(expectedPitId))
+						Expect(nextFrom).To(BeEquivalentTo(expectedPageSize))
+					})
+				})
+
+				When("a valid token is specified", func() {
+					BeforeEach(func() {
+						expectedPageToken = esutil.CreatePageToken(expectedPitId, expectedFrom)
+
+						request.PageToken = expectedPageToken
+					})
+
+					It("should query Elasticsearch using the PIT", func() {
+						Expect(esTransport.receivedHttpRequests[2].URL.Path).To(Equal("/_search"))
+						Expect(esTransport.receivedHttpRequests[2].Method).To(Equal(http.MethodGet))
+						request := readEsSearchResponse(esTransport.receivedHttpRequests[2])
+						Expect(request.Pit.Id).To(Equal(expectedPitId))
+						Expect(request.Pit.KeepAlive).To(Equal("1m"))
+					})
+
+					It("should return the next page token", func() {
+						nextPitId, nextFrom, err := esutil.ParsePageToken(actualResponse.NextPageToken)
+
+						Expect(err).ToNot(HaveOccurred())
+						Expect(nextPitId).To(Equal(expectedPitId))
+						Expect(nextFrom).To(BeEquivalentTo(expectedPageSize + int32(expectedFrom)))
+					})
+				})
+
+				When("an invalid token is passed (bad format)", func() {
+					BeforeEach(func() {
+						request.PageToken = gofakeit.LetterN(10)
+					})
+
+					It("should not make any further Elasticsearch queries", func() {
+						Expect(esTransport.receivedHttpRequests).To(HaveLen(2))
+					})
+
+					It("should return an error", func() {
+						Expect(actualError).To(HaveOccurred())
+						Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+						Expect(actualResponse).To(BeNil())
+					})
+				})
+
+				When("an invalid token is passed (bad from)", func() {
+					BeforeEach(func() {
+						request.PageToken = esutil.CreatePageToken(expectedPitId, expectedFrom) + gofakeit.LetterN(5)
+					})
+
+					It("should not make any further Elasticsearch queries", func() {
+						Expect(esTransport.receivedHttpRequests).To(HaveLen(2))
+					})
+
+					It("should return an error", func() {
+						Expect(actualError).To(HaveOccurred())
+						Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+						Expect(actualResponse).To(BeNil())
+					})
+				})
+			})
 		})
 		When("creating a policy without a name", func() {
 			var (
@@ -1398,6 +1649,140 @@ var _ = Describe("rode server", func() {
 					search := readEsSearchResponse(actualRequest)
 
 					Expect(search.Query).To(Equal(expectedQuery))
+				})
+			})
+		})
+
+		When("listing policies with pagination", func() {
+			var (
+				listRequest  *pb.ListPoliciesRequest
+				listResponse *pb.ListPoliciesResponse
+				actualError  error
+
+				expectedPageToken string
+				expectedPageSize  int32
+				expectedPitId     string
+				expectedFrom      int
+			)
+
+			BeforeEach(func() {
+				expectedPageSize = int32(gofakeit.Number(10, 100))
+				expectedPitId = gofakeit.LetterN(20)
+				expectedFrom = gofakeit.Number(10, 100)
+
+				listRequest = &pb.ListPoliciesRequest{
+					PageSize: expectedPageSize,
+				}
+
+				esTransport.preparedHttpResponses = []*http.Response{
+					{
+						StatusCode: http.StatusOK,
+						Body: createEsSearchResponseForPolicy([]*pb.Policy{
+							{
+								Id:     gofakeit.UUID(),
+								Policy: createRandomPolicyEntity(goodPolicy),
+							},
+						}),
+					},
+				}
+			})
+
+			JustBeforeEach(func() {
+				listResponse, actualError = rodeServer.ListPolicies(context.Background(), listRequest)
+			})
+
+			When("a page token is not specified", func() {
+				BeforeEach(func() {
+					esTransport.preparedHttpResponses = append([]*http.Response{
+						{
+							StatusCode: http.StatusOK,
+							Body: structToJsonBody(&esutil.ESPitResponse{
+								Id: expectedPitId,
+							}),
+						},
+					}, esTransport.preparedHttpResponses...)
+				})
+
+				It("should create a PIT in Elasticsearch", func() {
+					Expect(esTransport.receivedHttpRequests[2].URL.Path).To(Equal(fmt.Sprintf("/%s/_pit", rodeElasticsearchPoliciesIndex)))
+					Expect(esTransport.receivedHttpRequests[2].Method).To(Equal(http.MethodPost))
+					Expect(esTransport.receivedHttpRequests[2].URL.Query().Get("keep_alive")).To(Equal("1m"))
+				})
+
+				It("should query using the PIT", func() {
+					Expect(esTransport.receivedHttpRequests[3].URL.Path).To(Equal("/_search"))
+					Expect(esTransport.receivedHttpRequests[3].Method).To(Equal(http.MethodGet))
+					request := readEsSearchResponse(esTransport.receivedHttpRequests[3])
+					Expect(request.Pit.Id).To(Equal(expectedPitId))
+					Expect(request.Pit.KeepAlive).To(Equal("1m"))
+				})
+
+				It("should not return an error", func() {
+					Expect(actualError).To(BeNil())
+				})
+
+				It("should return the next page token", func() {
+					nextPitId, nextFrom, err := esutil.ParsePageToken(listResponse.NextPageToken)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(nextPitId).To(Equal(expectedPitId))
+					Expect(nextFrom).To(BeEquivalentTo(expectedPageSize))
+				})
+			})
+
+			When("a valid token is specified", func() {
+				BeforeEach(func() {
+					expectedPageToken = esutil.CreatePageToken(expectedPitId, expectedFrom)
+
+					listRequest.PageToken = expectedPageToken
+				})
+
+				It("should query Elasticsearch using the PIT", func() {
+					Expect(esTransport.receivedHttpRequests[2].URL.Path).To(Equal("/_search"))
+					Expect(esTransport.receivedHttpRequests[2].Method).To(Equal(http.MethodGet))
+					request := readEsSearchResponse(esTransport.receivedHttpRequests[2])
+					Expect(request.Pit.Id).To(Equal(expectedPitId))
+					Expect(request.Pit.KeepAlive).To(Equal("1m"))
+				})
+
+				It("should return the next page token", func() {
+					nextPitId, nextFrom, err := esutil.ParsePageToken(listResponse.NextPageToken)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(nextPitId).To(Equal(expectedPitId))
+					Expect(nextFrom).To(BeEquivalentTo(expectedPageSize + int32(expectedFrom)))
+				})
+			})
+
+			When("an invalid token is passed (bad format)", func() {
+				BeforeEach(func() {
+					listRequest.PageToken = gofakeit.LetterN(10)
+				})
+
+				It("should not make any further Elasticsearch queries", func() {
+					Expect(esTransport.receivedHttpRequests).To(HaveLen(2))
+				})
+
+				It("should return an error", func() {
+					Expect(actualError).To(HaveOccurred())
+					Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+					Expect(listResponse).To(BeNil())
+				})
+			})
+
+			When("an invalid token is passed (bad from)", func() {
+				BeforeEach(func() {
+					listRequest.PageToken = esutil.CreatePageToken(expectedPitId, expectedFrom) + gofakeit.LetterN(5)
+				})
+
+				It("should not make any further Elasticsearch queries", func() {
+					Expect(esTransport.receivedHttpRequests).To(HaveLen(2))
+				})
+
+				It("should return an error", func() {
+					Expect(actualError).To(HaveOccurred())
+					Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+					Expect(listResponse).To(BeNil())
 				})
 			})
 		})

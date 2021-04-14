@@ -153,6 +153,8 @@
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | filter | [string](#string) |  |  |
+| page_size | [int32](#int32) |  |  |
+| page_token | [string](#string) |  |  |
 
 
 
@@ -168,6 +170,7 @@
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | policies | [Policy](#rode.v1alpha1.Policy) | repeated |  |
+| next_page_token | [string](#string) |  |  |
 
 
 
