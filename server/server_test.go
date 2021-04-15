@@ -1178,6 +1178,17 @@ var _ = Describe("rode server", func() {
 				_, _ = rodeServer.EvaluatePolicy(context.Background(), evaluatePolicyRequest)
 			})
 
+			It("should return an error if resource uri is not specified", func() {
+				grafeasClient.EXPECT().ListOccurrences(gomock.Any(), gomock.Any()).Times(0)
+				opaClient.EXPECT().EvaluatePolicy(gomock.Any(), gomock.Any()).Times(0)
+				opaClient.EXPECT().InitializePolicy(policy, goodPolicy).Times(0)
+
+				evaluatePolicyRequest.ResourceUri = ""
+				_, err := rodeServer.EvaluatePolicy(context.Background(), evaluatePolicyRequest)
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(BeEquivalentTo(status.Errorf(codes.InvalidArgument, "resource uri is required")))
+			})
+
 			When("OPA policy initializes", func() {
 
 				BeforeEach(func() {
