@@ -227,7 +227,11 @@ func (r *rodeServer) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePol
 	}
 
 	// fetch occurrences from grafeas
-	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{Parent: rodeProjectSlug, Filter: fmt.Sprintf(`"resource.uri" == "%s"`, request.ResourceUri)})
+	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{
+		Parent:   rodeProjectSlug,
+		Filter:   fmt.Sprintf(`"resource.uri" == "%s"`, request.ResourceUri),
+		PageSize: maxPageSize,
+	})
 	if err != nil {
 		return nil, createError(log, "error listing occurrences", err)
 	}
