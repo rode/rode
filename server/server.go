@@ -215,6 +215,10 @@ func (r *rodeServer) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePol
 	log := r.logger.Named("EvaluatePolicy").With(zap.String("policy", request.Policy), zap.String("resource", request.ResourceUri))
 	log.Debug("evaluate policy request received")
 
+	if request.ResourceUri == "" {
+		return nil, createErrorWithCode(log, "resource uri is required", nil, codes.InvalidArgument)
+	}
+
 	policy, err := r.GetPolicy(ctx, &pb.GetPolicyRequest{Id: request.Policy})
 	if err != nil {
 		return nil, createError(log, "error fetching policy", err)
@@ -227,7 +231,11 @@ func (r *rodeServer) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePol
 	}
 
 	// fetch occurrences from grafeas
-	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{Parent: rodeProjectSlug, Filter: fmt.Sprintf(`"resource.uri" == "%s"`, request.ResourceUri)})
+	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{
+		Parent:   rodeProjectSlug,
+		Filter:   fmt.Sprintf(`"resource.uri" == "%s"`, request.ResourceUri),
+		PageSize: maxPageSize,
+	})
 	if err != nil {
 		return nil, createError(log, "error listing occurrences", err)
 	}
@@ -918,6 +926,17 @@ func createError(log *zap.Logger, message string, err error, fields ...zap.Field
 
 	log.Error(message, append(fields, zap.Error(err))...)
 	return status.Errorf(codes.Internal, "%s: %s", message, err)
+}
+
+// createError is a helper function that allows you to easily log an error and return a gRPC formatted error.
+func createErrorWithCode(log *zap.Logger, message string, err error, code codes.Code, fields ...zap.Field) error {
+	if err == nil {
+		log.Error(message, fields...)
+		return status.Errorf(code, "%s", message)
+	}
+
+	log.Error(message, append(fields, zap.Error(err))...)
+	return status.Errorf(code, "%s: %s", message, err)
 }
 
 // contains returns a boolean describing whether or not a string slice contains a particular string

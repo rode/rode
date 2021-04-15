@@ -1133,8 +1133,9 @@ var _ = Describe("rode server", func() {
 					createRandomOccurrence(grafeas_common_proto.NoteKind_ATTESTATION),
 				}
 				listOccurrencesRequest = &grafeas_proto.ListOccurrencesRequest{
-					Parent: "projects/rode",
-					Filter: fmt.Sprintf(`"resource.uri" == "%s"`, resourceURI),
+					Parent:   "projects/rode",
+					PageSize: maxPageSize,
+					Filter:   fmt.Sprintf(`"resource.uri" == "%s"`, resourceURI),
 				}
 				evaluatePolicyRequest = &pb.EvaluatePolicyRequest{
 					ResourceUri: resourceURI,
@@ -1175,6 +1176,17 @@ var _ = Describe("rode server", func() {
 				opaClient.EXPECT().InitializePolicy(policy, goodPolicy).Return(nil)
 
 				_, _ = rodeServer.EvaluatePolicy(context.Background(), evaluatePolicyRequest)
+			})
+
+			It("should return an error if resource uri is not specified", func() {
+				grafeasClient.EXPECT().ListOccurrences(gomock.Any(), gomock.Any()).Times(0)
+				opaClient.EXPECT().EvaluatePolicy(gomock.Any(), gomock.Any()).Times(0)
+				opaClient.EXPECT().InitializePolicy(policy, goodPolicy).Times(0)
+
+				evaluatePolicyRequest.ResourceUri = ""
+				_, err := rodeServer.EvaluatePolicy(context.Background(), evaluatePolicyRequest)
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(BeEquivalentTo(status.Errorf(codes.InvalidArgument, "resource uri is required")))
 			})
 
 			When("OPA policy initializes", func() {
