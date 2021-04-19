@@ -11,7 +11,7 @@ deploy:
     releases:
       - name: rode
         chartPath: rode/rode
-        version: 0.1.2
+        version: 0.2.0
         remote: true
         wait: true
         artifactOverrides:
@@ -29,11 +29,6 @@ profiles:
       namespace: default 
       port: 50051
       localPort: 50051
-    - resourceType: service
-      resourceName: rode
-      namespace: default
-      port: 50052
-      localPort: 50052
     - resourceType: service
       resourceName: grafeas-server
       namespace: default 
