@@ -747,7 +747,7 @@ func validateRodeRequirementsForPolicy(mod *ast.Module, regoContent string) []er
 	// policy must contains a violations block somewhere in the code
 	violationsBlockExists := false
 	// missing field from result return response
-	returnFieldsExist := true
+	returnFieldsExist := false
 
 	for _, r := range mod.Rules {
 		if r.Head.Name == "pass" {
@@ -756,20 +756,21 @@ func validateRodeRequirementsForPolicy(mod *ast.Module, regoContent string) []er
 
 		if r.Head.Name == "violations" && r.Head.Key != nil && r.Head.Key.Value.String() == "result" {
 			violationsBlockExists = true
-			for _, module := range r.Module.Rules {
-				fmt.Println(module.Head.Name)
+			for i, module := range r.Module.Rules {
 				if module.Head.Name == "violations" {
 					// get the last body element in the violations block as it must be the result
-
 					terms := module.Body[len(module.Body)-1].Terms.([]*ast.Term)
 					if terms[1].Value.String() == "result" {
 						resultObject := terms[2].Value.String()
-						if !(strings.Contains(resultObject, "\"id\"") && strings.Contains(resultObject, "\"message\"") && strings.Contains(resultObject, "\"name\"") && strings.Contains(resultObject, "\"pass\"")) {
+						// basic string search of the object struct
+						if !(strings.Contains(resultObject, "\"id\":") && strings.Contains(resultObject, "\"message\":") && strings.Contains(resultObject, "\"name\":") && strings.Contains(resultObject, "\"pass\":")) {
 							returnFieldsExist = false
 							break
 						}
 					}
-
+				}
+				if i == (len(r.Module.Rules) - 1) {
+					returnFieldsExist = true
 				}
 			}
 
@@ -785,7 +786,7 @@ func validateRodeRequirementsForPolicy(mod *ast.Module, regoContent string) []er
 		errorsList = append(errorsList, err)
 	}
 	if !returnFieldsExist {
-		err := errors.New("all \"violations\" blocks must return a \"result\" that returns a pass, id, message, and name")
+		err := errors.New("all \"violations\" blocks must return a \"result\" that contains pass, id, message, and name fields")
 		errorsList = append(errorsList, err)
 	}
 
