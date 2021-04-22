@@ -699,7 +699,7 @@ var _ = Describe("rode server", func() {
 
 				BeforeEach(func() {
 					genericResources = []*pb.GenericResource{}
-					for i := 0; i < gofakeit.Number(2, 5); i++ {
+					for i := 0; i < gofakeit.Number(3, 5); i++ {
 						genericResources = append(genericResources, &pb.GenericResource{Name: gofakeit.LetterN(10)})
 					}
 
@@ -862,7 +862,7 @@ var _ = Describe("rode server", func() {
 					)
 
 					BeforeEach(func() {
-						expectedPageSize = int32(gofakeit.Number(1, len(genericResources) - 1))
+						expectedPageSize = int32(gofakeit.Number(1, len(genericResources) - 2))
 						expectedPitId = gofakeit.LetterN(20)
 						expectedFrom = gofakeit.Number(0, 1)
 
@@ -1332,7 +1332,7 @@ var _ = Describe("rode server", func() {
 				It("should pass the filter to the filterer", func() {
 					mockFilterer.EXPECT().ParseExpression(request.Filter)
 
-					rodeServer.ListResources(context.Background(), request)
+					_, _ = rodeServer.ListResources(context.Background(), request)
 				})
 
 				It("should include the Elasticsearch query in the response", func() {
@@ -1353,7 +1353,7 @@ var _ = Describe("rode server", func() {
 				})
 			})
 
-			When("Elasticsearch returns with an error", func() {
+			When("elasticsearch returns with an error", func() {
 				BeforeEach(func() {
 					esTransport.preparedHttpResponses[0] = &http.Response{
 						StatusCode: http.StatusInternalServerError,
@@ -1383,11 +1383,13 @@ var _ = Describe("rode server", func() {
 				)
 
 				BeforeEach(func() {
-					expectedPageSize = int32(gofakeit.Number(1, len(occurrences) - 1))
+					expectedPageSize = int32(gofakeit.Number(1, 1))
 					expectedPitId = gofakeit.LetterN(20)
 					expectedFrom = gofakeit.Number(0, 1)
 
 					request.PageSize = expectedPageSize
+
+					esTransport.preparedHttpResponses[0].Body = createPaginatedEsSearchResponse(occurrences, gofakeit.Number(1000, 2000))
 				})
 
 				JustBeforeEach(func() {
@@ -1678,9 +1680,9 @@ var _ = Describe("rode server", func() {
 			)
 
 			BeforeEach(func() {
-				expectedPageSize = int32(gofakeit.Number(10, 100))
+				expectedPageSize = int32(gofakeit.Number(1, 1))
 				expectedPitId = gofakeit.LetterN(20)
-				expectedFrom = gofakeit.Number(10, 100)
+				expectedFrom = gofakeit.Number(0, 1)
 
 				listRequest = &pb.ListPoliciesRequest{
 					PageSize: expectedPageSize,
@@ -1689,12 +1691,12 @@ var _ = Describe("rode server", func() {
 				esTransport.preparedHttpResponses = []*http.Response{
 					{
 						StatusCode: http.StatusOK,
-						Body: createEsSearchResponseForPolicy([]*pb.Policy{
+						Body: createPaginatedEsSearchResponseForPolicy([]*pb.Policy{
 							{
 								Id:     gofakeit.UUID(),
 								Policy: createRandomPolicyEntity(goodPolicy),
 							},
-						}),
+						}, gofakeit.Number(1000, 10000)),
 					},
 				}
 			})
@@ -2114,6 +2116,10 @@ func structToJsonBody(i interface{}) io.ReadCloser {
 }
 
 func createEsSearchResponse(occurrences []*grafeas_proto.Occurrence) io.ReadCloser {
+	return createPaginatedEsSearchResponse(occurrences, len(occurrences))
+}
+
+func createPaginatedEsSearchResponse(occurrences []*grafeas_proto.Occurrence, totalResults int) io.ReadCloser {
 	var occurrenceHits []*esutil.EsSearchResponseHit
 
 	for _, occurrence := range occurrences {
@@ -2131,7 +2137,7 @@ func createEsSearchResponse(occurrences []*grafeas_proto.Occurrence) io.ReadClos
 	response := &esutil.EsSearchResponse{
 		Hits: &esutil.EsSearchResponseHits{
 			Total: &esutil.EsSearchResponseTotal{
-				Value: len(occurrences),
+				Value: totalResults,
 			},
 			Hits: occurrenceHits,
 		},
@@ -2175,10 +2181,14 @@ func createEsSearchResponseForGenericResource(resources []*pb.GenericResource) i
 	return ioutil.NopCloser(bytes.NewReader(responseBody))
 }
 
-func createEsSearchResponseForPolicy(occurrences []*pb.Policy) io.ReadCloser {
-	var occurrenceHits []*esutil.EsSearchResponseHit
+func createEsSearchResponseForPolicy(policies []*pb.Policy) io.ReadCloser {
+	return createPaginatedEsSearchResponseForPolicy(policies, len(policies))
+}
 
-	for _, occurrence := range occurrences {
+func createPaginatedEsSearchResponseForPolicy(policies []*pb.Policy, totalValue int) io.ReadCloser {
+	var policyHits []*esutil.EsSearchResponseHit
+
+	for _, occurrence := range policies {
 		source, err := protojson.Marshal(proto.MessageV2(occurrence))
 		Expect(err).To(BeNil())
 
@@ -2187,15 +2197,15 @@ func createEsSearchResponseForPolicy(occurrences []*pb.Policy) io.ReadCloser {
 			Source: source,
 		}
 
-		occurrenceHits = append(occurrenceHits, response)
+		policyHits = append(policyHits, response)
 	}
 
 	response := &esutil.EsSearchResponse{
 		Hits: &esutil.EsSearchResponseHits{
 			Total: &esutil.EsSearchResponseTotal{
-				Value: len(occurrences),
+				Value: totalValue,
 			},
-			Hits: occurrenceHits,
+			Hits: policyHits,
 		},
 		Took: gofakeit.Number(1, 10),
 	}
