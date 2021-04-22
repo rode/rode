@@ -886,7 +886,7 @@ var _ = Describe("rode server", func() {
 						It("should create a PIT in Elasticsearch", func() {
 							Expect(esTransport.receivedHttpRequests[2].URL.Path).To(Equal(fmt.Sprintf("/%s/_pit", rodeElasticsearchGenericResourcesIndex)))
 							Expect(esTransport.receivedHttpRequests[2].Method).To(Equal(http.MethodPost))
-							Expect(esTransport.receivedHttpRequests[2].URL.Query().Get("keep_alive")).To(Equal("1m"))
+							Expect(esTransport.receivedHttpRequests[2].URL.Query().Get("keep_alive")).To(Equal("5m"))
 						})
 
 						It("should query using the PIT", func() {
@@ -894,7 +894,7 @@ var _ = Describe("rode server", func() {
 							Expect(esTransport.receivedHttpRequests[3].Method).To(Equal(http.MethodGet))
 							request := readEsSearchResponse(esTransport.receivedHttpRequests[3])
 							Expect(request.Pit.Id).To(Equal(expectedPitId))
-							Expect(request.Pit.KeepAlive).To(Equal("1m"))
+							Expect(request.Pit.KeepAlive).To(Equal("5m"))
 						})
 
 						It("should not return an error", func() {
@@ -922,7 +922,7 @@ var _ = Describe("rode server", func() {
 							Expect(esTransport.receivedHttpRequests[2].Method).To(Equal(http.MethodGet))
 							request := readEsSearchResponse(esTransport.receivedHttpRequests[2])
 							Expect(request.Pit.Id).To(Equal(expectedPitId))
-							Expect(request.Pit.KeepAlive).To(Equal("1m"))
+							Expect(request.Pit.KeepAlive).To(Equal("5m"))
 						})
 
 						It("should return the next page token", func() {
@@ -1413,7 +1413,7 @@ var _ = Describe("rode server", func() {
 					It("should create a PIT in Elasticsearch", func() {
 						Expect(esTransport.receivedHttpRequests[2].URL.Path).To(Equal(fmt.Sprintf("/%s/_pit", rodeElasticsearchOccurrencesAlias)))
 						Expect(esTransport.receivedHttpRequests[2].Method).To(Equal(http.MethodPost))
-						Expect(esTransport.receivedHttpRequests[2].URL.Query().Get("keep_alive")).To(Equal("1m"))
+						Expect(esTransport.receivedHttpRequests[2].URL.Query().Get("keep_alive")).To(Equal("5m"))
 					})
 
 					It("should query using the PIT", func() {
@@ -1421,7 +1421,7 @@ var _ = Describe("rode server", func() {
 						Expect(esTransport.receivedHttpRequests[3].Method).To(Equal(http.MethodGet))
 						request := readEsSearchResponse(esTransport.receivedHttpRequests[3])
 						Expect(request.Pit.Id).To(Equal(expectedPitId))
-						Expect(request.Pit.KeepAlive).To(Equal("1m"))
+						Expect(request.Pit.KeepAlive).To(Equal("5m"))
 					})
 
 					It("should not return an error", func() {
@@ -1449,7 +1449,7 @@ var _ = Describe("rode server", func() {
 						Expect(esTransport.receivedHttpRequests[2].Method).To(Equal(http.MethodGet))
 						request := readEsSearchResponse(esTransport.receivedHttpRequests[2])
 						Expect(request.Pit.Id).To(Equal(expectedPitId))
-						Expect(request.Pit.KeepAlive).To(Equal("1m"))
+						Expect(request.Pit.KeepAlive).To(Equal("5m"))
 					})
 
 					It("should return the next page token", func() {
@@ -1722,7 +1722,7 @@ var _ = Describe("rode server", func() {
 				It("should create a PIT in Elasticsearch", func() {
 					Expect(esTransport.receivedHttpRequests[2].URL.Path).To(Equal(fmt.Sprintf("/%s/_pit", rodeElasticsearchPoliciesIndex)))
 					Expect(esTransport.receivedHttpRequests[2].Method).To(Equal(http.MethodPost))
-					Expect(esTransport.receivedHttpRequests[2].URL.Query().Get("keep_alive")).To(Equal("1m"))
+					Expect(esTransport.receivedHttpRequests[2].URL.Query().Get("keep_alive")).To(Equal("5m"))
 				})
 
 				It("should query using the PIT", func() {
@@ -1730,7 +1730,7 @@ var _ = Describe("rode server", func() {
 					Expect(esTransport.receivedHttpRequests[3].Method).To(Equal(http.MethodGet))
 					request := readEsSearchResponse(esTransport.receivedHttpRequests[3])
 					Expect(request.Pit.Id).To(Equal(expectedPitId))
-					Expect(request.Pit.KeepAlive).To(Equal("1m"))
+					Expect(request.Pit.KeepAlive).To(Equal("5m"))
 				})
 
 				It("should not return an error", func() {
@@ -1758,7 +1758,7 @@ var _ = Describe("rode server", func() {
 					Expect(esTransport.receivedHttpRequests[2].Method).To(Equal(http.MethodGet))
 					request := readEsSearchResponse(esTransport.receivedHttpRequests[2])
 					Expect(request.Pit.Id).To(Equal(expectedPitId))
-					Expect(request.Pit.KeepAlive).To(Equal("1m"))
+					Expect(request.Pit.KeepAlive).To(Equal("5m"))
 				})
 
 				It("should return the next page token", func() {

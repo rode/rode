@@ -51,7 +51,7 @@ const (
 	rodeElasticsearchPoliciesIndex         = "rode-v1alpha1-policies"
 	rodeElasticsearchGenericResourcesIndex = "rode-v1alpha1-generic-resources"
 	maxPageSize                            = 1000
-	pitKeepAlive                           = "1m"
+	pitKeepAlive                           = "5m"
 )
 
 // NewRodeServer constructor for rodeServer
