@@ -25,6 +25,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/elastic/go-elasticsearch/v7/esapi"
 	"github.com/gogo/protobuf/protoc-gen-gogo/generator"
+	"github.com/hashicorp/hcl/hcl/strconv"
 
 	"github.com/google/uuid"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
@@ -741,57 +742,51 @@ func (r *rodeServer) createIndex(ctx context.Context, indexName string) error {
 func validateRodeRequirementsForPolicy(mod *ast.Module, regoContent string) []error {
 	errorsList := []error{}
 	// policy must contains a pass block somewhere in the code
-	passBlockExists := false
+	passBlockExists := (len(mod.RuleSet("pass")) > 0)
 	// policy must contains a violations block somewhere in the code
-	violationsBlockExists := false
+	violationsBlockExists := (len(mod.RuleSet("violations")) > 0)
 	// missing field from result return response
 	returnFieldsExist := false
 
-	for _, r := range mod.Rules {
-		if r.Head.Name == "pass" {
-			passBlockExists = true
-		}
+	violations := mod.RuleSet("violations")
 
-		violations := mod.RuleSet("violations")
-		if len(violations) > 0 {
-			violationsBlockExists = true
+violationsLoop:
+	for x, r := range violations {
+		if r.Head.Key == nil || r.Head.Key.Value.String() != "result" {
+			// found a violations block that does not return a result object, break immediately
+			break
 		}
-	violationsLoop:
-		for x, r := range violations {
-			if r.Head.Key == nil || r.Head.Key.Value.String() != "result" {
-				// found a violations block that does not return a result object, break immediately
-				break
-			}
-			for _, b := range r.Body {
-				// find the assignment
-				if b.Operator().String() == "assign" || b.Operator().String() == "eq" {
-					terms := (b.Terms).([]*ast.Term)
-					for i, t := range terms {
-						switch a := t.Value.(type) {
-						case ast.Object:
-							// look at the previous terms to check that it was assigned to result
-							if terms[i-1].String() == "result" {
-								//keys := a.Keys() // ["pass" "name" "id" "message"]
-								keys := make([]string, len(a.Keys()))
-								for i, key := range a.Keys() {
+		for _, b := range r.Body {
+			// find the assignment
+			if b.Operator().String() == "assign" || b.Operator().String() == "eq" {
+				terms := (b.Terms).([]*ast.Term)
+				for i, t := range terms {
+					object, ok := t.Value.(ast.Object)
+					if ok {
+						// look at the previous terms to check that it was assigned to result
+						if terms[i-1].String() == "result" {
+							keys := make([]string, len(object.Keys()))
+							for i, key := range object.Keys() {
+								var err error
+								keys[i], err = strconv.Unquote(key.Value.String())
+								if err != nil {
 									keys[i] = key.Value.String()
 								}
-								if !contains(keys, "\"pass\"") || !contains(keys, "\"name\"") || !contains(keys, "\"id\"") || !contains(keys, "\"message\"") {
-									break violationsLoop
-								}
 							}
-						default:
-							continue
+							if !contains(keys, "pass") || !contains(keys, "name") || !contains(keys, "id") || !contains(keys, "message") {
+								break violationsLoop
+							}
 						}
+					} else {
+						continue
 					}
 				}
 			}
-			// if the end of the loop is reached, all violations blocks have the required fields
-			if x == len(violations)-1 {
-				returnFieldsExist = true
-			}
 		}
-
+		// if the end of the loop is reached, all violations blocks have the required fields
+		if x == len(violations)-1 {
+			returnFieldsExist = true
+		}
 	}
 
 	if !passBlockExists {
