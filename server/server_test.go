@@ -862,11 +862,13 @@ var _ = Describe("rode server", func() {
 					)
 
 					BeforeEach(func() {
-						expectedPageSize = int32(gofakeit.Number(1, len(genericResources) - 2))
+						expectedPageSize = int32(gofakeit.Number(5, 20))
 						expectedPitId = gofakeit.LetterN(20)
-						expectedFrom = gofakeit.Number(0, 1)
+						expectedFrom = gofakeit.Number(int(expectedPageSize), 100)
 
 						listRequest.PageSize = expectedPageSize
+
+						esTransport.preparedHttpResponses[0].Body = createPaginatedEsSearchResponseForGenericResource(genericResources, gofakeit.Number(1000, 10000))
 					})
 
 					When("a page token is not specified", func() {
@@ -1383,9 +1385,9 @@ var _ = Describe("rode server", func() {
 				)
 
 				BeforeEach(func() {
-					expectedPageSize = int32(gofakeit.Number(1, 1))
+					expectedPageSize = int32(gofakeit.Number(5, 20))
 					expectedPitId = gofakeit.LetterN(20)
-					expectedFrom = gofakeit.Number(0, 1)
+					expectedFrom = gofakeit.Number(int(expectedPageSize), 100)
 
 					request.PageSize = expectedPageSize
 
@@ -1680,9 +1682,9 @@ var _ = Describe("rode server", func() {
 			)
 
 			BeforeEach(func() {
-				expectedPageSize = int32(gofakeit.Number(1, 1))
+				expectedPageSize = int32(gofakeit.Number(5, 20))
 				expectedPitId = gofakeit.LetterN(20)
-				expectedFrom = gofakeit.Number(0, 1)
+				expectedFrom = gofakeit.Number(int(expectedPageSize), 100)
 
 				listRequest = &pb.ListPoliciesRequest{
 					PageSize: expectedPageSize,
@@ -1764,7 +1766,22 @@ var _ = Describe("rode server", func() {
 
 					Expect(err).ToNot(HaveOccurred())
 					Expect(nextPitId).To(Equal(expectedPitId))
-					Expect(nextFrom).To(BeEquivalentTo(expectedPageSize + int32(expectedFrom)))
+					Expect(nextFrom).To(BeEquivalentTo(int(expectedPageSize) + expectedFrom))
+				})
+
+				When("the user reaches the last page of results", func() {
+					BeforeEach(func() {
+						esTransport.preparedHttpResponses[0].Body = createPaginatedEsSearchResponseForPolicy([]*pb.Policy{
+							{
+								Id:     gofakeit.UUID(),
+								Policy: createRandomPolicyEntity(goodPolicy),
+							},
+						}, gofakeit.Number(1, int(expectedPageSize) + expectedFrom - 1))
+					})
+
+					It("should return an empty next page token", func() {
+						Expect(listResponse.NextPageToken).To(Equal(""))
+					})
 				})
 			})
 
@@ -2151,6 +2168,10 @@ func createPaginatedEsSearchResponse(occurrences []*grafeas_proto.Occurrence, to
 }
 
 func createEsSearchResponseForGenericResource(resources []*pb.GenericResource) io.ReadCloser {
+	return createPaginatedEsSearchResponseForGenericResource(resources, len(resources))
+}
+
+func createPaginatedEsSearchResponseForGenericResource(resources []*pb.GenericResource, totalValue int) io.ReadCloser {
 	var hits []*esutil.EsSearchResponseHit
 
 	for _, resource := range resources {
@@ -2169,7 +2190,7 @@ func createEsSearchResponseForGenericResource(resources []*pb.GenericResource) i
 		Hits: &esutil.EsSearchResponseHits{
 			Hits: hits,
 			Total: &esutil.EsSearchResponseTotal{
-				Value: len(resources),
+				Value: totalValue,
 			},
 		},
 		Took: gofakeit.Number(1, 10),
