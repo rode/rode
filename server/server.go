@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/elastic/go-elasticsearch/v7/esapi"
@@ -753,27 +752,46 @@ func validateRodeRequirementsForPolicy(mod *ast.Module, regoContent string) []er
 			passBlockExists = true
 		}
 
-		if r.Head.Name == "violations" && r.Head.Key != nil && r.Head.Key.Value.String() == "result" {
+		violations := mod.RuleSet("violations")
+		if len(violations) > 0 {
 			violationsBlockExists = true
-			for i, module := range r.Module.Rules {
-				if module.Head.Name == "violations" {
-					// get the last body element in the violations block as it must be the result
-					terms := module.Body[len(module.Body)-1].Terms.([]*ast.Term)
-					if terms[1].Value.String() == "result" {
-						resultObject := terms[2].Value.String()
-						// basic string search of the object struct
-						if !(strings.Contains(resultObject, "\"id\":") && strings.Contains(resultObject, "\"message\":") && strings.Contains(resultObject, "\"name\":") && strings.Contains(resultObject, "\"pass\":")) {
-							returnFieldsExist = false
-							break
+		}
+	violationsLoop:
+		for x, r := range violations {
+			if r.Head.Key == nil || r.Head.Key.Value.String() != "result" {
+				// found a violations block that does not return a result object, break immediately
+				break
+			}
+			for _, b := range r.Body {
+				// find the assignment
+				if b.Operator().String() == "assign" || b.Operator().String() == "eq" {
+					terms := (b.Terms).([]*ast.Term)
+					for i, t := range terms {
+						switch a := t.Value.(type) {
+						case ast.Object:
+							// look at the previous terms to check that it was assigned to result
+							if terms[i-1].String() == "result" {
+								//keys := a.Keys() // ["pass" "name" "id" "message"]
+								keys := make([]string, len(a.Keys()))
+								for i, key := range a.Keys() {
+									keys[i] = key.Value.String()
+								}
+								if !contains(keys, "\"pass\"") || !contains(keys, "\"name\"") || !contains(keys, "\"id\"") || !contains(keys, "\"message\"") {
+									break violationsLoop
+								}
+							}
+						default:
+							continue
 						}
 					}
 				}
-				if i == (len(r.Module.Rules) - 1) {
-					returnFieldsExist = true
-				}
 			}
-
+			// if the end of the loop is reached, all violations blocks have the required fields
+			if x == len(violations)-1 {
+				returnFieldsExist = true
+			}
 		}
+
 	}
 
 	if !passBlockExists {

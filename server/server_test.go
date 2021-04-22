@@ -112,7 +112,21 @@ var _ = Describe("rode server", func() {
 		}
 
 		violations[result] {
-			result = {
+			result := {
+				"pass": true,
+				"name": "Occurrences containing note names",
+				"description": "Verify that all occurrences contain a note name",
+				"message": sprintf("found %v occurrences with missing note names", ["hi"]),
+			}
+		}`
+		compilablePolicyMissingResultsReturn = `
+		package harborfail
+		pass = true {
+				3 == 3
+		}
+
+		violations {
+			a := {
 				"pass": true,
 				"name": "Occurrences containing note names",
 				"description": "Verify that all occurrences contain a note name",
@@ -1884,6 +1898,23 @@ var _ = Describe("rode server", func() {
 
 			BeforeEach(func() {
 				policyEntity = createRandomPolicyEntity(compilablePolicyMissingRodeFields)
+				policyResponse, err = rodeServer.CreatePolicy(context.Background(), policyEntity)
+			})
+
+			It("should throw a compilation error", func() {
+				Expect(policyResponse).To(BeNil())
+				Expect(err).To(HaveOccurred())
+			})
+		})
+		When("creating an compilable policy with missing results return", func() {
+			var (
+				policyEntity   *pb.PolicyEntity
+				policyResponse *pb.Policy
+				err            error
+			)
+
+			BeforeEach(func() {
+				policyEntity = createRandomPolicyEntity(compilablePolicyMissingResultsReturn)
 				policyResponse, err = rodeServer.CreatePolicy(context.Background(), policyEntity)
 			})
 
