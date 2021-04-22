@@ -862,9 +862,9 @@ var _ = Describe("rode server", func() {
 					)
 
 					BeforeEach(func() {
-						expectedPageSize = int32(gofakeit.Number(10, 100))
+						expectedPageSize = int32(gofakeit.Number(1, len(genericResources) - 1))
 						expectedPitId = gofakeit.LetterN(20)
-						expectedFrom = gofakeit.Number(10, 100)
+						expectedFrom = gofakeit.Number(0, 1)
 
 						listRequest.PageSize = expectedPageSize
 					})
@@ -1383,9 +1383,9 @@ var _ = Describe("rode server", func() {
 				)
 
 				BeforeEach(func() {
-					expectedPageSize = int32(gofakeit.Number(10, 100))
+					expectedPageSize = int32(gofakeit.Number(1, len(occurrences) - 1))
 					expectedPitId = gofakeit.LetterN(20)
-					expectedFrom = gofakeit.Number(10, 100)
+					expectedFrom = gofakeit.Number(0, 1)
 
 					request.PageSize = expectedPageSize
 				})
@@ -2162,6 +2162,9 @@ func createEsSearchResponseForGenericResource(resources []*pb.GenericResource) i
 	response := &esutil.EsSearchResponse{
 		Hits: &esutil.EsSearchResponseHits{
 			Hits: hits,
+			Total: &esutil.EsSearchResponseTotal{
+				Value: len(resources),
+			},
 		},
 		Took: gofakeit.Number(1, 10),
 	}
