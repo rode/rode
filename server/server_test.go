@@ -1776,7 +1776,7 @@ var _ = Describe("rode server", func() {
 								Id:     gofakeit.UUID(),
 								Policy: createRandomPolicyEntity(goodPolicy),
 							},
-						}, gofakeit.Number(1, int(expectedPageSize) + expectedFrom - 1))
+						}, gofakeit.Number(1, int(expectedPageSize)+expectedFrom-1))
 					})
 
 					It("should return an empty next page token", func() {
