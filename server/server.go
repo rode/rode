@@ -765,15 +765,21 @@ violationsLoop:
 					if ok {
 						// look at the previous terms to check that it was assigned to result
 						if terms[i-1].String() == "result" {
-							keys := make([]string, len(object.Keys()))
-							for i, key := range object.Keys() {
-								var err error
-								keys[i], err = strconv.Unquote(key.Value.String())
+							keyMap := make(map[string]interface{})
+							for _, key := range object.Keys() {
+								keyVal, err := strconv.Unquote(key.Value.String())
 								if err != nil {
-									keys[i] = key.Value.String()
+									keyVal = key.Value.String()
 								}
+								keyMap[keyVal] = object.Get(key)
 							}
-							if !contains(keys, "pass") || !contains(keys, "name") || !contains(keys, "id") || !contains(keys, "message") {
+
+							_, passExists := keyMap["pass"]
+							_, nameExists := keyMap["name"]
+							_, idExists := keyMap["id"]
+							_, messageExists := keyMap["message"]
+
+							if !passExists || !nameExists || !idExists || !messageExists {
 								break violationsLoop
 							}
 						}
