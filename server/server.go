@@ -25,7 +25,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/elastic/go-elasticsearch/v7/esapi"
 	"github.com/gogo/protobuf/protoc-gen-gogo/generator"
-	"github.com/hashicorp/hcl/hcl/strconv"
+	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
