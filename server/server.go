@@ -750,44 +750,13 @@ func validateRodeRequirementsForPolicy(mod *ast.Module, regoContent string) []er
 
 	violations := mod.RuleSet("violations")
 
-violationsLoop:
 	for x, r := range violations {
 		if r.Head.Key == nil || r.Head.Key.Value.String() != "result" {
 			// found a violations block that does not return a result object, break immediately
 			break
 		}
-		for _, b := range r.Body {
-			// find the assignment
-			if b.Operator().String() == "assign" || b.Operator().String() == "eq" {
-				terms := (b.Terms).([]*ast.Term)
-				for i, t := range terms {
-					object, ok := t.Value.(ast.Object)
-					if ok {
-						// look at the previous terms to check that it was assigned to result
-						if terms[i-1].String() == "result" {
-							keyMap := make(map[string]interface{})
-							for _, key := range object.Keys() {
-								keyVal, err := strconv.Unquote(key.Value.String())
-								if err != nil {
-									keyVal = key.Value.String()
-								}
-								keyMap[keyVal] = object.Get(key)
-							}
-
-							_, passExists := keyMap["pass"]
-							_, nameExists := keyMap["name"]
-							_, idExists := keyMap["id"]
-							_, messageExists := keyMap["message"]
-
-							if !passExists || !nameExists || !idExists || !messageExists {
-								break violationsLoop
-							}
-						}
-					} else {
-						continue
-					}
-				}
-			}
+		if !validateResultTermsInBody(r.Body) {
+			break
 		}
 		// if the end of the loop is reached, all violations blocks have the required fields
 		if x == len(violations)-1 {
@@ -809,6 +778,43 @@ violationsLoop:
 	}
 
 	return errorsList
+}
+
+func validateResultTermsInBody(body ast.Body) bool {
+	for _, b := range body {
+		// find the assignment
+		if b.Operator().String() == "assign" || b.Operator().String() == "eq" {
+			terms := (b.Terms).([]*ast.Term)
+			for i, t := range terms {
+				object, ok := t.Value.(ast.Object)
+				if ok {
+					// look at the previous terms to check that it was assigned to result
+					if terms[i-1].String() == "result" {
+						keyMap := make(map[string]interface{})
+						for _, key := range object.Keys() {
+							keyVal, err := strconv.Unquote(key.Value.String())
+							if err != nil {
+								keyVal = key.Value.String()
+							}
+							keyMap[keyVal] = object.Get(key)
+						}
+
+						_, passExists := keyMap["pass"]
+						_, nameExists := keyMap["name"]
+						_, idExists := keyMap["id"]
+						_, messageExists := keyMap["message"]
+
+						if !passExists || !nameExists || !idExists || !messageExists {
+							return false
+						}
+					}
+				} else {
+					continue
+				}
+			}
+		}
+	}
+	return true
 }
 
 func (r *rodeServer) genericGet(ctx context.Context, log *zap.Logger, search *esutil.EsSearch, index string, protoMessage interface{}) (string, error) {
