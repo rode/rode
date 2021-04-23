@@ -22,9 +22,12 @@ import (
 	"fmt"
 	"net/http"
 
+	"strconv"
+
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/elastic/go-elasticsearch/v7/esapi"
 	"github.com/gogo/protobuf/protoc-gen-gogo/generator"
+
 	"github.com/google/uuid"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
@@ -740,16 +743,25 @@ func (r *rodeServer) createIndex(ctx context.Context, indexName string) error {
 func validateRodeRequirementsForPolicy(mod *ast.Module, regoContent string) []error {
 	errorsList := []error{}
 	// policy must contains a pass block somewhere in the code
-	passBlockExists := false
+	passBlockExists := (len(mod.RuleSet("pass")) > 0)
 	// policy must contains a violations block somewhere in the code
-	violationsBlockExists := false
+	violationsBlockExists := (len(mod.RuleSet("violations")) > 0)
+	// missing field from result return response
+	returnFieldsExist := false
 
-	for _, r := range mod.Rules {
-		if r.Head.Name == "pass" {
-			passBlockExists = true
+	violations := mod.RuleSet("violations")
+
+	for x, r := range violations {
+		if r.Head.Key == nil || r.Head.Key.Value.String() != "result" {
+			// found a violations block that does not return a result object, break immediately
+			break
 		}
-		if r.Head.Name == "violations" && r.Head.Key != nil && r.Head.Key.Value.String() == "result" {
-			violationsBlockExists = true
+		if !validateResultTermsInBody(r.Body) {
+			break
+		}
+		// if the end of the loop is reached, all violations blocks have the required fields
+		if x == len(violations)-1 {
+			returnFieldsExist = true
 		}
 	}
 
@@ -761,8 +773,49 @@ func validateRodeRequirementsForPolicy(mod *ast.Module, regoContent string) []er
 		err := errors.New("all policies must contain a \"violations\" block that returns a map of results")
 		errorsList = append(errorsList, err)
 	}
+	if !returnFieldsExist {
+		err := errors.New("all \"violations\" blocks must return a \"result\" that contains pass, id, message, and name fields")
+		errorsList = append(errorsList, err)
+	}
 
 	return errorsList
+}
+
+func validateResultTermsInBody(body ast.Body) bool {
+	for _, b := range body {
+		// find the assignment
+		if b.Operator().String() == "assign" || b.Operator().String() == "eq" {
+			terms := (b.Terms).([]*ast.Term)
+			for i, t := range terms {
+				object, ok := t.Value.(ast.Object)
+				if ok {
+					// look at the previous terms to check that it was assigned to result
+					if terms[i-1].String() == "result" {
+						keyMap := make(map[string]interface{})
+						for _, key := range object.Keys() {
+							keyVal, err := strconv.Unquote(key.Value.String())
+							if err != nil {
+								keyVal = key.Value.String()
+							}
+							keyMap[keyVal] = object.Get(key)
+						}
+
+						_, passExists := keyMap["pass"]
+						_, nameExists := keyMap["name"]
+						_, idExists := keyMap["id"]
+						_, messageExists := keyMap["message"]
+
+						if !passExists || !nameExists || !idExists || !messageExists {
+							return false
+						}
+					}
+				} else {
+					continue
+				}
+			}
+		}
+	}
+	return true
 }
 
 func (r *rodeServer) genericGet(ctx context.Context, log *zap.Logger, search *esutil.EsSearch, index string, protoMessage interface{}) (string, error) {
