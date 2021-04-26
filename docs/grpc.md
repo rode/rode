@@ -18,6 +18,8 @@
     - [ValidatePolicyRequest](#rode.v1alpha1.ValidatePolicyRequest)
     - [ValidatePolicyResponse](#rode.v1alpha1.ValidatePolicyResponse)
   
+    - [PolicyEntity.Target](#rode.v1alpha1.PolicyEntity.Target)
+  
 - [proto/v1alpha1/rode.proto](#proto/v1alpha1/rode.proto)
     - [BatchCreateOccurrencesRequest](#rode.v1alpha1.BatchCreateOccurrencesRequest)
     - [BatchCreateOccurrencesResponse](#rode.v1alpha1.BatchCreateOccurrencesResponse)
@@ -207,6 +209,7 @@
 | description | [string](#string) |  |  |
 | rego_content | [string](#string) |  | The rego code for the policy represented as a string |
 | source_path | [string](#string) |  | The location of the policy stored in source control |
+| target | [PolicyEntity.Target](#rode.v1alpha1.PolicyEntity.Target) |  | Target represents the type of resource that the policy applies to. |
 
 
 
@@ -262,6 +265,26 @@
 
 
  
+
+
+<a name="rode.v1alpha1.PolicyEntity.Target"></a>
+
+### PolicyEntity.Target
+
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| UNIVERSAL | 0 |  |
+| DEBIAN | 1 |  |
+| DOCKER | 2 |  |
+| FILE | 3 |  |
+| MAVEN | 4 |  |
+| NPM | 5 |  |
+| NUGET | 6 |  |
+| PYTHON | 7 |  |
+| RPM | 8 |  |
+| GIT | 9 |  |
+
 
  
 

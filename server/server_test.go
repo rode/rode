@@ -1564,6 +1564,9 @@ var _ = Describe("rode server", func() {
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(policyResponse.Policy).To(BeEquivalentTo(policyEntity))
 			})
+			It("should default to a UNIVERSAL policy", func() {
+				Expect(policyResponse.Policy.Target).To(Equal(pb.PolicyEntity_UNIVERSAL))
+			})
 			When("attemtpting to retrieve the same policy", func() {
 				var (
 					getResponse *pb.Policy

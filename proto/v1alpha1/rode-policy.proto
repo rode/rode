@@ -94,6 +94,20 @@ message PolicyEntity {
   string rego_content = 3;
   // The location of the policy stored in source control
   string source_path = 4;
+  enum Target {
+    UNIVERSAL = 0;
+    DEBIAN = 1;
+    DOCKER = 2;
+    FILE = 3;
+    MAVEN = 4;
+    NPM = 5;
+    NUGET = 6;
+    PYTHON = 7;
+    RPM = 8;
+    GIT = 9;
+  }
+  // Target represents the type of resource that the policy applies to.
+  Target target = 5;
 }
 
 message Policy {
