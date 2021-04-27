@@ -206,37 +206,71 @@ func local_request_Rode_ListGenericResources_0(ctx context.Context, marshaler ru
 }
 
 var (
-	filter_Rode_ListOccurrences_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
+	filter_Rode_ListResourceInstanceOccurrences_0 = &utilities.DoubleArray{Encoding: map[string]int{"resource_uri": 0}, Base: []int{1, 1, 0}, Check: []int{0, 1, 2}}
 )
 
-func request_Rode_ListOccurrences_0(ctx context.Context, marshaler runtime.Marshaler, client RodeClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ListOccurrencesRequest
+func request_Rode_ListResourceInstanceOccurrences_0(ctx context.Context, marshaler runtime.Marshaler, client RodeClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq ListResourceInstanceOccurrencesRequest
 	var metadata runtime.ServerMetadata
+
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["resource_uri"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "resource_uri")
+	}
+
+	protoReq.ResourceUri, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "resource_uri", err)
+	}
 
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Rode_ListOccurrences_0); err != nil {
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Rode_ListResourceInstanceOccurrences_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
-	msg, err := client.ListOccurrences(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	msg, err := client.ListResourceInstanceOccurrences(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 
 }
 
-func local_request_Rode_ListOccurrences_0(ctx context.Context, marshaler runtime.Marshaler, server RodeServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ListOccurrencesRequest
+func local_request_Rode_ListResourceInstanceOccurrences_0(ctx context.Context, marshaler runtime.Marshaler, server RodeServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq ListResourceInstanceOccurrencesRequest
 	var metadata runtime.ServerMetadata
+
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["resource_uri"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "resource_uri")
+	}
+
+	protoReq.ResourceUri, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "resource_uri", err)
+	}
 
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Rode_ListOccurrences_0); err != nil {
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Rode_ListResourceInstanceOccurrences_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
-	msg, err := server.ListOccurrences(ctx, &protoReq)
+	msg, err := server.ListResourceInstanceOccurrences(ctx, &protoReq)
 	return msg, metadata, err
 
 }
@@ -747,18 +781,18 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 
 	})
 
-	mux.Handle("GET", pattern_Rode_ListOccurrences_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_Rode_ListResourceInstanceOccurrences_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListOccurrences")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListResourceInstanceOccurrences")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_Rode_ListOccurrences_0(rctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Rode_ListResourceInstanceOccurrences_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -766,7 +800,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 			return
 		}
 
-		forward_Rode_ListOccurrences_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Rode_ListResourceInstanceOccurrences_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -1052,23 +1086,23 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 
 	})
 
-	mux.Handle("GET", pattern_Rode_ListOccurrences_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("GET", pattern_Rode_ListResourceInstanceOccurrences_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListOccurrences")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListResourceInstanceOccurrences")
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_Rode_ListOccurrences_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Rode_ListResourceInstanceOccurrences_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_Rode_ListOccurrences_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Rode_ListResourceInstanceOccurrences_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -1224,7 +1258,7 @@ var (
 
 	pattern_Rode_ListGenericResources_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1alpha1", "generic-resources"}, ""))
 
-	pattern_Rode_ListOccurrences_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1alpha1", "occurrences"}, ""))
+	pattern_Rode_ListResourceInstanceOccurrences_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 3, 0, 4, 1, 5, 2, 2, 3}, []string{"v1alpha1", "resource-instances", "resource_uri", "occurrences"}, ""))
 
 	pattern_Rode_UpdateOccurrence_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1alpha1", "occurrences", "id"}, ""))
 
@@ -1250,7 +1284,7 @@ var (
 
 	forward_Rode_ListGenericResources_0 = runtime.ForwardResponseMessage
 
-	forward_Rode_ListOccurrences_0 = runtime.ForwardResponseMessage
+	forward_Rode_ListResourceInstanceOccurrences_0 = runtime.ForwardResponseMessage
 
 	forward_Rode_UpdateOccurrence_0 = runtime.ForwardResponseMessage
 
