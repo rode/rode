@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 
@@ -386,23 +385,25 @@ func (r *rodeServer) initialize(ctx context.Context) error {
 	return nil
 }
 
-func (r *rodeServer) ListResourceInstanceOccurrences(ctx context.Context, request *pb.ListResourceInstanceOccurrencesRequest) (*pb.ListResourceInstanceOccurrencesResponse, error) {
-	//log := r.logger.Named("ListResourceInstanceOccurrences")
-	//log.Debug("received request", zap.Any("ListResourceInstanceOccurrences", request))
+func (r *rodeServer) ListVersionedResourceOccurrences(ctx context.Context, request *pb.ListVersionedResourceOccurrencesRequest) (*pb.ListVersionedResourceOccurrencesResponse, error) {
+	log := r.logger.Named("ListVersionedResourceOccurrences")
+	log.Debug("received request", zap.Any("ListVersionedResourceOccurrencesRequest", request))
 
-	resourceUri, err := url.PathUnescape(request.ResourceUri)
-	if err != nil {
-		return nil, err
+	resourceUri := request.ResourceUri
+	if resourceUri == "" {
+		log.Error("Request missing resource_uri")
+		return nil, status.Errorf(codes.InvalidArgument, "must set resource_uri")
 	}
 
+	log.Debug("listing build occurrences")
 	buildOccurrences, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{
-		Parent: rodeProjectSlug,
+		Parent:   rodeProjectSlug,
 		PageSize: maxPageSize,
-		Filter: fmt.Sprintf(`kind == "BUILD" && (resource.uri == "%s" || build.provenance.builtArtifacts.nestedFilter(id == "%s"))`, resourceUri, resourceUri),
+		Filter:   fmt.Sprintf(`kind == "BUILD" && (resource.uri == "%s" || build.provenance.builtArtifacts.nestedFilter(id == "%s"))`, resourceUri, resourceUri),
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, createError(log, "error fetching build occurrences", err)
 	}
 
 	resourceUris := map[string]string{
@@ -421,20 +422,20 @@ func (r *rodeServer) ListResourceInstanceOccurrences(ctx context.Context, reques
 	}
 
 	filter := strings.Join(resourceFilters, " || ")
-
+	log.Debug("listing occurrences", zap.String("filter", filter))
 	allOccurrences, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{
-		Parent: rodeProjectSlug,
-		Filter: filter,
-		PageSize: request.PageSize,
+		Parent:    rodeProjectSlug,
+		Filter:    filter,
+		PageSize:  request.PageSize,
 		PageToken: request.PageToken,
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, createError(log, "error listing occurrences", err)
 	}
 
-	return &pb.ListResourceInstanceOccurrencesResponse{
-		Occurrences: allOccurrences.Occurrences,
+	return &pb.ListVersionedResourceOccurrencesResponse{
+		Occurrences:   allOccurrences.Occurrences,
 		NextPageToken: allOccurrences.NextPageToken,
 	}, nil
 }

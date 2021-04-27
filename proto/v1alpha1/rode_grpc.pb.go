@@ -26,7 +26,7 @@ type RodeClient interface {
 	// List resource URI
 	ListResources(ctx context.Context, in *ListResourcesRequest, opts ...grpc.CallOption) (*ListResourcesResponse, error)
 	ListGenericResources(ctx context.Context, in *ListGenericResourcesRequest, opts ...grpc.CallOption) (*ListGenericResourcesResponse, error)
-	ListResourceInstanceOccurrences(ctx context.Context, in *ListResourceInstanceOccurrencesRequest, opts ...grpc.CallOption) (*ListResourceInstanceOccurrencesResponse, error)
+	ListVersionedResourceOccurrences(ctx context.Context, in *ListVersionedResourceOccurrencesRequest, opts ...grpc.CallOption) (*ListVersionedResourceOccurrencesResponse, error)
 	UpdateOccurrence(ctx context.Context, in *UpdateOccurrenceRequest, opts ...grpc.CallOption) (*grafeas_go_proto.Occurrence, error)
 	CreatePolicy(ctx context.Context, in *PolicyEntity, opts ...grpc.CallOption) (*Policy, error)
 	GetPolicy(ctx context.Context, in *GetPolicyRequest, opts ...grpc.CallOption) (*Policy, error)
@@ -80,9 +80,9 @@ func (c *rodeClient) ListGenericResources(ctx context.Context, in *ListGenericRe
 	return out, nil
 }
 
-func (c *rodeClient) ListResourceInstanceOccurrences(ctx context.Context, in *ListResourceInstanceOccurrencesRequest, opts ...grpc.CallOption) (*ListResourceInstanceOccurrencesResponse, error) {
-	out := new(ListResourceInstanceOccurrencesResponse)
-	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/ListResourceInstanceOccurrences", in, out, opts...)
+func (c *rodeClient) ListVersionedResourceOccurrences(ctx context.Context, in *ListVersionedResourceOccurrencesRequest, opts ...grpc.CallOption) (*ListVersionedResourceOccurrencesResponse, error) {
+	out := new(ListVersionedResourceOccurrencesResponse)
+	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/ListVersionedResourceOccurrences", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +163,7 @@ type RodeServer interface {
 	// List resource URI
 	ListResources(context.Context, *ListResourcesRequest) (*ListResourcesResponse, error)
 	ListGenericResources(context.Context, *ListGenericResourcesRequest) (*ListGenericResourcesResponse, error)
-	ListResourceInstanceOccurrences(context.Context, *ListResourceInstanceOccurrencesRequest) (*ListResourceInstanceOccurrencesResponse, error)
+	ListVersionedResourceOccurrences(context.Context, *ListVersionedResourceOccurrencesRequest) (*ListVersionedResourceOccurrencesResponse, error)
 	UpdateOccurrence(context.Context, *UpdateOccurrenceRequest) (*grafeas_go_proto.Occurrence, error)
 	CreatePolicy(context.Context, *PolicyEntity) (*Policy, error)
 	GetPolicy(context.Context, *GetPolicyRequest) (*Policy, error)
@@ -190,8 +190,8 @@ func (UnimplementedRodeServer) ListResources(context.Context, *ListResourcesRequ
 func (UnimplementedRodeServer) ListGenericResources(context.Context, *ListGenericResourcesRequest) (*ListGenericResourcesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListGenericResources not implemented")
 }
-func (UnimplementedRodeServer) ListResourceInstanceOccurrences(context.Context, *ListResourceInstanceOccurrencesRequest) (*ListResourceInstanceOccurrencesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListResourceInstanceOccurrences not implemented")
+func (UnimplementedRodeServer) ListVersionedResourceOccurrences(context.Context, *ListVersionedResourceOccurrencesRequest) (*ListVersionedResourceOccurrencesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListVersionedResourceOccurrences not implemented")
 }
 func (UnimplementedRodeServer) UpdateOccurrence(context.Context, *UpdateOccurrenceRequest) (*grafeas_go_proto.Occurrence, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateOccurrence not implemented")
@@ -299,20 +299,20 @@ func _Rode_ListGenericResources_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Rode_ListResourceInstanceOccurrences_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListResourceInstanceOccurrencesRequest)
+func _Rode_ListVersionedResourceOccurrences_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListVersionedResourceOccurrencesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(RodeServer).ListResourceInstanceOccurrences(ctx, in)
+		return srv.(RodeServer).ListVersionedResourceOccurrences(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/rode.v1alpha1.Rode/ListResourceInstanceOccurrences",
+		FullMethod: "/rode.v1alpha1.Rode/ListVersionedResourceOccurrences",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RodeServer).ListResourceInstanceOccurrences(ctx, req.(*ListResourceInstanceOccurrencesRequest))
+		return srv.(RodeServer).ListVersionedResourceOccurrences(ctx, req.(*ListVersionedResourceOccurrencesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -464,8 +464,8 @@ var _Rode_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Rode_ListGenericResources_Handler,
 		},
 		{
-			MethodName: "ListResourceInstanceOccurrences",
-			Handler:    _Rode_ListResourceInstanceOccurrences_Handler,
+			MethodName: "ListVersionedResourceOccurrences",
+			Handler:    _Rode_ListVersionedResourceOccurrences_Handler,
 		},
 		{
 			MethodName: "UpdateOccurrence",

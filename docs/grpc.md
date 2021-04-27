@@ -24,10 +24,10 @@
     - [GenericResource](#rode.v1alpha1.GenericResource)
     - [ListGenericResourcesRequest](#rode.v1alpha1.ListGenericResourcesRequest)
     - [ListGenericResourcesResponse](#rode.v1alpha1.ListGenericResourcesResponse)
-    - [ListResourceInstanceOccurrencesRequest](#rode.v1alpha1.ListResourceInstanceOccurrencesRequest)
-    - [ListResourceInstanceOccurrencesResponse](#rode.v1alpha1.ListResourceInstanceOccurrencesResponse)
     - [ListResourcesRequest](#rode.v1alpha1.ListResourcesRequest)
     - [ListResourcesResponse](#rode.v1alpha1.ListResourcesResponse)
+    - [ListVersionedResourceOccurrencesRequest](#rode.v1alpha1.ListVersionedResourceOccurrencesRequest)
+    - [ListVersionedResourceOccurrencesResponse](#rode.v1alpha1.ListVersionedResourceOccurrencesResponse)
     - [UpdateOccurrenceRequest](#rode.v1alpha1.UpdateOccurrenceRequest)
   
     - [Rode](#rode.v1alpha1.Rode)
@@ -356,39 +356,6 @@ Response for creating occurrences in batch.
 
 
 
-<a name="rode.v1alpha1.ListResourceInstanceOccurrencesRequest"></a>
-
-### ListResourceInstanceOccurrencesRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| resource_uri | [string](#string) |  |  |
-| page_size | [int32](#int32) |  |  |
-| page_token | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="rode.v1alpha1.ListResourceInstanceOccurrencesResponse"></a>
-
-### ListResourceInstanceOccurrencesResponse
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| occurrences | [grafeas.v1beta1.Occurrence](#grafeas.v1beta1.Occurrence) | repeated |  |
-| next_page_token | [string](#string) |  |  |
-
-
-
-
-
-
 <a name="rode.v1alpha1.ListResourcesRequest"></a>
 
 ### ListResourcesRequest
@@ -416,6 +383,39 @@ https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | resources | [grafeas.v1beta1.Resource](#grafeas.v1beta1.Resource) | repeated |  |
+| next_page_token | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ListVersionedResourceOccurrencesRequest"></a>
+
+### ListVersionedResourceOccurrencesRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| resource_uri | [string](#string) |  |  |
+| page_size | [int32](#int32) |  |  |
+| page_token | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ListVersionedResourceOccurrencesResponse"></a>
+
+### ListVersionedResourceOccurrencesResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| occurrences | [grafeas.v1beta1.Occurrence](#grafeas.v1beta1.Occurrence) | repeated |  |
 | next_page_token | [string](#string) |  |  |
 
 
@@ -457,7 +457,7 @@ https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576
 | EvaluatePolicy | [EvaluatePolicyRequest](#rode.v1alpha1.EvaluatePolicyRequest) | [EvaluatePolicyResponse](#rode.v1alpha1.EvaluatePolicyResponse) | Verify that an artifact satisfies a policy |
 | ListResources | [ListResourcesRequest](#rode.v1alpha1.ListResourcesRequest) | [ListResourcesResponse](#rode.v1alpha1.ListResourcesResponse) | List resource URI |
 | ListGenericResources | [ListGenericResourcesRequest](#rode.v1alpha1.ListGenericResourcesRequest) | [ListGenericResourcesResponse](#rode.v1alpha1.ListGenericResourcesResponse) |  |
-| ListResourceInstanceOccurrences | [ListResourceInstanceOccurrencesRequest](#rode.v1alpha1.ListResourceInstanceOccurrencesRequest) | [ListResourceInstanceOccurrencesResponse](#rode.v1alpha1.ListResourceInstanceOccurrencesResponse) |  |
+| ListVersionedResourceOccurrences | [ListVersionedResourceOccurrencesRequest](#rode.v1alpha1.ListVersionedResourceOccurrencesRequest) | [ListVersionedResourceOccurrencesResponse](#rode.v1alpha1.ListVersionedResourceOccurrencesResponse) |  |
 | UpdateOccurrence | [UpdateOccurrenceRequest](#rode.v1alpha1.UpdateOccurrenceRequest) | [.grafeas.v1beta1.Occurrence](#grafeas.v1beta1.Occurrence) |  |
 | CreatePolicy | [PolicyEntity](#rode.v1alpha1.PolicyEntity) | [Policy](#rode.v1alpha1.Policy) |  |
 | GetPolicy | [GetPolicyRequest](#rode.v1alpha1.GetPolicyRequest) | [Policy](#rode.v1alpha1.Policy) |  |
