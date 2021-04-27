@@ -44,7 +44,7 @@ const _ = proto.ProtoPackageIsVersion4
 type PolicyEntity_Target int32
 
 const (
-	PolicyEntity_UNIVERSAL PolicyEntity_Target = 0
+	PolicyEntity_UNIVERSAL PolicyEntity_Target = 0 // default if no target field is provided
 	PolicyEntity_DEBIAN    PolicyEntity_Target = 1
 	PolicyEntity_DOCKER    PolicyEntity_Target = 2
 	PolicyEntity_FILE      PolicyEntity_Target = 3

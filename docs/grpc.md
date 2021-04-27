@@ -274,7 +274,7 @@
 
 | Name | Number | Description |
 | ---- | ------ | ----------- |
-| UNIVERSAL | 0 |  |
+| UNIVERSAL | 0 | default if no target field is provided |
 | DEBIAN | 1 |  |
 | DOCKER | 2 |  |
 | FILE | 3 |  |

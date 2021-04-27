@@ -95,7 +95,7 @@ message PolicyEntity {
   // The location of the policy stored in source control
   string source_path = 4;
   enum Target {
-    UNIVERSAL = 0;
+    UNIVERSAL = 0; // default if no target field is provided
     DEBIAN = 1;
     DOCKER = 2;
     FILE = 3;

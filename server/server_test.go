@@ -1539,6 +1539,28 @@ var _ = Describe("rode server", func() {
 				Expect(policyResponse).To(BeNil())
 			})
 		})
+		When("creating a policy without a target", func() {
+			var (
+				policyEntity   *pb.PolicyEntity
+				policyResponse *pb.Policy
+				err            error
+			)
+
+			BeforeEach(func() {
+				policyEntity = createRandomPolicyEntityMissingTarget(goodPolicy)
+				esTransport.preparedHttpResponses = []*http.Response{
+					{
+						StatusCode: http.StatusOK,
+					},
+				}
+				policyResponse, err = rodeServer.CreatePolicy(context.Background(), policyEntity)
+			})
+
+			It("should default to a UNIVERSAL target", func() {
+				Expect(policyResponse.Policy.Target).To(Equal(pb.PolicyEntity_UNIVERSAL))
+				Expect(err).To(BeNil())
+			})
+		})
 
 		When("creating a policy", func() {
 			var (
@@ -1564,8 +1586,8 @@ var _ = Describe("rode server", func() {
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(policyResponse.Policy).To(BeEquivalentTo(policyEntity))
 			})
-			It("should default to a UNIVERSAL policy", func() {
-				Expect(policyResponse.Policy.Target).To(Equal(pb.PolicyEntity_UNIVERSAL))
+			It("should target docker images", func() {
+				Expect(policyResponse.Policy.Target).To(Equal(pb.PolicyEntity_DOCKER))
 			})
 			When("attemtpting to retrieve the same policy", func() {
 				var (
@@ -2295,6 +2317,16 @@ func getGRPCStatusFromError(err error) *status.Status {
 }
 
 func createRandomPolicyEntity(policy string) *pb.PolicyEntity {
+	return &pb.PolicyEntity{
+		Name:        gofakeit.LetterN(10),
+		Description: gofakeit.LetterN(50),
+		RegoContent: policy,
+		SourcePath:  gofakeit.URL(),
+		Target:      pb.PolicyEntity_DOCKER,
+	}
+}
+
+func createRandomPolicyEntityMissingTarget(policy string) *pb.PolicyEntity {
 	return &pb.PolicyEntity{
 		Name:        gofakeit.LetterN(10),
 		Description: gofakeit.LetterN(50),
