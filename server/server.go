@@ -408,10 +408,10 @@ func (r *rodeServer) ListVersionedResourceOccurrences(ctx context.Context, reque
 	resourceUris := map[string]string{
 		resourceUri: resourceUri,
 	}
-	for _, o := range buildOccurrences.Occurrences {
-		resourceUris[o.Resource.Uri] = o.Resource.Uri
-		for _, a := range o.GetBuild().GetProvenance().BuiltArtifacts {
-			resourceUris[a.Id] = a.Id
+	for _, occurrence := range buildOccurrences.Occurrences {
+		resourceUris[occurrence.Resource.Uri] = occurrence.Resource.Uri
+		for _, artifact := range occurrence.GetBuild().GetProvenance().BuiltArtifacts {
+			resourceUris[artifact.Id] = artifact.Id
 		}
 	}
 
