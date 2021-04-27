@@ -391,15 +391,14 @@ func (r *rodeServer) ListVersionedResourceOccurrences(ctx context.Context, reque
 
 	resourceUri := request.ResourceUri
 	if resourceUri == "" {
-		log.Error("Request missing resource_uri")
-		return nil, status.Errorf(codes.InvalidArgument, "must set resource_uri")
+		return nil, createErrorWithCode(log, "invalid request", errors.New("must set resource_uri"), codes.InvalidArgument)
 	}
 
 	log.Debug("listing build occurrences")
 	buildOccurrences, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{
 		Parent:   rodeProjectSlug,
 		PageSize: maxPageSize,
-		Filter:   fmt.Sprintf(`kind == "BUILD" && (resource.uri == "%s" || build.provenance.builtArtifacts.nestedFilter(id == "%s"))`, resourceUri, resourceUri),
+		Filter:   fmt.Sprintf(`kind == "BUILD" && (resource.uri == "%[1]s" || build.provenance.builtArtifacts.nestedFilter(id == "%[1]s"))`, resourceUri),
 	})
 
 	if err != nil {
