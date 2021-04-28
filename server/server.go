@@ -21,8 +21,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-
 	"strconv"
+	"strings"
 
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/elastic/go-elasticsearch/v7/esapi"
@@ -385,25 +385,57 @@ func (r *rodeServer) initialize(ctx context.Context) error {
 	return nil
 }
 
-func (r *rodeServer) ListOccurrences(ctx context.Context, occurrenceRequest *pb.ListOccurrencesRequest) (*pb.ListOccurrencesResponse, error) {
-	log := r.logger.Named("ListOccurrences")
-	log.Debug("received request", zap.Any("ListOccurrencesRequest", occurrenceRequest))
+func (r *rodeServer) ListVersionedResourceOccurrences(ctx context.Context, request *pb.ListVersionedResourceOccurrencesRequest) (*pb.ListVersionedResourceOccurrencesResponse, error) {
+	log := r.logger.Named("ListVersionedResourceOccurrences")
+	log.Debug("received request", zap.Any("ListVersionedResourceOccurrencesRequest", request))
 
-	request := &grafeas_proto.ListOccurrencesRequest{
-		Parent:    rodeProjectSlug,
-		Filter:    occurrenceRequest.Filter,
-		PageToken: occurrenceRequest.PageToken,
-		PageSize:  occurrenceRequest.PageSize,
+	resourceUri := request.ResourceUri
+	if resourceUri == "" {
+		return nil, createErrorWithCode(log, "invalid request", errors.New("must set resource_uri"), codes.InvalidArgument)
 	}
 
-	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, request)
+	log.Debug("listing build occurrences")
+	buildOccurrences, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{
+		Parent:   rodeProjectSlug,
+		PageSize: maxPageSize,
+		Filter:   fmt.Sprintf(`kind == "BUILD" && (resource.uri == "%[1]s" || build.provenance.builtArtifacts.nestedFilter(id == "%[1]s"))`, resourceUri),
+	})
+
+	if err != nil {
+		return nil, createError(log, "error fetching build occurrences", err)
+	}
+
+	resourceUris := map[string]string{
+		resourceUri: resourceUri,
+	}
+	for _, occurrence := range buildOccurrences.Occurrences {
+		resourceUris[occurrence.Resource.Uri] = occurrence.Resource.Uri
+		for _, artifact := range occurrence.GetBuild().GetProvenance().BuiltArtifacts {
+			resourceUris[artifact.Id] = artifact.Id
+		}
+	}
+
+	var resourceFilters []string
+	for k := range resourceUris {
+		resourceFilters = append(resourceFilters, fmt.Sprintf(`resource.uri == "%s"`, k))
+	}
+
+	filter := strings.Join(resourceFilters, " || ")
+	log.Debug("listing occurrences", zap.String("filter", filter))
+	allOccurrences, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{
+		Parent:    rodeProjectSlug,
+		Filter:    filter,
+		PageSize:  request.PageSize,
+		PageToken: request.PageToken,
+	})
+
 	if err != nil {
 		return nil, createError(log, "error listing occurrences", err)
 	}
 
-	return &pb.ListOccurrencesResponse{
-		Occurrences:   listOccurrencesResponse.GetOccurrences(),
-		NextPageToken: listOccurrencesResponse.GetNextPageToken(),
+	return &pb.ListVersionedResourceOccurrencesResponse{
+		Occurrences:   allOccurrences.Occurrences,
+		NextPageToken: allOccurrences.NextPageToken,
 	}, nil
 }
 
