@@ -12,6 +12,7 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
+// Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
 // ProjectsClient is the client API for Projects service.
@@ -113,7 +114,7 @@ type UnsafeProjectsServer interface {
 }
 
 func RegisterProjectsServer(s grpc.ServiceRegistrar, srv ProjectsServer) {
-	s.RegisterService(&_Projects_serviceDesc, srv)
+	s.RegisterService(&Projects_ServiceDesc, srv)
 }
 
 func _Projects_CreateProject_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -188,7 +189,10 @@ func _Projects_DeleteProject_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-var _Projects_serviceDesc = grpc.ServiceDesc{
+// Projects_ServiceDesc is the grpc.ServiceDesc for Projects service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Projects_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "grafeas.v1beta1.project.Projects",
 	HandlerType: (*ProjectsServer)(nil),
 	Methods: []grpc.MethodDesc{

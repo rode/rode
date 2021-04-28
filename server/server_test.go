@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
@@ -29,7 +28,7 @@ import (
 	"github.com/brianvoe/gofakeit/v5"
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/elastic/go-elasticsearch/v7/esapi"
-	gomock "github.com/golang/mock/gomock"
+	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -40,10 +39,12 @@ import (
 	"github.com/rode/rode/mocks"
 	"github.com/rode/rode/opa"
 	pb "github.com/rode/rode/proto/v1alpha1"
+	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/build_go_proto"
 	grafeas_common_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/common_go_proto"
 	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	grafeas_project_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/project_go_proto"
+	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/provenance_go_proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -548,7 +549,7 @@ var _ = Describe("rode server", func() {
 				})
 
 				It("should send the API action and document as part of the bulk request", func() {
-					body, err := ioutil.ReadAll(esTransport.receivedHttpRequests[3].Body)
+					body, err := io.ReadAll(esTransport.receivedHttpRequests[3].Body)
 					Expect(err).To(BeNil())
 
 					metadata := &esutil.EsBulkQueryFragment{}
@@ -1019,74 +1020,174 @@ var _ = Describe("rode server", func() {
 			})
 		})
 
-		When("listing occurrences", func() {
+		Describe("ListVersionedResourceOccurrences", func() {
 			var (
-				randomOccurrence               *grafeas_proto.Occurrence
-				nextPageToken                  string
-				currentPageToken               string
-				pageSize                       int32
-				grafeasListOccurrencesRequest  *grafeas_proto.ListOccurrencesRequest
-				grafeasListOccurrencesResponse *grafeas_proto.ListOccurrencesResponse
-				uri                            string
+				buildOccurrencesRequest  *grafeas_proto.ListOccurrencesRequest
+				buildOccurrencesResponse *grafeas_proto.ListOccurrencesResponse
+
+				allOccurrencesRequest  *grafeas_proto.ListOccurrencesRequest
+				allOccurrencesResponse *grafeas_proto.ListOccurrencesResponse
+
+				gitResourceUri string
+
+				nextPageToken    string
+				currentPageToken string
+				pageSize         int32
+				ctx              context.Context
+				resourceUri      string
+				request          *pb.ListVersionedResourceOccurrencesRequest
+				actualResponse   *pb.ListVersionedResourceOccurrencesResponse
+				actualError      error
 			)
 
 			BeforeEach(func() {
-				randomOccurrence = createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED)
-
-				uri = randomOccurrence.Resource.Uri
+				ctx = context.Background()
+				resourceUri = gofakeit.URL()
 				nextPageToken = gofakeit.Word()
 				currentPageToken = gofakeit.Word()
 				pageSize = gofakeit.Int32()
 
-				// expected Grafeas ListOccurrencesRequest request
-				grafeasListOccurrencesRequest = &grafeas_proto.ListOccurrencesRequest{
-					Parent:    "projects/rode",
-					Filter:    fmt.Sprintf(`"resource.uri" == "%s"`, uri),
-					PageToken: currentPageToken,
-					PageSize:  pageSize,
+				request = &pb.ListVersionedResourceOccurrencesRequest{
+					ResourceUri: resourceUri,
+					PageToken:   currentPageToken,
+					PageSize:    pageSize,
 				}
 
-				// mocked Grafeas ListOccurrencesResponse response
-				grafeasListOccurrencesResponse = &grafeas_proto.ListOccurrencesResponse{
+				gitResourceUri = fmt.Sprintf("git://%s", gofakeit.DomainName())
+
+				buildOccurrencesResponse = &grafeas_proto.ListOccurrencesResponse{
 					Occurrences: []*grafeas_proto.Occurrence{
-						randomOccurrence,
+						{
+							Resource: &grafeas_proto.Resource{
+								Uri: gitResourceUri,
+							},
+							Kind: grafeas_common_proto.NoteKind_BUILD,
+							Details: &grafeas_proto.Occurrence_Build{
+								Build: &build_go_proto.Details{
+									Provenance: &provenance_go_proto.BuildProvenance{
+										BuiltArtifacts: []*provenance_go_proto.Artifact{
+											{
+												Id: resourceUri,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+
+				allOccurrencesResponse = &grafeas_proto.ListOccurrencesResponse{
+					Occurrences: []*grafeas_proto.Occurrence{
+						createRandomOccurrence(grafeas_common_proto.NoteKind_VULNERABILITY),
+						createRandomOccurrence(grafeas_common_proto.NoteKind_BUILD),
 					},
 					NextPageToken: nextPageToken,
 				}
-
 			})
 
-			It("should list occurrences from grafeas", func() {
-				// ensure Grafeas ListOccurrences is called with expected request and inject response
-				grafeasClient.EXPECT().ListOccurrences(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(grafeasListOccurrencesRequest)).Return(grafeasListOccurrencesResponse, nil)
-
-				listOccurrencesRequest := &pb.ListOccurrencesRequest{
-					Filter:    fmt.Sprintf(`"resource.uri" == "%s"`, uri),
-					PageToken: currentPageToken,
-					PageSize:  pageSize,
-				}
-				response, err := rodeServer.ListOccurrences(context.Background(), listOccurrencesRequest)
-				Expect(err).ToNot(HaveOccurred())
-
-				// check response
-				Expect(response.Occurrences).To(BeEquivalentTo(grafeasListOccurrencesResponse.Occurrences))
-				Expect(response.NextPageToken).To(Equal(nextPageToken))
+			JustBeforeEach(func() {
+				actualResponse, actualError = rodeServer.ListVersionedResourceOccurrences(ctx, request)
 			})
 
-			When("Grafeas returns an error", func() {
+			AfterEach(func() {
+				buildOccurrencesRequest = nil
+				allOccurrencesRequest = nil
+			})
+
+			Describe("successful calls to Grafeas", func() {
+				BeforeEach(func() {
+					grafeasClient.EXPECT().
+						ListOccurrences(ctx, gomock.Any()).
+						DoAndReturn(func(_ context.Context, r *grafeas_proto.ListOccurrencesRequest) (*grafeas_proto.ListOccurrencesResponse, error) {
+							if buildOccurrencesRequest == nil {
+								buildOccurrencesRequest = r
+
+								return buildOccurrencesResponse, nil
+							}
+
+							if allOccurrencesRequest == nil {
+								allOccurrencesRequest = r
+								return allOccurrencesResponse, nil
+							}
+
+							return nil, nil
+						}).Times(2)
+				})
+
+				When("there are build occurrences related to the resource uri", func() {
+					It("should list build occurrences for the resource uri", func() {
+						Expect(buildOccurrencesRequest).NotTo(BeNil())
+						Expect(buildOccurrencesRequest.Parent).To(Equal("projects/rode"))
+						Expect(buildOccurrencesRequest.Filter).To(ContainSubstring(fmt.Sprintf(`build.provenance.builtArtifacts.nestedFilter(id == "%s")`, resourceUri)))
+						Expect(buildOccurrencesRequest.Filter).To(ContainSubstring(fmt.Sprintf(`resource.uri == "%s"`, resourceUri)))
+						Expect(buildOccurrencesRequest.PageSize).To(Equal(int32(1000)))
+					})
+
+					It("should use the build occurrence to find all occurrences", func() {
+						expectedFilter := []string{
+							fmt.Sprintf(`resource.uri == "%s"`, resourceUri),
+							fmt.Sprintf(`resource.uri == "%s"`, gitResourceUri),
+						}
+
+						Expect(allOccurrencesRequest).NotTo(BeNil())
+						Expect(allOccurrencesRequest.Parent).To(Equal("projects/rode"))
+						Expect(allOccurrencesRequest.PageSize).To(Equal(pageSize))
+						Expect(allOccurrencesRequest.PageToken).To(Equal(currentPageToken))
+
+						filterParts := strings.Split(allOccurrencesRequest.Filter, " || ")
+						Expect(filterParts).To(ConsistOf(expectedFilter))
+					})
+				})
+
+				When("there are no build occurrences", func() {
+					BeforeEach(func() {
+						buildOccurrencesResponse.Occurrences = []*grafeas_proto.Occurrence{}
+					})
+
+					It("should list occurrences for the resource uri", func() {
+						Expect(allOccurrencesRequest.Filter).To(Equal(fmt.Sprintf(`resource.uri == "%s"`, resourceUri)))
+					})
+				})
+			})
+
+			When("the resource uri is not specified", func() {
+				BeforeEach(func() {
+					request.ResourceUri = ""
+				})
+
 				It("should return an error", func() {
-					grafeasClient.EXPECT().ListOccurrences(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(grafeasListOccurrencesRequest)).Return(nil, fmt.Errorf("error occurred"))
+					Expect(actualResponse).To(BeNil())
+					Expect(actualError).To(HaveOccurred())
+					Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.InvalidArgument))
+				})
+			})
 
-					listOccurrencesRequest := &pb.ListOccurrencesRequest{
-						Filter:    fmt.Sprintf(`"resource.uri" == "%s"`, uri),
-						PageToken: currentPageToken,
-						PageSize:  pageSize,
-					}
-					response, err := rodeServer.ListOccurrences(context.Background(), listOccurrencesRequest)
-					Expect(err).ToNot(BeNil())
+			When("an error occurs listing build occurrences", func() {
+				BeforeEach(func() {
+					grafeasClient.EXPECT().
+						ListOccurrences(gomock.Any(), gomock.Any()).
+						Return(nil, errors.New(gofakeit.Word())).
+						Times(1)
+				})
 
-					// check response
-					Expect(response).To(BeNil())
+				It("should return an error", func() {
+					Expect(actualResponse).To(BeNil())
+					Expect(actualError).To(HaveOccurred())
+					Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+				})
+			})
+
+			When("an error occurs listing all occurrences", func() {
+				BeforeEach(func() {
+					grafeasClient.EXPECT().ListOccurrences(gomock.Any(), gomock.Any()).Return(buildOccurrencesResponse, nil)
+					grafeasClient.EXPECT().ListOccurrences(gomock.Any(), gomock.Any()).Return(nil, errors.New(gofakeit.Word()))
+				})
+
+				It("should return an error", func() {
+					Expect(actualResponse).To(BeNil())
+					Expect(actualError).To(HaveOccurred())
+					Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
 				})
 			})
 		})
@@ -2196,7 +2297,7 @@ func structToJsonBody(i interface{}) io.ReadCloser {
 	b, err := json.Marshal(i)
 	Expect(err).ToNot(HaveOccurred())
 
-	return ioutil.NopCloser(strings.NewReader(string(b)))
+	return io.NopCloser(strings.NewReader(string(b)))
 }
 
 func createEsSearchResponse(occurrences []*grafeas_proto.Occurrence) io.ReadCloser {
@@ -2227,7 +2328,7 @@ func createEsSearchResponse(occurrences []*grafeas_proto.Occurrence) io.ReadClos
 	responseBody, err := json.Marshal(response)
 	Expect(err).To(BeNil())
 
-	return ioutil.NopCloser(bytes.NewReader(responseBody))
+	return io.NopCloser(bytes.NewReader(responseBody))
 }
 
 func createEsSearchResponseForGenericResource(resources []*pb.GenericResource) io.ReadCloser {
@@ -2255,7 +2356,7 @@ func createEsSearchResponseForGenericResource(resources []*pb.GenericResource) i
 	responseBody, err := json.Marshal(response)
 	Expect(err).To(BeNil())
 
-	return ioutil.NopCloser(bytes.NewReader(responseBody))
+	return io.NopCloser(bytes.NewReader(responseBody))
 }
 
 func createEsSearchResponseForPolicy(occurrences []*pb.Policy) io.ReadCloser {
@@ -2286,7 +2387,7 @@ func createEsSearchResponseForPolicy(occurrences []*pb.Policy) io.ReadCloser {
 	responseBody, err := json.Marshal(response)
 	Expect(err).To(BeNil())
 
-	return ioutil.NopCloser(bytes.NewReader(responseBody))
+	return io.NopCloser(bytes.NewReader(responseBody))
 }
 
 func readEsSearchResponse(request *http.Request) *esutil.EsSearch {
@@ -2297,7 +2398,7 @@ func readEsSearchResponse(request *http.Request) *esutil.EsSearch {
 }
 
 func readResponseBody(request *http.Request, v interface{}) {
-	requestBody, err := ioutil.ReadAll(request.Body)
+	requestBody, err := io.ReadAll(request.Body)
 	Expect(err).To(BeNil())
 
 	err = json.Unmarshal(requestBody, v)
@@ -2305,7 +2406,7 @@ func readResponseBody(request *http.Request, v interface{}) {
 }
 
 func createInvalidResponseBody() io.ReadCloser {
-	return ioutil.NopCloser(strings.NewReader("{"))
+	return io.NopCloser(strings.NewReader("{"))
 }
 
 func getGRPCStatusFromError(err error) *status.Status {
