@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
@@ -29,7 +28,7 @@ import (
 	"github.com/brianvoe/gofakeit/v5"
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/elastic/go-elasticsearch/v7/esapi"
-	gomock "github.com/golang/mock/gomock"
+	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -526,7 +525,7 @@ var _ = Describe("rode server", func() {
 				})
 
 				It("should send the API action and document as part of the bulk request", func() {
-					body, err := ioutil.ReadAll(esTransport.receivedHttpRequests[3].Body)
+					body, err := io.ReadAll(esTransport.receivedHttpRequests[3].Body)
 					Expect(err).To(BeNil())
 
 					metadata := &esutil.EsBulkQueryFragment{}
@@ -2274,7 +2273,7 @@ func structToJsonBody(i interface{}) io.ReadCloser {
 	b, err := json.Marshal(i)
 	Expect(err).ToNot(HaveOccurred())
 
-	return ioutil.NopCloser(strings.NewReader(string(b)))
+	return io.NopCloser(strings.NewReader(string(b)))
 }
 
 func createEsSearchResponse(occurrences []*grafeas_proto.Occurrence) io.ReadCloser {
@@ -2305,7 +2304,7 @@ func createEsSearchResponse(occurrences []*grafeas_proto.Occurrence) io.ReadClos
 	responseBody, err := json.Marshal(response)
 	Expect(err).To(BeNil())
 
-	return ioutil.NopCloser(bytes.NewReader(responseBody))
+	return io.NopCloser(bytes.NewReader(responseBody))
 }
 
 func createEsSearchResponseForGenericResource(resources []*pb.GenericResource) io.ReadCloser {
@@ -2333,7 +2332,7 @@ func createEsSearchResponseForGenericResource(resources []*pb.GenericResource) i
 	responseBody, err := json.Marshal(response)
 	Expect(err).To(BeNil())
 
-	return ioutil.NopCloser(bytes.NewReader(responseBody))
+	return io.NopCloser(bytes.NewReader(responseBody))
 }
 
 func createEsSearchResponseForPolicy(occurrences []*pb.Policy) io.ReadCloser {
@@ -2364,7 +2363,7 @@ func createEsSearchResponseForPolicy(occurrences []*pb.Policy) io.ReadCloser {
 	responseBody, err := json.Marshal(response)
 	Expect(err).To(BeNil())
 
-	return ioutil.NopCloser(bytes.NewReader(responseBody))
+	return io.NopCloser(bytes.NewReader(responseBody))
 }
 
 func readEsSearchResponse(request *http.Request) *esutil.EsSearch {
@@ -2375,7 +2374,7 @@ func readEsSearchResponse(request *http.Request) *esutil.EsSearch {
 }
 
 func readResponseBody(request *http.Request, v interface{}) {
-	requestBody, err := ioutil.ReadAll(request.Body)
+	requestBody, err := io.ReadAll(request.Body)
 	Expect(err).To(BeNil())
 
 	err = json.Unmarshal(requestBody, v)
@@ -2383,7 +2382,7 @@ func readResponseBody(request *http.Request, v interface{}) {
 }
 
 func createInvalidResponseBody() io.ReadCloser {
-	return ioutil.NopCloser(strings.NewReader("{"))
+	return io.NopCloser(strings.NewReader("{"))
 }
 
 func getGRPCStatusFromError(err error) *status.Status {

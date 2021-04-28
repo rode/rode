@@ -1,6 +1,6 @@
 module github.com/rode/rode
 
-go 1.15
+go 1.16
 
 require (
 	github.com/antlr/antlr4 v0.0.0-20210409163025-478e46409e82 // indirect

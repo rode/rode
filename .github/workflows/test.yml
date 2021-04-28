@@ -11,7 +11,7 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    container: golang:1.15
+    container: golang:1.16
     steps:
       - uses: actions/checkout@v2
 
@@ -27,11 +27,11 @@ jobs:
         run: go build -v .
   license-check:
     runs-on: ubuntu-latest
-    container: golang:1.15
+    container: golang:1.16
     steps:
     - uses: actions/checkout@v2
     - name: Download License Utility
-      run: go get -u github.com/google/addlicense
+      run: go install github.com/google/addlicense@master
     - name: Check License Headers
       run: |
         shopt -s globstar

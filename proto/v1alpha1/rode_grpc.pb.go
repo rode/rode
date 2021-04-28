@@ -13,6 +13,7 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
+// Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
 // RodeClient is the client API for Rode service.
@@ -224,7 +225,7 @@ type UnsafeRodeServer interface {
 }
 
 func RegisterRodeServer(s grpc.ServiceRegistrar, srv RodeServer) {
-	s.RegisterService(&_Rode_serviceDesc, srv)
+	s.RegisterService(&Rode_ServiceDesc, srv)
 }
 
 func _Rode_BatchCreateOccurrences_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -443,7 +444,10 @@ func _Rode_UpdatePolicy_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
-var _Rode_serviceDesc = grpc.ServiceDesc{
+// Rode_ServiceDesc is the grpc.ServiceDesc for Rode service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Rode_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "rode.v1alpha1.Rode",
 	HandlerType: (*RodeServer)(nil),
 	Methods: []grpc.MethodDesc{
