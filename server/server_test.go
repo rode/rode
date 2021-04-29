@@ -1565,7 +1565,6 @@ var _ = Describe("rode server", func() {
 			var (
 				policyEntity   *pb.PolicyEntity
 				policyResponse *pb.Policy
-				
 			)
 
 			BeforeEach(func() {
