@@ -54,7 +54,7 @@ const (
 	rodeElasticsearchPoliciesIndex         = "rode-v1alpha1-policies"
 	rodeElasticsearchGenericResourcesIndex = "rode-v1alpha1-generic-resources"
 	maxPageSize                            = 1000
-	pitKeepAlive                           = "1m"
+	pitKeepAlive                           = "5m"
 )
 
 // NewRodeServer constructor for rodeServer
@@ -950,6 +950,16 @@ func (r *rodeServer) genericList(ctx context.Context, log *zap.Logger, options *
 		return nil, "", createError(log, "error decoding elasticsearch response", err)
 	}
 
+	if options.pageToken != "" || options.pageSize != 0 { // if request is paginated, check for last page
+		_, from, err := esutil.ParsePageToken(nextPageToken)
+		if err != nil {
+			return nil, "", createError(log, "error parsing page token", err)
+		}
+
+		if from >= searchResults.Hits.Total.Value {
+			nextPageToken = ""
+		}
+	}
 	return searchResults.Hits, nextPageToken, nil
 }
 
