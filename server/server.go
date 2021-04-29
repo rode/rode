@@ -358,6 +358,11 @@ func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListG
 	}, nil
 }
 
+type indexSetting struct {
+	index      string
+	properties map[string]interface{}
+}
+
 func (r *rodeServer) initialize(ctx context.Context) error {
 	log := r.logger.Named("initialize")
 
@@ -376,9 +381,23 @@ func (r *rodeServer) initialize(ctx context.Context) error {
 		}
 	}
 
-	for _, index := range []string{rodeElasticsearchPoliciesIndex, rodeElasticsearchGenericResourcesIndex} {
-		if err := r.createIndex(ctx, index); err != nil {
-			return fmt.Errorf("error creating index %s: %s", index, err)
+	indexSettings := []indexSetting{
+		{index: rodeElasticsearchPoliciesIndex, properties: map[string]interface{}{
+			"created": map[string]interface{}{
+				"type": "date",
+			},
+		}},
+		{index: rodeElasticsearchGenericResourcesIndex, properties: map[string]interface{}{
+			"name": map[string]interface{}{
+				"type": "keyword",
+			},
+		}},
+	}
+
+	for _, settings := range indexSettings {
+		if err := r.createIndex(ctx, settings); err != nil {
+
+			return fmt.Errorf("error creating index %s: %s", settings, err)
 		}
 	}
 
@@ -736,12 +755,13 @@ func (r *rodeServer) UpdatePolicy(ctx context.Context, updatePolicyRequest *pb.U
 	return policy, nil
 }
 
-func (r *rodeServer) createIndex(ctx context.Context, indexName string) error {
+func (r *rodeServer) createIndex(ctx context.Context, settings indexSetting) error {
 	mappings := map[string]interface{}{
 		"mappings": map[string]interface{}{
 			"_meta": map[string]interface{}{
 				"type": "rode",
 			},
+			"properties": settings.properties,
 			"dynamic_templates": []map[string]interface{}{
 				{
 					"strings_as_keywords": map[string]interface{}{
@@ -756,7 +776,7 @@ func (r *rodeServer) createIndex(ctx context.Context, indexName string) error {
 		},
 	}
 	body, _ := esutil.EncodeRequest(mappings)
-	response, err := r.esClient.Indices.Create(indexName, r.esClient.Indices.Create.WithBody(body), r.esClient.Indices.Create.WithContext(ctx))
+	response, err := r.esClient.Indices.Create(settings.index, r.esClient.Indices.Create.WithBody(body), r.esClient.Indices.Create.WithContext(ctx))
 
 	if err != nil {
 		return err

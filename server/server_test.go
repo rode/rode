@@ -206,13 +206,26 @@ var _ = Describe("rode server", func() {
 
 		Context("Rode Elasticsearch indices", func() {
 			var actualError error
-			assertIndexRequestHasMappings := func(request *http.Request) {
+
+			JustBeforeEach(func() {
+				grafeasProjectsClient.EXPECT().GetProject(gomock.Any(), gomock.Any())
+				_, actualError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer, elasticsearchConfig)
+			})
+
+			It("should create an index for policies", func() {
+				Expect(esTransport.receivedHttpRequests[0].Method).To(Equal(http.MethodPut))
+				Expect(esTransport.receivedHttpRequests[0].URL.Path).To(Equal("/rode-v1alpha1-policies"))
 				payload := map[string]interface{}{}
-				readResponseBody(request, &payload)
+				readResponseBody(esTransport.receivedHttpRequests[0], &payload)
 				Expect(payload).To(MatchAllKeys(Keys{
 					"mappings": MatchAllKeys(Keys{
 						"_meta": MatchAllKeys(Keys{
 							"type": Equal("rode"),
+						}),
+						"properties": MatchAllKeys(Keys{
+							"created": MatchAllKeys(Keys{
+								"type": Equal("date"),
+							}),
 						}),
 						"dynamic_templates": ConsistOf(MatchAllKeys(Keys{
 							"strings_as_keywords": MatchAllKeys(Keys{
@@ -225,23 +238,34 @@ var _ = Describe("rode server", func() {
 						})),
 					}),
 				}))
-			}
-
-			JustBeforeEach(func() {
-				grafeasProjectsClient.EXPECT().GetProject(gomock.Any(), gomock.Any())
-				_, actualError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer, elasticsearchConfig)
-			})
-
-			It("should create an index for policies", func() {
-				Expect(esTransport.receivedHttpRequests[0].Method).To(Equal(http.MethodPut))
-				Expect(esTransport.receivedHttpRequests[0].URL.Path).To(Equal("/rode-v1alpha1-policies"))
-				assertIndexRequestHasMappings(esTransport.receivedHttpRequests[0])
 			})
 
 			It("should create an index for generic resources", func() {
 				Expect(esTransport.receivedHttpRequests[1].Method).To(Equal(http.MethodPut))
 				Expect(esTransport.receivedHttpRequests[1].URL.Path).To(Equal("/rode-v1alpha1-generic-resources"))
-				assertIndexRequestHasMappings(esTransport.receivedHttpRequests[1])
+				payload := map[string]interface{}{}
+				readResponseBody(esTransport.receivedHttpRequests[1], &payload)
+				Expect(payload).To(MatchAllKeys(Keys{
+					"mappings": MatchAllKeys(Keys{
+						"_meta": MatchAllKeys(Keys{
+							"type": Equal("rode"),
+						}),
+						"properties": MatchAllKeys(Keys{
+							"name": MatchAllKeys(Keys{
+								"type": Equal("keyword"),
+							}),
+						}),
+						"dynamic_templates": ConsistOf(MatchAllKeys(Keys{
+							"strings_as_keywords": MatchAllKeys(Keys{
+								"match_mapping_type": Equal("string"),
+								"mapping": MatchAllKeys(Keys{
+									"norms": Equal(false),
+									"type":  Equal("keyword"),
+								}),
+							}),
+						})),
+					}),
+				}))
 			})
 
 			When("an unexpected status code is returned from the create index call", func() {
