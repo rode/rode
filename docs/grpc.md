@@ -209,6 +209,7 @@
 | description | [string](#string) |  |  |
 | rego_content | [string](#string) |  | The rego code for the policy represented as a string |
 | source_path | [string](#string) |  | The location of the policy stored in source control |
+| environments | [string](#string) | repeated | Environments defines all of the environments that the policy shoud apply to &#34;all&#34; is reserved to represent all environments |
 | target | [PolicyEntity.Target](#rode.v1alpha1.PolicyEntity.Target) |  | Target represents the type of resource that the policy applies to. |
 
 

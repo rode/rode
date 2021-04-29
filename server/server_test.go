@@ -1561,7 +1561,27 @@ var _ = Describe("rode server", func() {
 				Expect(err).To(BeNil())
 			})
 		})
+		When("creating a policy with 2 specified environments", func() {
+			var (
+				policyEntity   *pb.PolicyEntity
+				policyResponse *pb.Policy
+				
+			)
 
+			BeforeEach(func() {
+				policyEntity = createRandomPolicyEntity(goodPolicy)
+				policyEntity.Environments = []string{"dev", "qa"}
+				esTransport.preparedHttpResponses = []*http.Response{
+					{
+						StatusCode: http.StatusOK,
+					},
+				}
+				policyResponse, _ = rodeServer.CreatePolicy(context.Background(), policyEntity)
+			})
+			It("should properly populate the 2 environments in the policy entity", func() {
+				Expect(policyResponse.Policy.Environments).To(BeEquivalentTo([]string{"dev", "qa"}))
+			})
+		})
 		When("creating a policy", func() {
 			var (
 				policyEntity   *pb.PolicyEntity
@@ -1585,6 +1605,9 @@ var _ = Describe("rode server", func() {
 			It("should match the policy entity", func() {
 				Expect(err).To(Not(HaveOccurred()))
 				Expect(policyResponse.Policy).To(BeEquivalentTo(policyEntity))
+			})
+			It("should default to target all environments", func() {
+				Expect(policyResponse.Policy.Environments).To(BeEquivalentTo([]string{"all"}))
 			})
 			It("should target docker images", func() {
 				Expect(policyResponse.Policy.Target).To(Equal(pb.PolicyEntity_DOCKER))

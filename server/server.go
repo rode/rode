@@ -506,7 +506,9 @@ func (r *rodeServer) CreatePolicy(ctx context.Context, policyEntity *pb.PolicyEn
 	if len(policyEntity.Name) == 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "policy name not provided")
 	}
-
+	if len(policyEntity.Environments) == 0 {
+		policyEntity.Environments = []string{"all"}
+	}
 	// CheckPolicy before writing to elastic
 	result, err := r.ValidatePolicy(ctx, &pb.ValidatePolicyRequest{Policy: policyEntity.RegoContent})
 	if (err != nil) || !result.Compile {
