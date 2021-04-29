@@ -394,10 +394,10 @@ func (r *rodeServer) initialize(ctx context.Context) error {
 		}},
 	}
 
-	for _, indexSettings := range indexSettings {
-		if err := r.createIndex(ctx, intSettings); err != nil {
+	for _, settings := range indexSettings {
+		if err := r.createIndex(ctx, settings); err != nil {
 
-			return fmt.Errorf("error creating index %s: %s", indexSettings, err)
+			return fmt.Errorf("error creating index %s: %s", settings, err)
 		}
 	}
 
