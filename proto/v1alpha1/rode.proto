@@ -56,6 +56,11 @@ service Rode {
       get: "/v1alpha1/versioned-resource-occurrences"
     };
   }
+  rpc ListOccurrences(ListOccurrencesRequest) returns (ListOccurrencesResponse) {
+    option (google.api.http) = {
+      get: "/v1alpha1/occurrences"
+    };
+  }
   rpc UpdateOccurrence(UpdateOccurrenceRequest) returns (grafeas.v1beta1.Occurrence) {
     option (google.api.http) = {
       patch: "/v1alpha1/occurrences/{id}"
@@ -148,6 +153,17 @@ message ListVersionedResourceOccurrencesRequest {
 }
 
 message ListVersionedResourceOccurrencesResponse {
+  repeated grafeas.v1beta1.Occurrence occurrences = 1;
+  string next_page_token = 2;
+}
+
+message ListOccurrencesRequest {
+  string filter = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+}
+
+message ListOccurrencesResponse {
   repeated grafeas.v1beta1.Occurrence occurrences = 1;
   string next_page_token = 2;
 }
