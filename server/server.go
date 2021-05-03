@@ -458,6 +458,28 @@ func (r *rodeServer) ListVersionedResourceOccurrences(ctx context.Context, reque
 	}, nil
 }
 
+func (r *rodeServer) ListOccurrences(ctx context.Context, occurrenceRequest *pb.ListOccurrencesRequest) (*pb.ListOccurrencesResponse, error) {
+	log := r.logger.Named("ListOccurrences")
+	log.Debug("received request", zap.Any("ListOccurrencesRequest", occurrenceRequest))
+
+	request := &grafeas_proto.ListOccurrencesRequest{
+		Parent:    rodeProjectSlug,
+		Filter:    occurrenceRequest.Filter,
+		PageToken: occurrenceRequest.PageToken,
+		PageSize:  occurrenceRequest.PageSize,
+	}
+
+	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, request)
+	if err != nil {
+		return nil, createError(log, "error listing occurrences", err)
+	}
+
+	return &pb.ListOccurrencesResponse{
+		Occurrences:   listOccurrencesResponse.GetOccurrences(),
+		NextPageToken: listOccurrencesResponse.GetNextPageToken(),
+	}, nil
+}
+
 func (r *rodeServer) UpdateOccurrence(ctx context.Context, occurrenceRequest *pb.UpdateOccurrenceRequest) (*grafeas_proto.Occurrence, error) {
 	log := r.logger.Named("UpdateOccurrence")
 	log.Debug("received request", zap.Any("UpdateOccurrenceRequest", occurrenceRequest))

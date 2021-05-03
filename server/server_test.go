@@ -1194,6 +1194,78 @@ var _ = Describe("rode server", func() {
 			})
 		})
 
+		Describe("ListOccurrences", func() {
+			var (
+				randomOccurrence               *grafeas_proto.Occurrence
+				nextPageToken                  string
+				currentPageToken               string
+				pageSize                       int32
+				grafeasListOccurrencesRequest  *grafeas_proto.ListOccurrencesRequest
+				grafeasListOccurrencesResponse *grafeas_proto.ListOccurrencesResponse
+				uri                            string
+			)
+
+			BeforeEach(func() {
+				randomOccurrence = createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED)
+
+				uri = randomOccurrence.Resource.Uri
+				nextPageToken = gofakeit.Word()
+				currentPageToken = gofakeit.Word()
+				pageSize = gofakeit.Int32()
+
+				// expected Grafeas ListOccurrencesRequest request
+				grafeasListOccurrencesRequest = &grafeas_proto.ListOccurrencesRequest{
+					Parent:    "projects/rode",
+					Filter:    fmt.Sprintf(`"resource.uri" == "%s"`, uri),
+					PageToken: currentPageToken,
+					PageSize:  pageSize,
+				}
+
+				// mocked Grafeas ListOccurrencesResponse response
+				grafeasListOccurrencesResponse = &grafeas_proto.ListOccurrencesResponse{
+					Occurrences: []*grafeas_proto.Occurrence{
+						randomOccurrence,
+					},
+					NextPageToken: nextPageToken,
+				}
+
+			})
+
+			It("should list occurrences from grafeas", func() {
+				// ensure Grafeas ListOccurrences is called with expected request and inject response
+				grafeasClient.EXPECT().ListOccurrences(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(grafeasListOccurrencesRequest)).Return(grafeasListOccurrencesResponse, nil)
+
+				listOccurrencesRequest := &pb.ListOccurrencesRequest{
+					Filter:    fmt.Sprintf(`"resource.uri" == "%s"`, uri),
+					PageToken: currentPageToken,
+					PageSize:  pageSize,
+				}
+				response, err := rodeServer.ListOccurrences(context.Background(), listOccurrencesRequest)
+				Expect(err).ToNot(HaveOccurred())
+
+				// check response
+				Expect(response.Occurrences).To(BeEquivalentTo(grafeasListOccurrencesResponse.Occurrences))
+				Expect(response.NextPageToken).To(Equal(nextPageToken))
+			})
+
+			When("Grafeas returns an error", func() {
+				It("should return an error", func() {
+					grafeasClient.EXPECT().ListOccurrences(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(grafeasListOccurrencesRequest)).Return(nil, fmt.Errorf("error occurred"))
+
+					listOccurrencesRequest := &pb.ListOccurrencesRequest{
+						Filter:    fmt.Sprintf(`"resource.uri" == "%s"`, uri),
+						PageToken: currentPageToken,
+						PageSize:  pageSize,
+					}
+					response, err := rodeServer.ListOccurrences(context.Background(), listOccurrencesRequest)
+					Expect(err).ToNot(BeNil())
+
+					// check response
+					Expect(response).To(BeNil())
+				})
+			})
+		})
+
 		Describe("UpdateOccurrence", func() {
 			var (
 				actualError             error
