@@ -103,6 +103,16 @@ service Rode {
     };
     option (google.api.method_signature) = "id,update_mask";
   }
+  // RegisterCollector accepts a collector ID and a list of notes that this collector will reference when creating
+  // occurrences. The response will contain the notes with the fully qualified note name. This operation is idempotent,
+  // so any notes that already exist will not be re-created. Collectors are expected to invoke this RPC each time they
+  // start.
+  rpc RegisterCollector(RegisterCollectorRequest) returns (RegisterCollectorResponse) {
+    option (google.api.http) = {
+      post: "/v1alpha1/collectors:register"
+      body: "*"
+    };
+  }
 }
 
 message GenericResource {
@@ -172,4 +182,13 @@ message UpdateOccurrenceRequest {
   string id = 1;
   grafeas.v1beta1.Occurrence occurrence = 2;
   google.protobuf.FieldMask update_mask = 3;
+}
+
+message RegisterCollectorRequest {
+  string id = 1;
+  repeated grafeas.v1beta1.Note notes = 2;
+}
+
+message RegisterCollectorResponse {
+  map<string, grafeas.v1beta1.Note> notes = 1;
 }
