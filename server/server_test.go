@@ -152,25 +152,23 @@ var _ = Describe("rode server", func() {
 
 	var (
 		rodeServer            pb.RodeServer
-		rodeServerError       error
-		grafeasClient         *mocks.MockGrafeasClient
-		grafeasProjectsClient *mocks.MockGrafeasProjectsClient
+		grafeasClient         *mocks.FakeGrafeasV1Beta1Client
+		grafeasProjectsClient *mocks.FakeProjectsClient
 		opaClient             *mocks.MockOpaClient
 		esClient              *elasticsearch.Client
 		esTransport           *mockEsTransport
 		mockFilterer          *mocks.MockFilterer
 		mockCtrl              *gomock.Controller
-		getProjectRequest     = &grafeas_project_proto.GetProjectRequest{Name: "projects/rode"}
 		elasticsearchConfig   *config.ElasticsearchConfig
 	)
 
 	BeforeEach(func() {
 		mockCtrl = gomock.NewController(GinkgoT())
-		grafeasClient = mocks.NewMockGrafeasClient(mockCtrl)
-		grafeasProjectsClient = mocks.NewMockGrafeasProjectsClient(mockCtrl)
+		grafeasClient = &mocks.FakeGrafeasV1Beta1Client{}
+		grafeasProjectsClient = &mocks.FakeProjectsClient{}
 		opaClient = mocks.NewMockOpaClient(mockCtrl)
 		elasticsearchConfig = &config.ElasticsearchConfig{
-			Refresh: config.RefreshOption("true"),
+			Refresh: "true",
 		}
 
 		esTransport = &mockEsTransport{}
@@ -189,213 +187,240 @@ var _ = Describe("rode server", func() {
 				Body:       structToJsonBody(createEsIndexResponse("rode-v1alpha1-generic-resources")),
 			},
 		}
+
+		rodeServer, _ = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer, elasticsearchConfig)
 	})
 
 	AfterEach(func() {
 		mockCtrl.Finish()
 	})
 
-	When("server is initialized", func() {
-		It("should check if the rode project exists", func() {
-			grafeasProjectsClient.
-				EXPECT().
-				GetProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(getProjectRequest))
+	Context("initialize", func() {
+		var (
+			actualRodeServer pb.RodeServer
+			actualErr        error
 
-			rodeServer, rodeServerError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer, elasticsearchConfig)
+			expectedProject         *grafeas_project_proto.Project
+			expectedGetProjectError error
+
+			expectedCreateProjectError error
+		)
+
+		BeforeEach(func() {
+			expectedProject = &grafeas_project_proto.Project{
+				Name: fmt.Sprintf("projects/%s", gofakeit.LetterN(10)),
+			}
+			expectedGetProjectError = nil
+			expectedCreateProjectError = nil
 		})
 
-		Context("Rode Elasticsearch indices", func() {
-			var actualError error
+		JustBeforeEach(func() {
+			grafeasProjectsClient.GetProjectReturns(expectedProject, expectedGetProjectError)
+			grafeasProjectsClient.CreateProjectReturns(expectedProject, expectedCreateProjectError)
 
-			JustBeforeEach(func() {
-				grafeasProjectsClient.EXPECT().GetProject(gomock.Any(), gomock.Any())
-				_, actualError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer, elasticsearchConfig)
-			})
+			actualRodeServer, actualErr = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer, elasticsearchConfig)
+		})
 
-			It("should create an index for policies", func() {
-				Expect(esTransport.receivedHttpRequests[0].Method).To(Equal(http.MethodPut))
-				Expect(esTransport.receivedHttpRequests[0].URL.Path).To(Equal("/rode-v1alpha1-policies"))
-				payload := map[string]interface{}{}
-				readResponseBody(esTransport.receivedHttpRequests[0], &payload)
-				Expect(payload).To(MatchAllKeys(Keys{
-					"mappings": MatchAllKeys(Keys{
-						"_meta": MatchAllKeys(Keys{
-							"type": Equal("rode"),
-						}),
-						"properties": MatchAllKeys(Keys{
-							"created": MatchAllKeys(Keys{
-								"type": Equal("date"),
-							}),
-						}),
-						"dynamic_templates": ConsistOf(MatchAllKeys(Keys{
-							"strings_as_keywords": MatchAllKeys(Keys{
-								"match_mapping_type": Equal("string"),
-								"mapping": MatchAllKeys(Keys{
-									"norms": Equal(false),
-									"type":  Equal("keyword"),
-								}),
-							}),
-						})),
+		It("should check if the rode project exists", func() {
+			Expect(grafeasProjectsClient.GetProjectCallCount()).To(Equal(1))
+
+			_, getProjectRequest, _ := grafeasProjectsClient.GetProjectArgsForCall(0)
+			Expect(getProjectRequest.Name).To(Equal(rodeProjectSlug))
+		})
+
+		// happy path: project already exists
+		It("should not create a project", func() {
+			Expect(grafeasProjectsClient.CreateProjectCallCount()).To(Equal(0))
+		})
+
+		It("should create an index for policies", func() {
+			Expect(esTransport.receivedHttpRequests[0].Method).To(Equal(http.MethodPut))
+			Expect(esTransport.receivedHttpRequests[0].URL.Path).To(Equal("/rode-v1alpha1-policies"))
+			payload := map[string]interface{}{}
+			readResponseBody(esTransport.receivedHttpRequests[0], &payload)
+			Expect(payload).To(MatchAllKeys(Keys{
+				"mappings": MatchAllKeys(Keys{
+					"_meta": MatchAllKeys(Keys{
+						"type": Equal("rode"),
 					}),
-				}))
-			})
-
-			It("should create an index for generic resources", func() {
-				Expect(esTransport.receivedHttpRequests[1].Method).To(Equal(http.MethodPut))
-				Expect(esTransport.receivedHttpRequests[1].URL.Path).To(Equal("/rode-v1alpha1-generic-resources"))
-				payload := map[string]interface{}{}
-				readResponseBody(esTransport.receivedHttpRequests[1], &payload)
-				Expect(payload).To(MatchAllKeys(Keys{
-					"mappings": MatchAllKeys(Keys{
-						"_meta": MatchAllKeys(Keys{
-							"type": Equal("rode"),
+					"properties": MatchAllKeys(Keys{
+						"created": MatchAllKeys(Keys{
+							"type": Equal("date"),
 						}),
-						"properties": MatchAllKeys(Keys{
-							"name": MatchAllKeys(Keys{
-								"type": Equal("keyword"),
-							}),
-						}),
-						"dynamic_templates": ConsistOf(MatchAllKeys(Keys{
-							"strings_as_keywords": MatchAllKeys(Keys{
-								"match_mapping_type": Equal("string"),
-								"mapping": MatchAllKeys(Keys{
-									"norms": Equal(false),
-									"type":  Equal("keyword"),
-								}),
-							}),
-						})),
 					}),
-				}))
+					"dynamic_templates": ConsistOf(MatchAllKeys(Keys{
+						"strings_as_keywords": MatchAllKeys(Keys{
+							"match_mapping_type": Equal("string"),
+							"mapping": MatchAllKeys(Keys{
+								"norms": Equal(false),
+								"type":  Equal("keyword"),
+							}),
+						}),
+					})),
+				}),
+			}))
+		})
+
+		It("should create an index for generic resources", func() {
+			Expect(esTransport.receivedHttpRequests[1].Method).To(Equal(http.MethodPut))
+			Expect(esTransport.receivedHttpRequests[1].URL.Path).To(Equal("/rode-v1alpha1-generic-resources"))
+			payload := map[string]interface{}{}
+			readResponseBody(esTransport.receivedHttpRequests[1], &payload)
+			Expect(payload).To(MatchAllKeys(Keys{
+				"mappings": MatchAllKeys(Keys{
+					"_meta": MatchAllKeys(Keys{
+						"type": Equal("rode"),
+					}),
+					"properties": MatchAllKeys(Keys{
+						"name": MatchAllKeys(Keys{
+							"type": Equal("keyword"),
+						}),
+					}),
+					"dynamic_templates": ConsistOf(MatchAllKeys(Keys{
+						"strings_as_keywords": MatchAllKeys(Keys{
+							"match_mapping_type": Equal("string"),
+							"mapping": MatchAllKeys(Keys{
+								"norms": Equal(false),
+								"type":  Equal("keyword"),
+							}),
+						}),
+					})),
+				}),
+			}))
+		})
+
+		It("should return the initialized rode server", func() {
+			Expect(actualRodeServer).ToNot(BeNil())
+			Expect(actualErr).ToNot(HaveOccurred())
+		})
+
+		When("getting the rode project fails", func() {
+			BeforeEach(func() {
+				expectedGetProjectError = status.Error(codes.Internal, "getting project failed")
 			})
 
-			When("an unexpected status code is returned from the create index call", func() {
-				BeforeEach(func() {
-					esTransport.preparedHttpResponses[0].StatusCode = http.StatusInternalServerError
-				})
-
-				It("should return an error", func() {
-					Expect(actualError).To(HaveOccurred())
-				})
-
-				It("should not make any further requests", func() {
-					Expect(esTransport.receivedHttpRequests).To(HaveLen(1))
-				})
+			It("should return an error", func() {
+				Expect(actualRodeServer).To(BeNil())
+				Expect(actualErr).To(HaveOccurred())
 			})
 
-			When("an error occurs during the request", func() {
-				BeforeEach(func() {
-					esTransport.actions = []func(req *http.Request) (*http.Response, error){
-						func(req *http.Request) (*http.Response, error) {
-							return nil, errors.New(gofakeit.Word())
-						},
-					}
-				})
-
-				It("should return an error", func() {
-					Expect(actualError).To(HaveOccurred())
-				})
+			It("should not create a project", func() {
+				Expect(grafeasProjectsClient.CreateProjectCallCount()).To(Equal(0))
 			})
 
-			When("the index already exists", func() {
-				BeforeEach(func() {
-					esTransport.preparedHttpResponses[0].StatusCode = http.StatusBadRequest
-				})
-
-				It("should not return an error", func() {
-					Expect(actualError).NotTo(HaveOccurred())
-				})
+			It("should not attempt to create indices", func() {
+				Expect(esTransport.receivedHttpRequests).To(HaveLen(0))
 			})
 		})
 
 		When("the rode project does not exist", func() {
-			var (
-				createProjectRequest = &grafeas_project_proto.CreateProjectRequest{
-					Project: &grafeas_project_proto.Project{Name: "projects/rode"},
-				}
-			)
 			BeforeEach(func() {
-				grafeasProjectsClient.
-					EXPECT().
-					GetProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(getProjectRequest)).
-					Return(nil, status.Error(codes.NotFound, "Not found"))
+				expectedGetProjectError = status.Error(codes.NotFound, "not found")
 			})
 
 			It("should create the rode project", func() {
-				grafeasProjectsClient.
-					EXPECT().
-					CreateProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(createProjectRequest))
+				Expect(grafeasProjectsClient.CreateProjectCallCount()).To(Equal(1))
 
-				rodeServer, rodeServerError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer, elasticsearchConfig)
+				_, createProjectRequest, _ := grafeasProjectsClient.CreateProjectArgsForCall(0)
+				Expect(createProjectRequest.Project.Name).To(Equal(rodeProjectSlug))
 			})
 
-			When("create project returns error from Grafeas", func() {
+			When("creating the rode project fails", func() {
 				BeforeEach(func() {
-					grafeasProjectsClient.
-						EXPECT().
-						CreateProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(createProjectRequest)).Return(nil, status.Error(codes.Internal, createProjectError))
+					expectedCreateProjectError = errors.New("create project failed")
 				})
 
-				It("should returns error", func() {
-					rodeServer, rodeServerError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer, elasticsearchConfig)
-
-					Expect(rodeServerError).To(HaveOccurred())
-					Expect(rodeServerError.Error()).To(ContainSubstring(createProjectError))
-				})
-			})
-
-			When("create project succeeds", func() {
-				BeforeEach(func() {
-					grafeasProjectsClient.
-						EXPECT().
-						CreateProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(createProjectRequest)).Return(&grafeas_project_proto.Project{}, nil)
+				It("should return an error", func() {
+					Expect(actualRodeServer).To(BeNil())
+					Expect(actualErr).To(HaveOccurred())
 				})
 
-				It("should return the Rode server", func() {
-					rodeServer, rodeServerError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer, elasticsearchConfig)
-
-					Expect(rodeServer).ToNot(BeNil())
-					Expect(rodeServerError).ToNot(HaveOccurred())
+				It("should not attempt to create indices", func() {
+					Expect(esTransport.receivedHttpRequests).To(HaveLen(0))
 				})
 			})
 		})
 
-		When("rode project exists", func() {
+		When("creating the first index fails", func() {
 			BeforeEach(func() {
-				grafeasProjectsClient.
-					EXPECT().
-					GetProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(getProjectRequest)).
-					Return(&grafeas_project_proto.Project{}, nil)
-			})
-
-			It("should not attempt to create the project", func() {
-				grafeasProjectsClient.
-					EXPECT().
-					CreateProject(gomock.Any(), gomock.Any()).MaxTimes(0)
-
-				rodeServer, rodeServerError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer, elasticsearchConfig)
-			})
-
-			It("should return the Rode server", func() {
-				rodeServer, rodeServerError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer, elasticsearchConfig)
-
-				Expect(rodeServer).ToNot(BeNil())
-				Expect(rodeServerError).To(BeNil())
-			})
-		})
-
-		When("fetching the rode project it returns an error", func() {
-			BeforeEach(func() {
-				grafeasProjectsClient.
-					EXPECT().
-					GetProject(gomock.AssignableToTypeOf(context.Background()), gomock.Eq(getProjectRequest)).
-					Return(nil, status.Error(codes.Internal, getProjectError))
+				esTransport.preparedHttpResponses[0].StatusCode = http.StatusInternalServerError
 			})
 
 			It("should return an error", func() {
-				rodeServer, rodeServerError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer, elasticsearchConfig)
+				Expect(actualRodeServer).To(BeNil())
+				Expect(actualErr).To(HaveOccurred())
+			})
 
-				Expect(rodeServerError).To(HaveOccurred())
-				Expect(rodeServerError.Error()).To(ContainSubstring(getProjectError))
+			It("should not attempt to create another index", func() {
+				Expect(esTransport.receivedHttpRequests).To(HaveLen(1))
+			})
+		})
+
+		When("creating the first index errors", func() {
+			BeforeEach(func() {
+				esTransport.actions = []func(req *http.Request) (*http.Response, error){
+					func(req *http.Request) (*http.Response, error) {
+						return nil, errors.New(gofakeit.Word())
+					},
+				}
+			})
+
+			It("should return an error", func() {
+				Expect(actualRodeServer).To(BeNil())
+				Expect(actualErr).To(HaveOccurred())
+			})
+
+			It("should not attempt to create another index", func() {
+				Expect(esTransport.receivedHttpRequests).To(HaveLen(1))
+			})
+		})
+
+		When("creating the second index fails", func() {
+			BeforeEach(func() {
+				esTransport.preparedHttpResponses[1].StatusCode = http.StatusInternalServerError
+			})
+
+			It("should return an error", func() {
+				Expect(actualRodeServer).To(BeNil())
+				Expect(actualErr).To(HaveOccurred())
+			})
+		})
+
+		When("creating the second index errors", func() {
+			BeforeEach(func() {
+				esTransport.actions = []func(req *http.Request) (*http.Response, error){
+					nil,
+					func(req *http.Request) (*http.Response, error) {
+						return nil, errors.New(gofakeit.Word())
+					},
+				}
+			})
+
+			It("should return an error", func() {
+				Expect(actualRodeServer).To(BeNil())
+				Expect(actualErr).To(HaveOccurred())
+			})
+		})
+
+		When("the first index already exists", func() {
+			BeforeEach(func() {
+				esTransport.preparedHttpResponses[0].StatusCode = http.StatusBadRequest
+			})
+
+			It("should return the initialized rode server", func() {
+				Expect(actualRodeServer).ToNot(BeNil())
+				Expect(actualErr).ToNot(HaveOccurred())
+			})
+		})
+
+		When("the second index already exists", func() {
+			BeforeEach(func() {
+				esTransport.preparedHttpResponses[1].StatusCode = http.StatusBadRequest
+			})
+
+			It("should return the initialized rode server", func() {
+				Expect(actualRodeServer).ToNot(BeNil())
+				Expect(actualErr).ToNot(HaveOccurred())
 			})
 		})
 	})
