@@ -1696,6 +1696,137 @@ var _ = Describe("rode server", func() {
 		})
 	})
 
+	Context("RegisterCollector", func() {
+		var (
+			actualRegisterCollectorResponse *pb.RegisterCollectorResponse
+			actualRegisterCollectorError    error
+
+			expectedCollectorId              string
+			expectedRegisterCollectorRequest *pb.RegisterCollectorRequest
+
+			expectedListNotesResponse *grafeas_proto.ListNotesResponse
+			expectedListNotesError    error
+
+			expectedBatchCreateNotesResponse *grafeas_proto.BatchCreateNotesResponse
+			expectedBatchCreateNotesError    error
+
+			expectedNotes []*grafeas_proto.Note
+		)
+
+		BeforeEach(func() {
+			expectedDiscoveryNote := &grafeas_proto.Note{
+				ShortDescription: "Harbor Image Scan",
+				Kind:             grafeas_common_proto.NoteKind_DISCOVERY,
+			}
+			expectedAttestationNote := &grafeas_proto.Note{
+				ShortDescription: "Harbor Attestation",
+				Kind:             grafeas_common_proto.NoteKind_ATTESTATION,
+			}
+			expectedNotes = []*grafeas_proto.Note{
+				expectedDiscoveryNote,
+				expectedAttestationNote,
+			}
+			expectedCollectorId = gofakeit.LetterN(10)
+			expectedRegisterCollectorRequest = &pb.RegisterCollectorRequest{
+				Id:    expectedCollectorId,
+				Notes: expectedNotes,
+			}
+
+			// happy path: notes do not already exist
+			expectedListNotesResponse = &grafeas_proto.ListNotesResponse{
+				Notes: []*grafeas_proto.Note{},
+			}
+			expectedListNotesError = nil
+
+			// when notes are returned, their name should not be empty
+			expectedCreatedDiscoveryNote := deepCopyNote(expectedDiscoveryNote)
+			expectedCreatedAttestationNote := deepCopyNote(expectedAttestationNote)
+
+			expectedCreatedDiscoveryNote.Name = fmt.Sprintf("%s/notes/%s", rodeProjectSlug, buildNoteIdFromCollectorId(expectedCollectorId, expectedCreatedDiscoveryNote))
+			expectedCreatedAttestationNote.Name = fmt.Sprintf("%s/notes/%s", rodeProjectSlug, buildNoteIdFromCollectorId(expectedCollectorId, expectedCreatedAttestationNote))
+
+			expectedBatchCreateNotesResponse = &grafeas_proto.BatchCreateNotesResponse{
+				Notes: []*grafeas_proto.Note{
+					expectedCreatedDiscoveryNote,
+					expectedCreatedAttestationNote,
+				},
+			}
+			expectedBatchCreateNotesError = nil
+		})
+
+		JustBeforeEach(func() {
+			grafeasClient.ListNotesReturns(expectedListNotesResponse, expectedListNotesError)
+			grafeasClient.BatchCreateNotesReturns(expectedBatchCreateNotesResponse, expectedBatchCreateNotesError)
+
+			actualRegisterCollectorResponse, actualRegisterCollectorError = server.RegisterCollector(ctx, expectedRegisterCollectorRequest)
+		})
+
+		It("should search grafeas for the notes", func() {
+			Expect(grafeasClient.ListNotesCallCount()).To(Equal(1))
+
+			_, listNotesRequest, _ := grafeasClient.ListNotesArgsForCall(0)
+			Expect(listNotesRequest.Parent).To(Equal(rodeProjectSlug))
+			Expect(listNotesRequest.Filter).To(Equal(fmt.Sprintf(`name.startsWith("%s/notes/%s-")`, rodeProjectSlug, expectedCollectorId)))
+		})
+
+		It("should create the missing notes", func() {
+			Expect(grafeasClient.BatchCreateNotesCallCount()).To(Equal(1))
+
+			_, batchCreateNotesRequest, _ := grafeasClient.BatchCreateNotesArgsForCall(0)
+			Expect(batchCreateNotesRequest.Parent).To(Equal(rodeProjectSlug))
+			Expect(batchCreateNotesRequest.Notes).To(ConsistOf(expectedNotes))
+		})
+
+		It("should return the collector's notes", func() {
+			Expect(actualRegisterCollectorResponse).ToNot(BeNil())
+			Expect(actualRegisterCollectorResponse.Notes).To(HaveLen(len(expectedNotes)))
+			for _, note := range expectedNotes {
+				note.Name = buildNoteIdFromCollectorId(expectedCollectorId, note)
+				Expect(actualRegisterCollectorResponse.Notes).To(ContainElement(note))
+			}
+
+			Expect(actualRegisterCollectorError).ToNot(HaveOccurred())
+		})
+
+		When("a note already exists", func() {
+			BeforeEach(func() {
+				expectedNoteThatAlreadyExists := deepCopyNote(expectedNotes[0])
+				expectedNoteThatAlreadyExists.Name = fmt.Sprintf("%s/notes/%s", rodeProjectSlug, buildNoteIdFromCollectorId(expectedCollectorId, expectedNoteThatAlreadyExists))
+
+				expectedListNotesResponse.Notes = []*grafeas_proto.Note{
+					expectedNoteThatAlreadyExists,
+				}
+			})
+
+			It("should not attempt to create that note", func() {
+				Expect(grafeasClient.BatchCreateNotesCallCount()).To(Equal(1))
+
+				_, batchCreateNotesRequest, _ := grafeasClient.BatchCreateNotesArgsForCall(0)
+				Expect(batchCreateNotesRequest.Parent).To(Equal(rodeProjectSlug))
+				Expect(batchCreateNotesRequest.Notes).To(HaveLen(1))
+				Expect(batchCreateNotesRequest.Notes).To(ContainElement(expectedNotes[1]))
+			})
+		})
+
+		When("both notes already exist", func() {
+			BeforeEach(func() {
+				var notesThatAlreadyExist []*grafeas_proto.Note
+				for _, note := range expectedNotes {
+					noteThatAlreadyExists := deepCopyNote(note)
+					noteThatAlreadyExists.Name = fmt.Sprintf("%s/notes/%s", rodeProjectSlug, buildNoteIdFromCollectorId(expectedCollectorId, noteThatAlreadyExists))
+
+					notesThatAlreadyExist = append(notesThatAlreadyExist, noteThatAlreadyExists)
+				}
+
+				expectedListNotesResponse.Notes = notesThatAlreadyExist
+			})
+
+			It("should not attempt to create any notes", func() {
+				Expect(grafeasClient.BatchCreateNotesCallCount()).To(Equal(0))
+			})
+		})
+	})
+
 	When("creating a policy without a name", func() {
 		var (
 			policyEntity   *pb.PolicyEntity
@@ -2520,5 +2651,14 @@ func createRandomPolicyEntity(policy string) *pb.PolicyEntity {
 		Description: gofakeit.LetterN(50),
 		RegoContent: policy,
 		SourcePath:  gofakeit.URL(),
+	}
+}
+
+func deepCopyNote(note *grafeas_proto.Note) *grafeas_proto.Note {
+	return &grafeas_proto.Note{
+		Name:             note.Name,
+		ShortDescription: note.ShortDescription,
+		LongDescription:  note.LongDescription,
+		Kind:             note.Kind,
 	}
 }
