@@ -26,7 +26,7 @@ import (
 
 var logger *zap.Logger
 
-func TestAPIs(t *testing.T) {
+func TestServer(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Server Suite")
 }
