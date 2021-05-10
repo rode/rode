@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/common_go_proto"
 	"net/http"
 	"strconv"
 	"strings"
@@ -777,6 +778,76 @@ func (r *rodeServer) UpdatePolicy(ctx context.Context, updatePolicyRequest *pb.U
 	return policy, nil
 }
 
+func (r *rodeServer) RegisterCollector(ctx context.Context, registerCollectorRequest *pb.RegisterCollectorRequest) (*pb.RegisterCollectorResponse, error) {
+	log := r.logger.Named("RegisterCollector")
+
+	if registerCollectorRequest.Id == "" {
+		return nil, createErrorWithCode(log, "collector ID is required", nil, codes.InvalidArgument)
+	}
+
+	if len(registerCollectorRequest.Notes) == 0 {
+		return &pb.RegisterCollectorResponse{}, nil
+	}
+
+	// build collection of notes that potentially need to be created
+	notesWithIds := make(map[string]*grafeas_proto.Note)
+	notesToCreate := make(map[string]*grafeas_proto.Note)
+	for _, note := range registerCollectorRequest.Notes {
+		noteId := buildNoteIdFromCollectorId(registerCollectorRequest.Id, note)
+
+		if _, ok := notesWithIds[noteId]; ok {
+			return nil, createErrorWithCode(log, "cannot use more than one note type when registering a collector", nil, codes.InvalidArgument)
+		}
+
+		notesWithIds[noteId] = note
+		notesToCreate[noteId] = note
+	}
+
+	log = log.With(zap.Any("notes", notesWithIds))
+
+	// find out which notes already exist
+	filter := fmt.Sprintf(`name.startsWith("%s/notes/%s-")`, rodeProjectSlug, registerCollectorRequest.Id)
+	listNotesResponse, err := r.grafeasCommon.ListNotes(ctx, &grafeas_proto.ListNotesRequest{
+		Parent: rodeProjectSlug,
+		Filter: filter,
+	})
+	if err != nil {
+		return nil, createError(log, "error listing notes", err)
+	}
+
+	// build map of notes that need to be created
+	for _, note := range listNotesResponse.Notes {
+		noteId := getNoteIdFromNoteName(note.Name)
+
+		if _, ok := notesWithIds[noteId]; ok {
+			notesWithIds[noteId].Name = note.Name
+			delete(notesToCreate, noteId)
+		}
+	}
+
+	if len(notesToCreate) != 0 {
+		batchCreateNotesResponse, err := r.grafeasCommon.BatchCreateNotes(ctx, &grafeas_proto.BatchCreateNotesRequest{
+			Parent: rodeProjectSlug,
+			Notes:  notesToCreate,
+		})
+		if err != nil {
+			return nil, createError(log, "error creating notes", err)
+		}
+
+		for _, note := range batchCreateNotesResponse.Notes {
+			noteId := getNoteIdFromNoteName(note.Name)
+
+			if _, ok := notesWithIds[noteId]; ok {
+				notesWithIds[noteId].Name = note.Name
+			}
+		}
+	}
+
+	return &pb.RegisterCollectorResponse{
+		Notes: notesWithIds,
+	}, nil
+}
+
 func (r *rodeServer) createIndex(ctx context.Context, settings indexSetting) error {
 	mappings := map[string]interface{}{
 		"mappings": map[string]interface{}{
@@ -1056,13 +1127,7 @@ func (r *rodeServer) handlePagination(ctx context.Context, log *zap.Logger, body
 
 // createError is a helper function that allows you to easily log an error and return a gRPC formatted error.
 func createError(log *zap.Logger, message string, err error, fields ...zap.Field) error {
-	if err == nil {
-		log.Error(message, fields...)
-		return status.Errorf(codes.Internal, "%s", message)
-	}
-
-	log.Error(message, append(fields, zap.Error(err))...)
-	return status.Errorf(codes.Internal, "%s: %s", message, err)
+	return createErrorWithCode(log, message, err, codes.Internal, fields...)
 }
 
 // createError is a helper function that allows you to easily log an error and return a gRPC formatted error.
@@ -1091,4 +1156,32 @@ func withRefreshBool(o config.RefreshOption) bool {
 		return false
 	}
 	return true
+}
+
+func buildNoteIdFromCollectorId(collectorId string, note *grafeas_proto.Note) string {
+	switch note.Kind {
+	case common_go_proto.NoteKind_VULNERABILITY:
+		return fmt.Sprintf("%s-vulnerability", collectorId)
+	case common_go_proto.NoteKind_BUILD:
+		return fmt.Sprintf("%s-build", collectorId)
+	case common_go_proto.NoteKind_IMAGE:
+		return fmt.Sprintf("%s-image", collectorId)
+	case common_go_proto.NoteKind_PACKAGE:
+		return fmt.Sprintf("%s-package", collectorId)
+	case common_go_proto.NoteKind_DEPLOYMENT:
+		return fmt.Sprintf("%s-deployment", collectorId)
+	case common_go_proto.NoteKind_DISCOVERY:
+		return fmt.Sprintf("%s-discovery", collectorId)
+	case common_go_proto.NoteKind_ATTESTATION:
+		return fmt.Sprintf("%s-attestation", collectorId)
+	case common_go_proto.NoteKind_INTOTO:
+		return fmt.Sprintf("%s-intoto", collectorId)
+	}
+
+	return fmt.Sprintf("%s-unspecified", collectorId)
+}
+
+func getNoteIdFromNoteName(noteName string) string {
+	// note name format: projects/${projectId}/notes/${noteId}
+	return strings.TrimPrefix(noteName, rodeProjectSlug+"/notes/")
 }

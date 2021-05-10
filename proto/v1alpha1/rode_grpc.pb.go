@@ -36,6 +36,11 @@ type RodeClient interface {
 	ListPolicies(ctx context.Context, in *ListPoliciesRequest, opts ...grpc.CallOption) (*ListPoliciesResponse, error)
 	ValidatePolicy(ctx context.Context, in *ValidatePolicyRequest, opts ...grpc.CallOption) (*ValidatePolicyResponse, error)
 	UpdatePolicy(ctx context.Context, in *UpdatePolicyRequest, opts ...grpc.CallOption) (*Policy, error)
+	// RegisterCollector accepts a collector ID and a list of notes that this collector will reference when creating
+	// occurrences. The response will contain the notes with the fully qualified note name. This operation is idempotent,
+	// so any notes that already exist will not be re-created. Collectors are expected to invoke this RPC each time they
+	// start.
+	RegisterCollector(ctx context.Context, in *RegisterCollectorRequest, opts ...grpc.CallOption) (*RegisterCollectorResponse, error)
 }
 
 type rodeClient struct {
@@ -163,6 +168,15 @@ func (c *rodeClient) UpdatePolicy(ctx context.Context, in *UpdatePolicyRequest, 
 	return out, nil
 }
 
+func (c *rodeClient) RegisterCollector(ctx context.Context, in *RegisterCollectorRequest, opts ...grpc.CallOption) (*RegisterCollectorResponse, error) {
+	out := new(RegisterCollectorResponse)
+	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/RegisterCollector", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RodeServer is the server API for Rode service.
 // All implementations must embed UnimplementedRodeServer
 // for forward compatibility
@@ -183,6 +197,11 @@ type RodeServer interface {
 	ListPolicies(context.Context, *ListPoliciesRequest) (*ListPoliciesResponse, error)
 	ValidatePolicy(context.Context, *ValidatePolicyRequest) (*ValidatePolicyResponse, error)
 	UpdatePolicy(context.Context, *UpdatePolicyRequest) (*Policy, error)
+	// RegisterCollector accepts a collector ID and a list of notes that this collector will reference when creating
+	// occurrences. The response will contain the notes with the fully qualified note name. This operation is idempotent,
+	// so any notes that already exist will not be re-created. Collectors are expected to invoke this RPC each time they
+	// start.
+	RegisterCollector(context.Context, *RegisterCollectorRequest) (*RegisterCollectorResponse, error)
 	mustEmbedUnimplementedRodeServer()
 }
 
@@ -228,6 +247,9 @@ func (UnimplementedRodeServer) ValidatePolicy(context.Context, *ValidatePolicyRe
 }
 func (UnimplementedRodeServer) UpdatePolicy(context.Context, *UpdatePolicyRequest) (*Policy, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdatePolicy not implemented")
+}
+func (UnimplementedRodeServer) RegisterCollector(context.Context, *RegisterCollectorRequest) (*RegisterCollectorResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RegisterCollector not implemented")
 }
 func (UnimplementedRodeServer) mustEmbedUnimplementedRodeServer() {}
 
@@ -476,6 +498,24 @@ func _Rode_UpdatePolicy_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Rode_RegisterCollector_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegisterCollectorRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RodeServer).RegisterCollector(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rode.v1alpha1.Rode/RegisterCollector",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RodeServer).RegisterCollector(ctx, req.(*RegisterCollectorRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Rode_ServiceDesc is the grpc.ServiceDesc for Rode service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -534,6 +574,10 @@ var Rode_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdatePolicy",
 			Handler:    _Rode_UpdatePolicy_Handler,
+		},
+		{
+			MethodName: "RegisterCollector",
+			Handler:    _Rode_RegisterCollector_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -30,6 +30,9 @@
     - [ListResourcesResponse](#rode.v1alpha1.ListResourcesResponse)
     - [ListVersionedResourceOccurrencesRequest](#rode.v1alpha1.ListVersionedResourceOccurrencesRequest)
     - [ListVersionedResourceOccurrencesResponse](#rode.v1alpha1.ListVersionedResourceOccurrencesResponse)
+    - [RegisterCollectorRequest](#rode.v1alpha1.RegisterCollectorRequest)
+    - [RegisterCollectorResponse](#rode.v1alpha1.RegisterCollectorResponse)
+    - [RegisterCollectorResponse.NotesEntry](#rode.v1alpha1.RegisterCollectorResponse.NotesEntry)
     - [UpdateOccurrenceRequest](#rode.v1alpha1.UpdateOccurrenceRequest)
   
     - [Rode](#rode.v1alpha1.Rode)
@@ -458,6 +461,53 @@ https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576
 
 
 
+<a name="rode.v1alpha1.RegisterCollectorRequest"></a>
+
+### RegisterCollectorRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| notes | [grafeas.v1beta1.Note](#grafeas.v1beta1.Note) | repeated |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.RegisterCollectorResponse"></a>
+
+### RegisterCollectorResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| notes | [RegisterCollectorResponse.NotesEntry](#rode.v1alpha1.RegisterCollectorResponse.NotesEntry) | repeated |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.RegisterCollectorResponse.NotesEntry"></a>
+
+### RegisterCollectorResponse.NotesEntry
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| key | [string](#string) |  |  |
+| value | [grafeas.v1beta1.Note](#grafeas.v1beta1.Note) |  |  |
+
+
+
+
+
+
 <a name="rode.v1alpha1.UpdateOccurrenceRequest"></a>
 
 ### UpdateOccurrenceRequest
@@ -501,6 +551,7 @@ https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576
 | ListPolicies | [ListPoliciesRequest](#rode.v1alpha1.ListPoliciesRequest) | [ListPoliciesResponse](#rode.v1alpha1.ListPoliciesResponse) |  |
 | ValidatePolicy | [ValidatePolicyRequest](#rode.v1alpha1.ValidatePolicyRequest) | [ValidatePolicyResponse](#rode.v1alpha1.ValidatePolicyResponse) |  |
 | UpdatePolicy | [UpdatePolicyRequest](#rode.v1alpha1.UpdatePolicyRequest) | [Policy](#rode.v1alpha1.Policy) |  |
+| RegisterCollector | [RegisterCollectorRequest](#rode.v1alpha1.RegisterCollectorRequest) | [RegisterCollectorResponse](#rode.v1alpha1.RegisterCollectorResponse) | RegisterCollector accepts a collector ID and a list of notes that this collector will reference when creating occurrences. The response will contain the notes with the fully qualified note name. This operation is idempotent, so any notes that already exist will not be re-created. Collectors are expected to invoke this RPC each time they start. |
 
  
 
