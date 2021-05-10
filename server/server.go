@@ -817,10 +817,7 @@ func (r *rodeServer) RegisterCollector(ctx context.Context, registerCollectorReq
 
 	// build map of notes that need to be created
 	for _, note := range listNotesResponse.Notes {
-		noteId, err := getNoteIdFromNoteName(note.Name)
-		if err != nil {
-			return nil, createError(log, "error parsing note id", nil)
-		}
+		noteId := getNoteIdFromNoteName(note.Name)
 
 		if _, ok := notesWithIds[noteId]; ok {
 			notesWithIds[noteId].Name = note.Name
@@ -838,10 +835,7 @@ func (r *rodeServer) RegisterCollector(ctx context.Context, registerCollectorReq
 		}
 
 		for _, note := range batchCreateNotesResponse.Notes {
-			noteId, err := getNoteIdFromNoteName(note.Name)
-			if err != nil {
-				return nil, createError(log, "error parsing note id", nil)
-			}
+			noteId := getNoteIdFromNoteName(note.Name)
 
 			if _, ok := notesWithIds[noteId]; ok {
 				notesWithIds[noteId].Name = note.Name
@@ -1187,13 +1181,7 @@ func buildNoteIdFromCollectorId(collectorId string, note *grafeas_proto.Note) st
 	return fmt.Sprintf("%s-unspecified", collectorId)
 }
 
-func getNoteIdFromNoteName(noteName string) (string, error) {
+func getNoteIdFromNoteName(noteName string) string {
 	// note name format: projects/${projectId}/notes/${noteId}
-	parts := strings.Split(noteName, "/")
-
-	if len(parts) != 4 {
-		return "", fmt.Errorf("expected note name to adhere to format projects/${projectId}/notes/${noteId}, got %s", noteName)
-	}
-
-	return parts[3], nil
+	return strings.TrimPrefix(noteName, rodeProjectSlug+"/notes/")
 }

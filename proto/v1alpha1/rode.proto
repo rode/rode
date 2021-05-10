@@ -109,7 +109,7 @@ service Rode {
   // start.
   rpc RegisterCollector(RegisterCollectorRequest) returns (RegisterCollectorResponse) {
     option (google.api.http) = {
-      post: "/v1alpha1/collectors:register"
+      post: "/v1alpha1/collectors/{id}:register"
       body: "*"
     };
   }

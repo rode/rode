@@ -1250,12 +1250,6 @@ var _ = Describe("rode server", func() {
 				},
 			}
 
-			//grafeasUpdateRequest = &grafeas_go_proto.UpdateOccurrenceRequest{
-			//	Name:       occurrenceName,
-			//	Occurrence: expectedOccurrence,
-			//	UpdateMask: expectedUpdateOccurrenceRequest.UpdateMask,
-			//}
-
 			expectedGrafeasUpdateOccurrenceResponse = createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED)
 			expectedGrafeasUpdateOccurrenceError = nil
 		})
@@ -1332,11 +1326,7 @@ var _ = Describe("rode server", func() {
 				createRandomOccurrence(grafeas_common_proto.NoteKind_VULNERABILITY),
 				createRandomOccurrence(grafeas_common_proto.NoteKind_ATTESTATION),
 			}
-			//listOccurrencesRequest = &grafeas_proto.ListOccurrencesRequest{
-			//	Parent:   "projects/rode",
-			//	PageSize: maxPageSize,
-			//	Filter:   fmt.Sprintf(`"resource.uri" == "%s"`, resourceURI),
-			//}
+
 			evaluatePolicyRequest = &pb.EvaluatePolicyRequest{
 				ResourceUri: resourceURI,
 				Policy:      policy,
