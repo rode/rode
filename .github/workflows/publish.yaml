@@ -31,3 +31,34 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCKER_BUILDKIT: 1
+  chart-promote:
+    needs: goreleaser
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          repository: rode/charts
+      - name: Get tag
+        id: tag
+        run: echo ::set-output name=TAG::${GITHUB_REF#refs/tags/v}
+      - name: Increment chart version
+        uses: liatrio/github-actions/gitops-semver-increment-yaml@master
+        with:
+          file: charts/rode/Chart.yaml
+          path: version
+          position: PATCH
+      - name: Update application version
+        uses: liatrio/github-actions/gitops-update-yaml@master
+        with:
+          file: charts/rode/Chart.yaml
+          path: appVersion
+          value: ${{ steps.tag.outputs.TAG }}
+      - name: Create pull request
+        uses: liatrio/github-actions/gitops-gh-pr@master
+        with:
+          repo: rode/charts
+          token: ${{ secrets.GITOPS_TOKEN }}
+          message: "update Rode app version to ${{ steps.tag.outputs.TAG }}"
