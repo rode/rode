@@ -24,10 +24,13 @@ import (
 	"net/http"
 )
 
+//go:generate counterfeiter -generate
+
 const (
 	rodeElasticsearchGenericResourcesIndex = "rode-v1alpha1-generic-resources"
 )
 
+//counterfeiter:generate . Manager
 type Manager interface {
 	BatchCreateGenericResources(context.Context, *pb.BatchCreateOccurrencesRequest) error
 }

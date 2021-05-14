@@ -16,4 +16,3 @@ package mocks
 
 //go:generate counterfeiter -o grafeas_client.go github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto.GrafeasV1Beta1Client
 //go:generate counterfeiter -o grafeas_projects_client.go github.com/rode/rode/protodeps/grafeas/proto/v1beta1/project_go_proto.ProjectsClient
-//go:generate counterfeiter --fake-name FakeEsClient -o es_client.go github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil.Client

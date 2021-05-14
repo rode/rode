@@ -21,8 +21,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
+	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil/esutilfakes"
 	"github.com/rode/rode/config"
-	"github.com/rode/rode/mocks"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	grafeas_common_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/common_go_proto"
 	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
@@ -34,7 +34,7 @@ var _ = Describe("resource manager", func() {
 	var (
 		ctx      context.Context
 		manager  Manager
-		esClient *mocks.FakeEsClient
+		esClient *esutilfakes.FakeClient
 		esConfig *config.ElasticsearchConfig
 	)
 
@@ -43,7 +43,7 @@ var _ = Describe("resource manager", func() {
 		esConfig = &config.ElasticsearchConfig{
 			Refresh: config.RefreshTrue,
 		}
-		esClient = &mocks.FakeEsClient{}
+		esClient = &esutilfakes.FakeClient{}
 	})
 
 	JustBeforeEach(func() {
