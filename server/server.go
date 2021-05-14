@@ -17,9 +17,9 @@ package server
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/rode/rode/pkg/resource"
 	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/common_go_proto"
 	"net/http"
 	"strconv"
@@ -67,6 +67,7 @@ func NewRodeServer(
 	esClient *elasticsearch.Client,
 	filterer filtering.Filterer,
 	elasticsearchConfig *config.ElasticsearchConfig,
+	resourceManager resource.Manager,
 ) (pb.RodeServer, error) {
 	rodeServer := &rodeServer{
 		logger:              logger,
@@ -76,6 +77,7 @@ func NewRodeServer(
 		esClient:            esClient,
 		filterer:            filterer,
 		elasticsearchConfig: elasticsearchConfig,
+		resouceManager:      resourceManager,
 	}
 	if err := rodeServer.initialize(context.Background()); err != nil {
 		return nil, fmt.Errorf("failed to initialize rode server: %s", err)
@@ -93,111 +95,14 @@ type rodeServer struct {
 	grafeasProjects     grafeas_project_proto.ProjectsClient
 	opa                 opa.Client
 	elasticsearchConfig *config.ElasticsearchConfig
-}
-
-func (r *rodeServer) batchCreateGenericResources(ctx context.Context, occurrenceRequest *pb.BatchCreateOccurrencesRequest) error {
-	log := r.logger.Named("batchCreateGenericResources")
-
-	visitedResources := map[string]bool{}
-	var resourceNames []string
-	for _, x := range occurrenceRequest.Occurrences {
-		uriParts, err := parseResourceUri(x.Resource.Uri)
-		if err != nil {
-			return err
-		}
-		resourceName := uriParts.name
-		if _, ok := visitedResources[resourceName]; ok {
-			continue
-		}
-		visitedResources[resourceName] = true
-		resourceNames = append(resourceNames, resourceName)
-	}
-
-	mgetBody, _ := esutil.EncodeRequest(&esutil.EsMultiGetRequest{IDs: resourceNames})
-
-	res, err := r.esClient.Mget(mgetBody, r.esClient.Mget.WithContext(ctx), r.esClient.Mget.WithIndex(rodeElasticsearchGenericResourcesIndex))
-	if err != nil {
-		return err
-	}
-	if res.IsError() {
-		return fmt.Errorf("unexpected response from elasticsearch: %s", res.String())
-	}
-
-	mGetResponse := esutil.EsMultiGetResponse{}
-	if err := esutil.DecodeResponse(res.Body, &mGetResponse); err != nil {
-		return err
-	}
-
-	var body bytes.Buffer
-	for i := range resourceNames {
-		resourceName := resourceNames[i]
-		existingDocument := mGetResponse.Docs[i]
-		if existingDocument.Found {
-			log.Debug("skipping resource creation because it already exists", zap.String("resourceName", resourceName))
-			continue
-		}
-
-		log.Debug("Adding resource to bulk request", zap.String("resourceName", resourceName))
-
-		metadata, _ := json.Marshal(esutil.EsBulkQueryFragment{
-			Create: &esutil.EsBulkQueryCreateFragment{
-				Id: resourceName,
-			},
-		})
-		metadata = append(metadata, "\n"...)
-
-		data, _ := protojson.MarshalOptions{EmitUnpopulated: true}.Marshal(proto.MessageV2(&pb.GenericResource{Name: resourceName}))
-		data = append(data, "\n"...)
-
-		body.Grow(len(metadata) + len(data))
-		body.Write(metadata)
-		body.Write(data)
-	}
-
-	// no new generic resources to create
-	if body.Len() == 0 {
-		return nil
-	}
-
-	res, err = r.esClient.Bulk(
-		bytes.NewReader(body.Bytes()),
-		r.esClient.Bulk.WithContext(ctx),
-		r.esClient.Bulk.WithRefresh(r.elasticsearchConfig.Refresh.String()),
-		r.esClient.Bulk.WithIndex(rodeElasticsearchGenericResourcesIndex))
-	if err != nil {
-		return err
-	}
-	if res.IsError() {
-		return fmt.Errorf("unexpected response from elasticsearch: %s", res.String())
-	}
-
-	bulkResponse := &esutil.EsBulkResponse{}
-	err = esutil.DecodeResponse(res.Body, bulkResponse)
-	if err != nil {
-		return err
-	}
-
-	var bulkItemErrors []error
-	for i := range bulkResponse.Items {
-		item := bulkResponse.Items[i].Create
-		if item.Error != nil && item.Status != http.StatusConflict {
-			itemError := fmt.Errorf("error creating generic resource [%d] %s: %s", item.Status, item.Error.Type, item.Error.Reason)
-			bulkItemErrors = append(bulkItemErrors, itemError)
-		}
-	}
-
-	if len(bulkItemErrors) > 0 {
-		return fmt.Errorf("failed to create all resources: %v", bulkItemErrors)
-	}
-
-	return nil
+	resouceManager      resource.Manager
 }
 
 func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceRequest *pb.BatchCreateOccurrencesRequest) (*pb.BatchCreateOccurrencesResponse, error) {
 	log := r.logger.Named("BatchCreateOccurrences")
 	log.Debug("received request", zap.Any("BatchCreateOccurrencesRequest", occurrenceRequest))
 
-	if err := r.batchCreateGenericResources(ctx, occurrenceRequest); err != nil {
+	if err := r.resouceManager.BatchCreateGenericResources(ctx, occurrenceRequest); err != nil {
 		return nil, createError(log, "error creating generic resources", err)
 	}
 

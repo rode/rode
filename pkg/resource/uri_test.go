@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package server
+package resource
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -21,63 +21,63 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("util", func() {
+var _ = Describe("uri", func() {
 	Describe("parseResourceUri", func() {
-		DescribeTable("valid resource types", func(resourceUri string, expected *resourceUriComponents) {
+		DescribeTable("valid resource types", func(resourceUri string, expected *uriComponents) {
 			actual, err := parseResourceUri(resourceUri)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actual).To(Equal(expected))
 		},
-			Entry("Docker image", "https://gcr.io/scanning-customer/dockerimage@sha256:244fd47e07d1004f0aed9c156aa09083c82bf8944eceb67c946ff7430510a77b", &resourceUriComponents{
+			Entry("Docker image", "https://gcr.io/scanning-customer/dockerimage@sha256:244fd47e07d1004f0aed9c156aa09083c82bf8944eceb67c946ff7430510a77b", &uriComponents{
 				name:    "https://gcr.io/scanning-customer/dockerimage",
 				version: "244fd47e07d1004f0aed9c156aa09083c82bf8944eceb67c946ff7430510a77b",
 			}),
-			Entry("Debian package", "deb://lucid:i386:acl:2.2.49-2", &resourceUriComponents{
+			Entry("Debian package", "deb://lucid:i386:acl:2.2.49-2", &uriComponents{
 				name:    "acl",
 				version: "2.2.49-2",
 			}),
-			Entry("Debian package without a specified distribution", "deb://arm64:build-essential:12.9", &resourceUriComponents{
+			Entry("Debian package without a specified distribution", "deb://arm64:build-essential:12.9", &uriComponents{
 				name:    "build-essential",
 				version: "12.9",
 			}),
-			Entry("Generic file", "file://sha256:244fd47e07d1004f0aed9c156aa09083c82bf8944eceb67c946ff7430510a77b:foo.jar", &resourceUriComponents{
+			Entry("Generic file", "file://sha256:244fd47e07d1004f0aed9c156aa09083c82bf8944eceb67c946ff7430510a77b:foo.jar", &uriComponents{
 				name:    "foo.jar",
 				version: "244fd47e07d1004f0aed9c156aa09083c82bf8944eceb67c946ff7430510a77b",
 			}),
-			Entry("Maven package", "gav://ant:ant:1.6.5", &resourceUriComponents{
+			Entry("Maven package", "gav://ant:ant:1.6.5", &uriComponents{
 				name:    "ant:ant",
 				version: "1.6.5",
 			}),
-			Entry("npm package", "npm://mocha:2.4.5", &resourceUriComponents{
+			Entry("npm package", "npm://mocha:2.4.5", &uriComponents{
 				name:    "mocha",
 				version: "2.4.5",
 			}),
-			Entry("scoped npm package", "npm://@babel/core:7.13.14", &resourceUriComponents{
+			Entry("scoped npm package", "npm://@babel/core:7.13.14", &uriComponents{
 				name:    "@babel/core",
 				version: "7.13.14",
 			}),
-			Entry("NuGet", "nuget://log4net:9.0.1", &resourceUriComponents{
+			Entry("NuGet", "nuget://log4net:9.0.1", &uriComponents{
 				name:    "log4net",
 				version: "9.0.1",
 			}),
-			Entry("pip package", "pip://raven:5.13.0", &resourceUriComponents{
+			Entry("pip package", "pip://raven:5.13.0", &uriComponents{
 				name:    "raven",
 				version: "5.13.0",
 			}),
-			Entry("RPM package", "rpm://el6:i386:ImageMagick:6.7.2.7-4", &resourceUriComponents{
+			Entry("RPM package", "rpm://el6:i386:ImageMagick:6.7.2.7-4", &uriComponents{
 				name:    "ImageMagick",
 				version: "6.7.2.7-4",
 			}),
-			Entry("RPM without a specified distribution", "rpm://el6:i386:ImageMagick:6.7.2.7-4", &resourceUriComponents{
+			Entry("RPM without a specified distribution", "rpm://el6:i386:ImageMagick:6.7.2.7-4", &uriComponents{
 				name:    "ImageMagick",
 				version: "6.7.2.7-4",
 			}),
-			Entry("Git repository (GitHub)", "git://github.com/rode/rode@bca0e1b89be42a61131b6de09fd2836e7b00c252", &resourceUriComponents{
+			Entry("Git repository (GitHub)", "git://github.com/rode/rode@bca0e1b89be42a61131b6de09fd2836e7b00c252", &uriComponents{
 				name:    "github.com/rode/rode",
 				version: "bca0e1b89be42a61131b6de09fd2836e7b00c252",
 			}),
-			Entry("Git repository (Azure DevOps)", "git://dev.azure.com/rode/rode/_git/rode@bca0e1b89be42a61131b6de09fd2836e7b00c252", &resourceUriComponents{
+			Entry("Git repository (Azure DevOps)", "git://dev.azure.com/rode/rode/_git/rode@bca0e1b89be42a61131b6de09fd2836e7b00c252", &uriComponents{
 				name:    "dev.azure.com/rode/rode/_git/rode",
 				version: "bca0e1b89be42a61131b6de09fd2836e7b00c252",
 			}),

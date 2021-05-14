@@ -5,6 +5,7 @@ go 1.16
 require (
 	github.com/antlr/antlr4 v0.0.0-20210409163025-478e46409e82 // indirect
 	github.com/brianvoe/gofakeit/v5 v5.10.1
+	github.com/brianvoe/gofakeit/v6 v6.0.0
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/elastic/go-elasticsearch/v7 v7.12.0
@@ -25,7 +26,7 @@ require (
 	github.com/open-policy-agent/opa v0.27.1
 	github.com/pquerna/cachecontrol v0.1.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
-	github.com/rode/grafeas-elasticsearch v0.6.2
+	github.com/rode/grafeas-elasticsearch v0.6.4
 	github.com/soheilhy/cmux v0.1.4
 	go.uber.org/zap v1.16.0
 	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2 // indirect

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package server
+package resource
 
 import (
 	"fmt"
@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	resourceUriPatterns = []*regexp.Regexp{
+	uriPatterns = []*regexp.Regexp{
 		// Docker images
 		regexp.MustCompile("(?P<name>.+)(@sha256:)(?P<version>.+)"),
 		// Git repositories
@@ -42,15 +42,15 @@ var (
 	}
 )
 
-type resourceUriComponents struct {
+type uriComponents struct {
 	name    string
 	version string
 }
 
-func parseResourceUri(uri string) (*resourceUriComponents, error) {
+func parseResourceUri(uri string) (*uriComponents, error) {
 	var resourceRegex *regexp.Regexp
 
-	for _, pattern := range resourceUriPatterns {
+	for _, pattern := range uriPatterns {
 		if pattern.MatchString(uri) {
 			resourceRegex = pattern
 			break
@@ -65,5 +65,5 @@ func parseResourceUri(uri string) (*resourceUriComponents, error) {
 	name := matches[resourceRegex.SubexpIndex("name")]
 	version := matches[resourceRegex.SubexpIndex("version")]
 
-	return &resourceUriComponents{name, version}, nil
+	return &uriComponents{name, version}, nil
 }

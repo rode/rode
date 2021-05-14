@@ -30,3 +30,4 @@ mocks:
 	mockgen -package mocks github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering Filterer > mocks/grafeasElasticsearch.go
 	go install github.com/maxbrunsfeld/counterfeiter/v6@v6.4.1
 	COUNTERFEITER_NO_GENERATE_WARNING="true" go generate mocks/generate.go
+	COUNTERFEITER_NO_GENERATE_WARNING="true" go generate pkg/resource/generate.go
