@@ -100,7 +100,6 @@ func main() {
 	})
 	resourceManager := resource.NewManager(logger.Named("Resource Manager"), esutilClient, c.Elasticsearch, indexManager)
 
-
 	rodeServer, err := server.NewRodeServer(logger.Named("rode"), grafeasClientCommon, grafeasClientProjects, opaClient, esClient, filtering.NewFilterer(), c.Elasticsearch, resourceManager, indexManager)
 	if err != nil {
 		logger.Fatal("failed to create Rode server", zap.Error(err))

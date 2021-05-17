@@ -33,10 +33,10 @@ import (
 
 var _ = Describe("resource manager", func() {
 	var (
-		ctx      context.Context
-		manager  Manager
-		esClient *esutilfakes.FakeClient
-		esConfig *config.ElasticsearchConfig
+		ctx          context.Context
+		manager      Manager
+		esClient     *esutilfakes.FakeClient
+		esConfig     *config.ElasticsearchConfig
 		indexManager *immocks.FakeIndexManager
 
 		genericResourcesAlias string
