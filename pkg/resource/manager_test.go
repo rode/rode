@@ -20,6 +20,7 @@ import (
 	"fmt"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	immocks "github.com/rode/es-index-manager/mocks"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil/esutilfakes"
 	"github.com/rode/rode/config"
@@ -32,10 +33,13 @@ import (
 
 var _ = Describe("resource manager", func() {
 	var (
-		ctx      context.Context
-		manager  Manager
-		esClient *esutilfakes.FakeClient
-		esConfig *config.ElasticsearchConfig
+		ctx          context.Context
+		manager      Manager
+		esClient     *esutilfakes.FakeClient
+		esConfig     *config.ElasticsearchConfig
+		indexManager *immocks.FakeIndexManager
+
+		genericResourcesAlias string
 	)
 
 	BeforeEach(func() {
@@ -44,10 +48,14 @@ var _ = Describe("resource manager", func() {
 			Refresh: config.RefreshTrue,
 		}
 		esClient = &esutilfakes.FakeClient{}
+		indexManager = &immocks.FakeIndexManager{}
+
+		genericResourcesAlias = fake.LetterN(10)
+		indexManager.AliasNameReturns(genericResourcesAlias)
 	})
 
 	JustBeforeEach(func() {
-		manager = NewManager(logger, esClient, esConfig)
+		manager = NewManager(logger, esClient, esConfig, indexManager)
 	})
 
 	Context("BatchCreateGenericResources", func() {
@@ -113,7 +121,7 @@ var _ = Describe("resource manager", func() {
 			Expect(esClient.MultiGetCallCount()).To(Equal(1))
 
 			_, multiGetRequest := esClient.MultiGetArgsForCall(0)
-			Expect(multiGetRequest.Index).To(Equal(rodeElasticsearchGenericResourcesIndex))
+			Expect(multiGetRequest.Index).To(Equal(genericResourcesAlias))
 			Expect(multiGetRequest.DocumentIds).To(HaveLen(1))
 			Expect(multiGetRequest.DocumentIds).To(ConsistOf(expectedResourceName))
 		})
@@ -123,7 +131,7 @@ var _ = Describe("resource manager", func() {
 
 			_, bulkCreateRequest := esClient.BulkCreateArgsForCall(0)
 			Expect(bulkCreateRequest.Refresh).To(Equal(esConfig.Refresh.String()))
-			Expect(bulkCreateRequest.Index).To(Equal(rodeElasticsearchGenericResourcesIndex))
+			Expect(bulkCreateRequest.Index).To(Equal(genericResourcesAlias))
 			Expect(bulkCreateRequest.Items).To(HaveLen(1))
 
 			Expect(bulkCreateRequest.Items[0].DocumentId).To(Equal(expectedResourceName))

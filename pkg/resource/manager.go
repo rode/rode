@@ -17,17 +17,19 @@ package resource
 import (
 	"context"
 	"fmt"
+	"net/http"
+
+	"github.com/rode/es-index-manager/indexmanager"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
 	"github.com/rode/rode/config"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	"go.uber.org/zap"
-	"net/http"
 )
 
 //go:generate counterfeiter -generate
 
 const (
-	rodeElasticsearchGenericResourcesIndex = "rode-v1alpha1-generic-resources"
+	genericResourcesDocumentKind = "generic-resources"
 )
 
 //counterfeiter:generate . Manager
@@ -36,16 +38,18 @@ type Manager interface {
 }
 
 type manager struct {
-	logger   *zap.Logger
-	esClient esutil.Client
-	esConfig *config.ElasticsearchConfig
+	logger       *zap.Logger
+	esClient     esutil.Client
+	esConfig     *config.ElasticsearchConfig
+	indexManager indexmanager.IndexManager
 }
 
-func NewManager(logger *zap.Logger, esClient esutil.Client, esConfig *config.ElasticsearchConfig) Manager {
+func NewManager(logger *zap.Logger, esClient esutil.Client, esConfig *config.ElasticsearchConfig, indexManager indexmanager.IndexManager) Manager {
 	return &manager{
-		logger:   logger,
-		esClient: esClient,
-		esConfig: esConfig,
+		logger:       logger,
+		esClient:     esClient,
+		esConfig:     esConfig,
+		indexManager: indexManager,
 	}
 }
 
@@ -71,7 +75,7 @@ func (m *manager) BatchCreateGenericResources(ctx context.Context, request *pb.B
 
 	multiGetResponse, err := m.esClient.MultiGet(ctx, &esutil.MultiGetRequest{
 		DocumentIds: resourceNames,
-		Index:       rodeElasticsearchGenericResourcesIndex,
+		Index:       m.indexManager.AliasName(genericResourcesDocumentKind, ""),
 	})
 	if err != nil {
 		return err
@@ -99,7 +103,7 @@ func (m *manager) BatchCreateGenericResources(ctx context.Context, request *pb.B
 	}
 
 	bulkCreateResponse, err := m.esClient.BulkCreate(ctx, &esutil.BulkCreateRequest{
-		Index:   rodeElasticsearchGenericResourcesIndex,
+		Index:   m.indexManager.AliasName(genericResourcesDocumentKind, ""),
 		Refresh: m.esConfig.Refresh.String(),
 		Items:   bulkCreateItems,
 	})

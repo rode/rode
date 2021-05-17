@@ -38,3 +38,5 @@ dockers:
       - "auth"
       - "config"
       - "opa"
+      - "pkg"
+      - "mappings"
