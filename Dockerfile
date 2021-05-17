@@ -21,7 +21,6 @@ COPY config/ config/
 COPY auth/ auth/
 COPY opa/ opa/
 COPY pkg/ pkg/
-COPY mappings/ mappings/
 
 RUN --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o rode main.go
 
@@ -31,6 +30,7 @@ FROM gcr.io/distroless/static:nonroot
 WORKDIR /
 COPY --from=builder /workspace/rode .
 COPY --from=builder /bin/grpc_health_probe .
+COPY mappings/ mappings/
 USER nonroot:nonroot
 
 ENTRYPOINT ["/rode"]
