@@ -19,15 +19,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/rode/rode/pkg/resource"
-	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/common_go_proto"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"github.com/rode/rode/pkg/resource"
+	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/common_go_proto"
+
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/elastic/go-elasticsearch/v7/esapi"
 	"github.com/gogo/protobuf/protoc-gen-gogo/generator"
+	"github.com/rode/es-index-manager/indexmanager"
 
 	"github.com/google/uuid"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
@@ -50,12 +52,12 @@ import (
 )
 
 const (
-	rodeProjectSlug                        = "projects/rode"
-	rodeElasticsearchOccurrencesAlias      = "grafeas-rode-occurrences"
-	rodeElasticsearchPoliciesIndex         = "rode-v1alpha1-policies"
-	rodeElasticsearchGenericResourcesIndex = "rode-v1alpha1-generic-resources"
-	maxPageSize                            = 1000
-	pitKeepAlive                           = "5m"
+	rodeProjectSlug                   = "projects/rode"
+	rodeElasticsearchOccurrencesAlias = "grafeas-rode-occurrences"
+	policiesDocumentKind              = "policies"
+	genericResourcesDocumentKind      = "generic-resources"
+	maxPageSize                       = 1000
+	pitKeepAlive                      = "5m"
 )
 
 // NewRodeServer constructor for rodeServer
@@ -68,6 +70,7 @@ func NewRodeServer(
 	filterer filtering.Filterer,
 	elasticsearchConfig *config.ElasticsearchConfig,
 	resourceManager resource.Manager,
+	indexManager indexmanager.IndexManager,
 ) (pb.RodeServer, error) {
 	rodeServer := &rodeServer{
 		logger:              logger,
@@ -77,7 +80,8 @@ func NewRodeServer(
 		esClient:            esClient,
 		filterer:            filterer,
 		elasticsearchConfig: elasticsearchConfig,
-		resouceManager:      resourceManager,
+		resourceManager:     resourceManager,
+		indexManager:        indexManager,
 	}
 	if err := rodeServer.initialize(context.Background()); err != nil {
 		return nil, fmt.Errorf("failed to initialize rode server: %s", err)
@@ -95,14 +99,15 @@ type rodeServer struct {
 	grafeasProjects     grafeas_project_proto.ProjectsClient
 	opa                 opa.Client
 	elasticsearchConfig *config.ElasticsearchConfig
-	resouceManager      resource.Manager
+	resourceManager     resource.Manager
+	indexManager        indexmanager.IndexManager
 }
 
 func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceRequest *pb.BatchCreateOccurrencesRequest) (*pb.BatchCreateOccurrencesResponse, error) {
 	log := r.logger.Named("BatchCreateOccurrences")
 	log.Debug("received request", zap.Any("BatchCreateOccurrencesRequest", occurrenceRequest))
 
-	if err := r.resouceManager.BatchCreateGenericResources(ctx, occurrenceRequest); err != nil {
+	if err := r.resourceManager.BatchCreateGenericResources(ctx, occurrenceRequest); err != nil {
 		return nil, createError(log, "error creating generic resources", err)
 	}
 
@@ -241,7 +246,7 @@ func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListG
 	log.Debug("received request", zap.Any("request", request))
 
 	hits, nextPageToken, err := r.genericList(ctx, log, &genericListOptions{
-		index:         rodeElasticsearchGenericResourcesIndex,
+		index:         r.indexManager.AliasName(genericResourcesDocumentKind, ""),
 		filter:        request.Filter,
 		pageSize:      request.PageSize,
 		pageToken:     request.PageToken,
@@ -272,6 +277,10 @@ type indexSetting struct {
 func (r *rodeServer) initialize(ctx context.Context) error {
 	log := r.logger.Named("initialize")
 
+	if err := r.indexManager.Initialize(ctx); err != nil {
+		return fmt.Errorf("error initializing index manager: %s", err)
+	}
+
 	_, err := r.grafeasProjects.GetProject(ctx, &grafeas_project_proto.GetProjectRequest{Name: rodeProjectSlug})
 	if err != nil {
 		if status.Code(err) == codes.NotFound {
@@ -287,23 +296,26 @@ func (r *rodeServer) initialize(ctx context.Context) error {
 		}
 	}
 
-	indexSettings := []indexSetting{
-		{index: rodeElasticsearchPoliciesIndex, properties: map[string]interface{}{
-			"created": map[string]interface{}{
-				"type": "date",
-			},
-		}},
-		{index: rodeElasticsearchGenericResourcesIndex, properties: map[string]interface{}{
-			"name": map[string]interface{}{
-				"type": "keyword",
-			},
-		}},
+	indexSettings := []struct {
+		indexName    string
+		aliasName    string
+		documentKind string
+	}{
+		{
+			indexName:    r.indexManager.IndexName("policies", ""),
+			aliasName:    r.indexManager.AliasName("policies", ""),
+			documentKind: "policies",
+		},
+		{
+			indexName:    r.indexManager.IndexName("generic-resources", ""),
+			aliasName:    r.indexManager.AliasName("generic-resources", ""),
+			documentKind: "generic-resources",
+		},
 	}
 
 	for _, settings := range indexSettings {
-		if err := r.createIndex(ctx, settings); err != nil {
-
-			return fmt.Errorf("error creating index %s: %s", settings, err)
+		if err := r.indexManager.CreateIndex(ctx, settings.indexName, settings.aliasName, settings.documentKind); err != nil {
+			return fmt.Errorf("error creating index: %s", err)
 		}
 	}
 
@@ -510,7 +522,7 @@ func (r *rodeServer) CreatePolicy(ctx context.Context, policyEntity *pb.PolicyEn
 	}
 
 	res, err := r.esClient.Index(
-		rodeElasticsearchPoliciesIndex,
+		r.indexManager.AliasName(policiesDocumentKind, ""),
 		bytes.NewReader(str),
 		r.esClient.Index.WithContext(ctx),
 		r.esClient.Index.WithRefresh(r.elasticsearchConfig.Refresh.String()),
@@ -538,7 +550,7 @@ func (r *rodeServer) GetPolicy(ctx context.Context, getPolicyRequest *pb.GetPoli
 
 	policy := &pb.Policy{}
 
-	_, err := r.genericGet(ctx, log, search, rodeElasticsearchPoliciesIndex, policy)
+	_, err := r.genericGet(ctx, log, search, r.indexManager.IndexName(policiesDocumentKind, ""), policy)
 	if err != nil {
 		return nil, createError(log, "error getting policy", err)
 	}
@@ -562,7 +574,7 @@ func (r *rodeServer) DeletePolicy(ctx context.Context, deletePolicyRequest *pb.D
 	log.Debug("es request payload", zap.Any("payload", requestJSON))
 
 	res, err := r.esClient.DeleteByQuery(
-		[]string{rodeElasticsearchPoliciesIndex},
+		[]string{r.indexManager.IndexName(policiesDocumentKind, "")},
 		encodedBody,
 		r.esClient.DeleteByQuery.WithContext(ctx),
 		r.esClient.DeleteByQuery.WithRefresh(withRefreshBool(r.elasticsearchConfig.Refresh)),
@@ -589,7 +601,7 @@ func (r *rodeServer) DeletePolicy(ctx context.Context, deletePolicyRequest *pb.D
 func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.ListPoliciesRequest) (*pb.ListPoliciesResponse, error) {
 	log := r.logger.Named("List Policies")
 	hits, nextPageToken, err := r.genericList(ctx, log, &genericListOptions{
-		index:         rodeElasticsearchPoliciesIndex,
+		index:         r.indexManager.AliasName(policiesDocumentKind, ""),
 		filter:        listPoliciesRequest.Filter,
 		pageSize:      listPoliciesRequest.PageSize,
 		pageToken:     listPoliciesRequest.PageToken,
@@ -636,7 +648,7 @@ func (r *rodeServer) UpdatePolicy(ctx context.Context, updatePolicyRequest *pb.U
 	}
 
 	policy := &pb.Policy{}
-	targetDocumentID, err := r.genericGet(ctx, log, search, rodeElasticsearchPoliciesIndex, policy)
+	targetDocumentID, err := r.genericGet(ctx, log, search, r.indexManager.IndexName(policiesDocumentKind, ""), policy)
 	if err != nil {
 		return nil, createError(log, "error fetching policy", err)
 	}
@@ -667,7 +679,7 @@ func (r *rodeServer) UpdatePolicy(ctx context.Context, updatePolicyRequest *pb.U
 	}
 
 	res, err := r.esClient.Index(
-		rodeElasticsearchPoliciesIndex,
+		r.indexManager.IndexName(policiesDocumentKind, ""),
 		bytes.NewReader(str),
 		r.esClient.Index.WithDocumentID(targetDocumentID),
 		r.esClient.Index.WithContext(ctx),
