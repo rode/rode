@@ -268,11 +268,6 @@ func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListG
 	}, nil
 }
 
-type indexSetting struct {
-	index      string
-	properties map[string]interface{}
-}
-
 func (r *rodeServer) initialize(ctx context.Context) error {
 	log := r.logger.Named("initialize")
 
@@ -303,12 +298,12 @@ func (r *rodeServer) initialize(ctx context.Context) error {
 		{
 			indexName:    r.indexManager.IndexName(policiesDocumentKind, ""),
 			aliasName:    r.indexManager.AliasName(policiesDocumentKind, ""),
-			documentKind: "policies",
+			documentKind: policiesDocumentKind,
 		},
 		{
 			indexName:    r.indexManager.IndexName(genericResourcesDocumentKind, ""),
 			aliasName:    r.indexManager.AliasName(genericResourcesDocumentKind, ""),
-			documentKind: "generic-resources",
+			documentKind: genericResourcesDocumentKind,
 		},
 	}
 
