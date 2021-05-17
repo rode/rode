@@ -257,13 +257,19 @@ func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListG
 		return nil, err
 	}
 
-	var resources []*pb.GenericResource
+	var genericResources []*pb.GenericResource
 	for _, hit := range hits.Hits {
-		resources = append(resources, &pb.GenericResource{Name: hit.ID})
+		var genericResource pb.GenericResource
+		err = protojson.Unmarshal(hit.Source, &genericResource)
+		if err != nil {
+			return nil, err
+		}
+
+		genericResources = append(genericResources, &genericResource)
 	}
 
 	return &pb.ListGenericResourcesResponse{
-		GenericResources: resources,
+		GenericResources: genericResources,
 		NextPageToken:    nextPageToken,
 	}, nil
 }

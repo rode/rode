@@ -1,11 +1,14 @@
 {
-  "version": "v1alpha1",
+  "version": "v1alpha2",
   "mappings": {
     "_meta": {
       "type": "rode"
     },
     "properties": {
       "name": {
+        "type": "keyword"
+      },
+      "type": {
         "type": "keyword"
       }
     },

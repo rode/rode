@@ -58,7 +58,7 @@ func NewManager(logger *zap.Logger, esClient esutil.Client, esConfig *config.Ela
 func (m *manager) BatchCreateGenericResources(ctx context.Context, request *pb.BatchCreateOccurrencesRequest) error {
 	log := m.logger.Named("BatchCreateGenericResources")
 
-	visitedResources := map[string]bool{}
+	genericResources := map[string]*pb.GenericResource{}
 	var resourceNames []string
 	for _, x := range request.Occurrences {
 		uriParts, err := parseResourceUri(x.Resource.Uri)
@@ -66,10 +66,13 @@ func (m *manager) BatchCreateGenericResources(ctx context.Context, request *pb.B
 			return err
 		}
 		resourceName := uriParts.name
-		if _, ok := visitedResources[resourceName]; ok {
+		if _, ok := genericResources[resourceName]; ok {
 			continue
 		}
-		visitedResources[resourceName] = true
+		genericResources[resourceName] = &pb.GenericResource{
+			Name: resourceName,
+			Type: uriParts.resourceType,
+		}
 		resourceNames = append(resourceNames, resourceName)
 	}
 
@@ -91,9 +94,7 @@ func (m *manager) BatchCreateGenericResources(ctx context.Context, request *pb.B
 		log.Debug("Adding resource to bulk request", zap.String("resourceName", resourceName))
 
 		bulkCreateItems = append(bulkCreateItems, &esutil.BulkCreateRequestItem{
-			Message: &pb.GenericResource{
-				Name: resourceName,
-			},
+			Message:    genericResources[resourceName],
 			DocumentId: resourceName,
 		})
 	}

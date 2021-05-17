@@ -489,7 +489,10 @@ var _ = Describe("rode server", func() {
 			BeforeEach(func() {
 				genericResources = []*pb.GenericResource{}
 				for i := 0; i < gofakeit.Number(3, 5); i++ {
-					genericResources = append(genericResources, &pb.GenericResource{Name: gofakeit.LetterN(10)})
+					genericResources = append(genericResources, &pb.GenericResource{
+						Name: gofakeit.LetterN(10),
+						Type: pb.ResourceType(gofakeit.Number(0, 8)),
+					})
 				}
 
 				esTransport.preparedHttpResponses = []*http.Response{

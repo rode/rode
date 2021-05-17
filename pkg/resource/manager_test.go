@@ -138,10 +138,26 @@ var _ = Describe("resource manager", func() {
 			genericResource := bulkCreateRequest.Items[0].Message.(*pb.GenericResource)
 
 			Expect(genericResource.Name).To(Equal(expectedResourceName))
+			Expect(genericResource.Type).To(Equal(pb.ResourceType_DOCKER))
 		})
 
 		It("should not return an error", func() {
 			Expect(actualError).ToNot(HaveOccurred())
+		})
+
+		When("a non docker resource is referenced", func() {
+			BeforeEach(func() {
+				expectedOccurrence.Resource.Uri = fmt.Sprintf("git://github.com/rode/rode@%s", fake.LetterN(10))
+			})
+
+			It("should create a generic resource with the correct type", func() {
+				Expect(esClient.BulkCreateCallCount()).To(Equal(1))
+
+				_, bulkCreateRequest := esClient.BulkCreateArgsForCall(0)
+				genericResource := bulkCreateRequest.Items[0].Message.(*pb.GenericResource)
+
+				Expect(genericResource.Type).To(Equal(pb.ResourceType_GIT))
+			})
 		})
 
 		When("the same resource appears multiple times", func() {

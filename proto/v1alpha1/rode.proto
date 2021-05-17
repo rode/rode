@@ -115,8 +115,22 @@ service Rode {
   }
 }
 
+enum ResourceType {
+  UNSPECIFIED = 0;
+  DOCKER = 1;
+  GIT = 2;
+  MAVEN = 3;
+  FILE = 4;
+  NPM = 5;
+  NUGET = 6;
+  PIP = 7;
+  DEBIAN = 8;
+  RPM = 9;
+}
+
 message GenericResource {
   string name = 1;
+  ResourceType type = 2;
 }
 
 // Request to create occurrences in batch.
