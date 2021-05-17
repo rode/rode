@@ -41,6 +41,7 @@ type RodeClient interface {
 	// so any notes that already exist will not be re-created. Collectors are expected to invoke this RPC each time they
 	// start.
 	RegisterCollector(ctx context.Context, in *RegisterCollectorRequest, opts ...grpc.CallOption) (*RegisterCollectorResponse, error)
+	CreateNote(ctx context.Context, in *CreateNoteRequest, opts ...grpc.CallOption) (*grafeas_go_proto.Note, error)
 }
 
 type rodeClient struct {
@@ -177,6 +178,15 @@ func (c *rodeClient) RegisterCollector(ctx context.Context, in *RegisterCollecto
 	return out, nil
 }
 
+func (c *rodeClient) CreateNote(ctx context.Context, in *CreateNoteRequest, opts ...grpc.CallOption) (*grafeas_go_proto.Note, error) {
+	out := new(grafeas_go_proto.Note)
+	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/CreateNote", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RodeServer is the server API for Rode service.
 // All implementations must embed UnimplementedRodeServer
 // for forward compatibility
@@ -202,6 +212,7 @@ type RodeServer interface {
 	// so any notes that already exist will not be re-created. Collectors are expected to invoke this RPC each time they
 	// start.
 	RegisterCollector(context.Context, *RegisterCollectorRequest) (*RegisterCollectorResponse, error)
+	CreateNote(context.Context, *CreateNoteRequest) (*grafeas_go_proto.Note, error)
 	mustEmbedUnimplementedRodeServer()
 }
 
@@ -250,6 +261,9 @@ func (UnimplementedRodeServer) UpdatePolicy(context.Context, *UpdatePolicyReques
 }
 func (UnimplementedRodeServer) RegisterCollector(context.Context, *RegisterCollectorRequest) (*RegisterCollectorResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterCollector not implemented")
+}
+func (UnimplementedRodeServer) CreateNote(context.Context, *CreateNoteRequest) (*grafeas_go_proto.Note, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateNote not implemented")
 }
 func (UnimplementedRodeServer) mustEmbedUnimplementedRodeServer() {}
 
@@ -516,6 +530,24 @@ func _Rode_RegisterCollector_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Rode_CreateNote_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateNoteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RodeServer).CreateNote(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rode.v1alpha1.Rode/CreateNote",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RodeServer).CreateNote(ctx, req.(*CreateNoteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Rode_ServiceDesc is the grpc.ServiceDesc for Rode service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -578,6 +610,10 @@ var Rode_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RegisterCollector",
 			Handler:    _Rode_RegisterCollector_Handler,
+		},
+		{
+			MethodName: "CreateNote",
+			Handler:    _Rode_CreateNote_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
