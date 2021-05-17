@@ -342,6 +342,21 @@ var _ = Describe("rode server", func() {
 			})
 		})
 
+		When("initializing the index manager fails", func() {
+			BeforeEach(func() {
+				indexManager.InitializeReturns(errors.New(gofakeit.Word()))
+			})
+
+			It("should return an error", func() {
+				Expect(actualRodeServer).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+			})
+
+			It("should not create the application indices", func() {
+				Expect(indexManager.CreateIndexCallCount()).To(Equal(0))
+			})
+		})
+
 		When("creating the first index fails", func() {
 			BeforeEach(func() {
 				indexManager.CreateIndexReturns(errors.New(gofakeit.Word()))
