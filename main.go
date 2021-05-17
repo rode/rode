@@ -94,11 +94,12 @@ func main() {
 	}
 
 	esutilClient := esutil.NewClient(logger.Named("ESClient"), esClient)
-	resourceManager := resource.NewManager(logger.Named("Resource Manager"), esutilClient, c.Elasticsearch)
 	indexManager := indexmanager.NewIndexManager(logger.Named("IndexManager"), esClient, &indexmanager.Config{
 		IndexPrefix:  "rode",
 		MappingsPath: "mappings",
 	})
+	resourceManager := resource.NewManager(logger.Named("Resource Manager"), esutilClient, c.Elasticsearch, indexManager)
+
 
 	rodeServer, err := server.NewRodeServer(logger.Named("rode"), grafeasClientCommon, grafeasClientProjects, opaClient, esClient, filtering.NewFilterer(), c.Elasticsearch, resourceManager, indexManager)
 	if err != nil {
