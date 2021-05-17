@@ -20,11 +20,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/rode/rode/pkg/resource/resourcefakes"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/rode/rode/pkg/resource/resourcefakes"
 
 	"github.com/brianvoe/gofakeit/v5"
 	"github.com/elastic/go-elasticsearch/v7"
@@ -33,7 +34,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
+	immocks "github.com/rode/es-index-manager/mocks"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 	"github.com/rode/rode/config"
@@ -56,9 +57,7 @@ import (
 
 var _ = Describe("rode server", func() {
 	const (
-		createProjectError = "CREATE_PROJECT_ERROR"
-		getProjectError    = "GET_PROJECT_ERROR"
-		goodPolicy         = `
+		goodPolicy = `
 		package harborfail
 		pass = true {
 				count(violation_count) == 0
@@ -162,7 +161,13 @@ var _ = Describe("rode server", func() {
 		mockCtrl              *gomock.Controller
 		elasticsearchConfig   *config.ElasticsearchConfig
 		resourceManager       *resourcefakes.FakeManager
+		indexManager          *immocks.FakeIndexManager
 		ctx                   context.Context
+
+		expectedPoliciesIndex        string
+		expectedPoliciesAlias        string
+		expectedGenericResourceIndex string
+		expectedGenericResourceAlias string
 	)
 
 	BeforeEach(func() {
@@ -181,15 +186,25 @@ var _ = Describe("rode server", func() {
 			API:       esapi.New(esTransport),
 		}
 		mockFilterer = mocks.NewMockFilterer(mockCtrl)
-		esTransport.preparedHttpResponses = []*http.Response{
-			{
-				StatusCode: http.StatusOK,
-				Body:       structToJsonBody(createEsIndexResponse("rode-v1alpha1-policies")),
-			},
-			{
-				StatusCode: http.StatusOK,
-				Body:       structToJsonBody(createEsIndexResponse("rode-v1alpha1-generic-resources")),
-			},
+
+		expectedPoliciesIndex = gofakeit.LetterN(10)
+		expectedPoliciesAlias = gofakeit.LetterN(10)
+		expectedGenericResourceIndex = gofakeit.LetterN(10)
+		expectedGenericResourceAlias = gofakeit.LetterN(10)
+		indexManager = &immocks.FakeIndexManager{}
+
+		indexManager.AliasNameStub = func(documentKind, _ string) string {
+			return map[string]string{
+				genericResourcesDocumentKind: expectedGenericResourceAlias,
+				policiesDocumentKind:         expectedPoliciesAlias,
+			}[documentKind]
+		}
+
+		indexManager.IndexNameStub = func(documentKind, _ string) string {
+			return map[string]string{
+				genericResourcesDocumentKind: expectedGenericResourceIndex,
+				policiesDocumentKind:         expectedPoliciesIndex,
+			}[documentKind]
 		}
 
 		ctx = context.Background()
@@ -203,7 +218,8 @@ var _ = Describe("rode server", func() {
 			esClient:            esClient,
 			filterer:            mockFilterer,
 			elasticsearchConfig: elasticsearchConfig,
-			resouceManager:      resourceManager,
+			resourceManager:     resourceManager,
+			indexManager:        indexManager,
 		}
 	})
 
@@ -228,13 +244,14 @@ var _ = Describe("rode server", func() {
 			}
 			expectedGetProjectError = nil
 			expectedCreateProjectError = nil
+
 		})
 
 		JustBeforeEach(func() {
 			grafeasProjectsClient.GetProjectReturns(expectedProject, expectedGetProjectError)
 			grafeasProjectsClient.CreateProjectReturns(expectedProject, expectedCreateProjectError)
 
-			actualRodeServer, actualError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer, elasticsearchConfig, resourceManager)
+			actualRodeServer, actualError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer, elasticsearchConfig, resourceManager, indexManager)
 		})
 
 		It("should check if the rode project exists", func() {
@@ -249,60 +266,28 @@ var _ = Describe("rode server", func() {
 			Expect(grafeasProjectsClient.CreateProjectCallCount()).To(Equal(0))
 		})
 
+		It("should initialize the index manager", func() {
+			Expect(indexManager.InitializeCallCount()).To(Equal(1))
+		})
+
 		It("should create an index for policies", func() {
-			Expect(esTransport.receivedHttpRequests[0].Method).To(Equal(http.MethodPut))
-			Expect(esTransport.receivedHttpRequests[0].URL.Path).To(Equal("/rode-v1alpha1-policies"))
-			payload := map[string]interface{}{}
-			readResponseBody(esTransport.receivedHttpRequests[0], &payload)
-			Expect(payload).To(MatchAllKeys(Keys{
-				"mappings": MatchAllKeys(Keys{
-					"_meta": MatchAllKeys(Keys{
-						"type": Equal("rode"),
-					}),
-					"properties": MatchAllKeys(Keys{
-						"created": MatchAllKeys(Keys{
-							"type": Equal("date"),
-						}),
-					}),
-					"dynamic_templates": ConsistOf(MatchAllKeys(Keys{
-						"strings_as_keywords": MatchAllKeys(Keys{
-							"match_mapping_type": Equal("string"),
-							"mapping": MatchAllKeys(Keys{
-								"norms": Equal(false),
-								"type":  Equal("keyword"),
-							}),
-						}),
-					})),
-				}),
-			}))
+			Expect(indexManager.CreateIndexCallCount()).To(Equal(2))
+
+			_, actualIndexName, actualAliasName, documentKind := indexManager.CreateIndexArgsForCall(0)
+
+			Expect(actualIndexName).To(Equal(expectedPoliciesIndex))
+			Expect(actualAliasName).To(Equal(expectedPoliciesAlias))
+			Expect(documentKind).To(Equal(policiesDocumentKind))
 		})
 
 		It("should create an index for generic resources", func() {
-			Expect(esTransport.receivedHttpRequests[1].Method).To(Equal(http.MethodPut))
-			Expect(esTransport.receivedHttpRequests[1].URL.Path).To(Equal("/rode-v1alpha1-generic-resources"))
-			payload := map[string]interface{}{}
-			readResponseBody(esTransport.receivedHttpRequests[1], &payload)
-			Expect(payload).To(MatchAllKeys(Keys{
-				"mappings": MatchAllKeys(Keys{
-					"_meta": MatchAllKeys(Keys{
-						"type": Equal("rode"),
-					}),
-					"properties": MatchAllKeys(Keys{
-						"name": MatchAllKeys(Keys{
-							"type": Equal("keyword"),
-						}),
-					}),
-					"dynamic_templates": ConsistOf(MatchAllKeys(Keys{
-						"strings_as_keywords": MatchAllKeys(Keys{
-							"match_mapping_type": Equal("string"),
-							"mapping": MatchAllKeys(Keys{
-								"norms": Equal(false),
-								"type":  Equal("keyword"),
-							}),
-						}),
-					})),
-				}),
-			}))
+			Expect(indexManager.CreateIndexCallCount()).To(Equal(2))
+
+			_, actualIndexName, actualAliasName, documentKind := indexManager.CreateIndexArgsForCall(1)
+
+			Expect(actualIndexName).To(Equal(expectedGenericResourceIndex))
+			Expect(actualAliasName).To(Equal(expectedGenericResourceAlias))
+			Expect(documentKind).To(Equal(genericResourcesDocumentKind))
 		})
 
 		It("should return the initialized rode server", func() {
@@ -357,9 +342,9 @@ var _ = Describe("rode server", func() {
 			})
 		})
 
-		When("creating the first index fails", func() {
+		When("initializing the index manager fails", func() {
 			BeforeEach(func() {
-				esTransport.preparedHttpResponses[0].StatusCode = http.StatusInternalServerError
+				indexManager.InitializeReturns(errors.New(gofakeit.Word()))
 			})
 
 			It("should return an error", func() {
@@ -367,18 +352,14 @@ var _ = Describe("rode server", func() {
 				Expect(actualError).To(HaveOccurred())
 			})
 
-			It("should not attempt to create another index", func() {
-				Expect(esTransport.receivedHttpRequests).To(HaveLen(1))
+			It("should not create the application indices", func() {
+				Expect(indexManager.CreateIndexCallCount()).To(Equal(0))
 			})
 		})
 
-		When("creating the first index errors", func() {
+		When("creating the first index fails", func() {
 			BeforeEach(func() {
-				esTransport.actions = []func(req *http.Request) (*http.Response, error){
-					func(req *http.Request) (*http.Response, error) {
-						return nil, errors.New(gofakeit.Word())
-					},
-				}
+				indexManager.CreateIndexReturns(errors.New(gofakeit.Word()))
 			})
 
 			It("should return an error", func() {
@@ -387,40 +368,18 @@ var _ = Describe("rode server", func() {
 			})
 
 			It("should not attempt to create another index", func() {
-				Expect(esTransport.receivedHttpRequests).To(HaveLen(1))
+				Expect(indexManager.CreateIndexCallCount()).To(Equal(1))
 			})
 		})
 
 		When("creating the second index fails", func() {
 			BeforeEach(func() {
-				esTransport.preparedHttpResponses[1].StatusCode = http.StatusInternalServerError
+				indexManager.CreateIndexReturnsOnCall(1, errors.New(gofakeit.Word()))
 			})
 
 			It("should return an error", func() {
 				Expect(actualRodeServer).To(BeNil())
 				Expect(actualError).To(HaveOccurred())
-			})
-		})
-
-		When("the first index already exists", func() {
-			BeforeEach(func() {
-				esTransport.preparedHttpResponses[0].StatusCode = http.StatusBadRequest
-			})
-
-			It("should return the initialized rode server", func() {
-				Expect(actualRodeServer).ToNot(BeNil())
-				Expect(actualError).ToNot(HaveOccurred())
-			})
-		})
-
-		When("the second index already exists", func() {
-			BeforeEach(func() {
-				esTransport.preparedHttpResponses[1].StatusCode = http.StatusBadRequest
-			})
-
-			It("should return the initialized rode server", func() {
-				Expect(actualRodeServer).ToNot(BeNil())
-				Expect(actualError).ToNot(HaveOccurred())
 			})
 		})
 	})
@@ -553,7 +512,7 @@ var _ = Describe("rode server", func() {
 
 			It("should search against the generic resources index", func() {
 				Expect(esTransport.receivedHttpRequests[0].Method).To(Equal(http.MethodGet))
-				Expect(esTransport.receivedHttpRequests[0].URL.Path).To(Equal(fmt.Sprintf("/%s/_search", rodeElasticsearchGenericResourcesIndex)))
+				Expect(esTransport.receivedHttpRequests[0].URL.Path).To(Equal(fmt.Sprintf("/%s/_search", expectedGenericResourceAlias)))
 				Expect(esTransport.receivedHttpRequests[0].URL.Query().Get("size")).To(Equal(strconv.Itoa(maxPageSize)))
 
 				body := readEsSearchResponse(esTransport.receivedHttpRequests[0])
@@ -714,7 +673,7 @@ var _ = Describe("rode server", func() {
 					})
 
 					It("should create a PIT in Elasticsearch", func() {
-						Expect(esTransport.receivedHttpRequests[0].URL.Path).To(Equal(fmt.Sprintf("/%s/_pit", rodeElasticsearchGenericResourcesIndex)))
+						Expect(esTransport.receivedHttpRequests[0].URL.Path).To(Equal(fmt.Sprintf("/%s/_pit", expectedGenericResourceAlias)))
 						Expect(esTransport.receivedHttpRequests[0].Method).To(Equal(http.MethodPost))
 						Expect(esTransport.receivedHttpRequests[0].URL.Query().Get("keep_alive")).To(Equal("5m"))
 					})
@@ -1661,7 +1620,7 @@ var _ = Describe("rode server", func() {
 		})
 
 		It("should have a correct url path", func() {
-			Expect(esTransport.receivedHttpRequests[0].URL.Path).To(Equal("/rode-v1alpha1-policies/_doc"))
+			Expect(esTransport.receivedHttpRequests[0].URL.Path).To(Equal(fmt.Sprintf("/%s/_doc", expectedPoliciesAlias)))
 		})
 
 		It("should match the policy entity", func() {
@@ -1669,7 +1628,7 @@ var _ = Describe("rode server", func() {
 			Expect(policyResponse.Policy).To(BeEquivalentTo(policyEntity))
 		})
 
-		When("attemtpting to retrieve the same policy", func() {
+		When("attempting to retrieve the same policy", func() {
 			var (
 				getResponse *pb.Policy
 				err         error
@@ -1855,7 +1814,7 @@ var _ = Describe("rode server", func() {
 			})
 
 			It("should create a PIT in Elasticsearch", func() {
-				Expect(esTransport.receivedHttpRequests[0].URL.Path).To(Equal(fmt.Sprintf("/%s/_pit", rodeElasticsearchPoliciesIndex)))
+				Expect(esTransport.receivedHttpRequests[0].URL.Path).To(Equal(fmt.Sprintf("/%s/_pit", expectedPoliciesAlias)))
 				Expect(esTransport.receivedHttpRequests[0].Method).To(Equal(http.MethodPost))
 				Expect(esTransport.receivedHttpRequests[0].URL.Query().Get("keep_alive")).To(Equal("5m"))
 			})
@@ -2274,14 +2233,6 @@ func createRandomOccurrence(kind grafeas_common_proto.NoteKind) *grafeas_proto.O
 		CreateTime:  timestamppb.New(gofakeit.Date()),
 		UpdateTime:  timestamppb.New(gofakeit.Date()),
 		Details:     nil,
-	}
-}
-
-func createEsIndexResponse(index string) *esutil.EsIndexResponse {
-	return &esutil.EsIndexResponse{
-		Acknowledged:       true,
-		ShardsAcknowledged: true,
-		Index:              index,
 	}
 }
 

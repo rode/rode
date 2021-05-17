@@ -18,9 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
-	"github.com/rode/rode/pkg/resource"
-	"github.com/soheilhy/cmux"
 	"log"
 	"net"
 	"net/http"
@@ -28,6 +25,11 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/rode/es-index-manager/indexmanager"
+	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
+	"github.com/rode/rode/pkg/resource"
+	"github.com/soheilhy/cmux"
 
 	"golang.org/x/sync/errgroup"
 
@@ -92,9 +94,13 @@ func main() {
 	}
 
 	esutilClient := esutil.NewClient(logger.Named("ESClient"), esClient)
-	resourceManager := resource.NewManager(logger.Named("Resource Manager"), esutilClient, c.Elasticsearch)
+	indexManager := indexmanager.NewIndexManager(logger.Named("IndexManager"), esClient, &indexmanager.Config{
+		IndexPrefix:  "rode",
+		MappingsPath: "mappings",
+	})
+	resourceManager := resource.NewManager(logger.Named("Resource Manager"), esutilClient, c.Elasticsearch, indexManager)
 
-	rodeServer, err := server.NewRodeServer(logger.Named("rode"), grafeasClientCommon, grafeasClientProjects, opaClient, esClient, filtering.NewFilterer(), c.Elasticsearch, resourceManager)
+	rodeServer, err := server.NewRodeServer(logger.Named("rode"), grafeasClientCommon, grafeasClientProjects, opaClient, esClient, filtering.NewFilterer(), c.Elasticsearch, resourceManager, indexManager)
 	if err != nil {
 		logger.Fatal("failed to create Rode server", zap.Error(err))
 	}
