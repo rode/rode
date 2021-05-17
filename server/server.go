@@ -19,7 +19,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"strconv"
 	"strings"
 
@@ -763,40 +762,6 @@ func (r *rodeServer) RegisterCollector(ctx context.Context, registerCollectorReq
 	return &pb.RegisterCollectorResponse{
 		Notes: notesWithIds,
 	}, nil
-}
-
-func (r *rodeServer) createIndex(ctx context.Context, settings indexSetting) error {
-	mappings := map[string]interface{}{
-		"mappings": map[string]interface{}{
-			"_meta": map[string]interface{}{
-				"type": "rode",
-			},
-			"properties": settings.properties,
-			"dynamic_templates": []map[string]interface{}{
-				{
-					"strings_as_keywords": map[string]interface{}{
-						"match_mapping_type": "string",
-						"mapping": map[string]interface{}{
-							"type":  "keyword",
-							"norms": false,
-						},
-					},
-				},
-			},
-		},
-	}
-	body, _ := esutil.EncodeRequest(mappings)
-	response, err := r.esClient.Indices.Create(settings.index, r.esClient.Indices.Create.WithBody(body), r.esClient.Indices.Create.WithContext(ctx))
-
-	if err != nil {
-		return err
-	}
-
-	if response.IsError() && response.StatusCode != http.StatusBadRequest {
-		return fmt.Errorf("unexpected response creating Elasticsearch index: %s", response)
-	}
-
-	return nil
 }
 
 // validateRodeRequirementsForPolicy ensures that these two rules are followed:
