@@ -753,6 +753,19 @@ func (r *rodeServer) RegisterCollector(ctx context.Context, registerCollectorReq
 	}, nil
 }
 
+// CreateNote operates as a simple proxy to grafeas.CreateNote, for now.
+func (r *rodeServer) CreateNote(ctx context.Context, request *pb.CreateNoteRequest) (*grafeas_proto.Note, error) {
+	log := r.logger.Named("CreateNote").With(zap.String("noteId", request.NoteId))
+
+	log.Debug("creating note in grafeas")
+
+	return r.grafeasCommon.CreateNote(ctx, &grafeas_proto.CreateNoteRequest{
+		Parent: rodeProjectSlug,
+		NoteId: request.NoteId,
+		Note:   request.Note,
+	})
+}
+
 func (r *rodeServer) createIndex(ctx context.Context, settings indexSetting) error {
 	mappings := map[string]interface{}{
 		"mappings": map[string]interface{}{

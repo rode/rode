@@ -41,6 +41,7 @@ type RodeClient interface {
 	// so any notes that already exist will not be re-created. Collectors are expected to invoke this RPC each time they
 	// start.
 	RegisterCollector(ctx context.Context, in *RegisterCollectorRequest, opts ...grpc.CallOption) (*RegisterCollectorResponse, error)
+	// CreateNote acts as a simple proxy to the grafeas CreateNote rpc
 	CreateNote(ctx context.Context, in *CreateNoteRequest, opts ...grpc.CallOption) (*grafeas_go_proto.Note, error)
 }
 
@@ -212,6 +213,7 @@ type RodeServer interface {
 	// so any notes that already exist will not be re-created. Collectors are expected to invoke this RPC each time they
 	// start.
 	RegisterCollector(context.Context, *RegisterCollectorRequest) (*RegisterCollectorResponse, error)
+	// CreateNote acts as a simple proxy to the grafeas CreateNote rpc
 	CreateNote(context.Context, *CreateNoteRequest) (*grafeas_go_proto.Note, error)
 	mustEmbedUnimplementedRodeServer()
 }

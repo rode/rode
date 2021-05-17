@@ -114,7 +114,7 @@ service Rode {
       body: "*"
     };
   }
-
+  // CreateNote acts as a simple proxy to the grafeas CreateNote rpc
   rpc CreateNote(CreateNoteRequest) returns (grafeas.v1beta1.Note) {
     option (google.api.http) = {
       post: "/v1alpha1/notes"
