@@ -302,13 +302,13 @@ func (r *rodeServer) initialize(ctx context.Context) error {
 		documentKind string
 	}{
 		{
-			indexName:    r.indexManager.IndexName("policies", ""),
-			aliasName:    r.indexManager.AliasName("policies", ""),
+			indexName:    r.indexManager.IndexName(policiesDocumentKind, ""),
+			aliasName:    r.indexManager.AliasName(policiesDocumentKind, ""),
 			documentKind: "policies",
 		},
 		{
-			indexName:    r.indexManager.IndexName("generic-resources", ""),
-			aliasName:    r.indexManager.AliasName("generic-resources", ""),
+			indexName:    r.indexManager.IndexName(genericResourcesDocumentKind, ""),
+			aliasName:    r.indexManager.AliasName(genericResourcesDocumentKind, ""),
 			documentKind: "generic-resources",
 		},
 	}
