@@ -73,11 +73,13 @@ var _ = Describe("resource manager", func() {
 			expectedOccurrence *grafeas_go_proto.Occurrence
 
 			expectedResourceName string
+			expectedResourceId   string
 		)
 
 		BeforeEach(func() {
 			expectedOccurrence = createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED)
 			expectedResourceName = fake.URL()
+			expectedResourceId = fmt.Sprintf("DOCKER:%s", expectedResourceName)
 			expectedOccurrence.Resource.Uri = fmt.Sprintf("%s@sha256:%s", expectedResourceName, fake.LetterN(10))
 
 			expectedBatchCreateOccurrencesRequest = &pb.BatchCreateOccurrencesRequest{
@@ -123,7 +125,7 @@ var _ = Describe("resource manager", func() {
 			_, multiGetRequest := esClient.MultiGetArgsForCall(0)
 			Expect(multiGetRequest.Index).To(Equal(genericResourcesAlias))
 			Expect(multiGetRequest.DocumentIds).To(HaveLen(1))
-			Expect(multiGetRequest.DocumentIds).To(ConsistOf(expectedResourceName))
+			Expect(multiGetRequest.DocumentIds).To(ConsistOf(expectedResourceId))
 		})
 
 		It("should make a bulk request to create all of the generic resources", func() {
@@ -134,7 +136,7 @@ var _ = Describe("resource manager", func() {
 			Expect(bulkCreateRequest.Index).To(Equal(genericResourcesAlias))
 			Expect(bulkCreateRequest.Items).To(HaveLen(1))
 
-			Expect(bulkCreateRequest.Items[0].DocumentId).To(Equal(expectedResourceName))
+			Expect(bulkCreateRequest.Items[0].DocumentId).To(Equal(expectedResourceId))
 			genericResource := bulkCreateRequest.Items[0].Message.(*pb.GenericResource)
 
 			Expect(genericResource.Name).To(Equal(expectedResourceName))
@@ -173,7 +175,7 @@ var _ = Describe("resource manager", func() {
 
 				_, multiGetRequest := esClient.MultiGetArgsForCall(0)
 				Expect(multiGetRequest.DocumentIds).To(HaveLen(1))
-				Expect(multiGetRequest.DocumentIds).To(ConsistOf(expectedResourceName))
+				Expect(multiGetRequest.DocumentIds).To(ConsistOf(expectedResourceId))
 			})
 
 			It("should only create the generic resource once", func() {
