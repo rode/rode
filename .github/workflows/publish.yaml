@@ -48,13 +48,13 @@ jobs:
         uses: liatrio/github-actions/gitops-semver-increment-yaml@master
         with:
           file: charts/rode/Chart.yaml
-          path: version
+          path: .version
           position: PATCH
       - name: Update application version
         uses: liatrio/github-actions/gitops-update-yaml@master
         with:
           file: charts/rode/Chart.yaml
-          path: appVersion
+          path: .appVersion
           value: ${{ steps.tag.outputs.TAG }}
       - name: Create pull request
         uses: liatrio/github-actions/gitops-gh-pr@master

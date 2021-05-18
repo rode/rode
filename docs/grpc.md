@@ -21,6 +21,7 @@
 - [proto/v1alpha1/rode.proto](#proto/v1alpha1/rode.proto)
     - [BatchCreateOccurrencesRequest](#rode.v1alpha1.BatchCreateOccurrencesRequest)
     - [BatchCreateOccurrencesResponse](#rode.v1alpha1.BatchCreateOccurrencesResponse)
+    - [CreateNoteRequest](#rode.v1alpha1.CreateNoteRequest)
     - [GenericResource](#rode.v1alpha1.GenericResource)
     - [ListGenericResourcesRequest](#rode.v1alpha1.ListGenericResourcesRequest)
     - [ListGenericResourcesResponse](#rode.v1alpha1.ListGenericResourcesResponse)
@@ -315,6 +316,22 @@ Response for creating occurrences in batch.
 
 
 
+<a name="rode.v1alpha1.CreateNoteRequest"></a>
+
+### CreateNoteRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| note_id | [string](#string) |  |  |
+| note | [grafeas.v1beta1.Note](#grafeas.v1beta1.Note) |  |  |
+
+
+
+
+
+
 <a name="rode.v1alpha1.GenericResource"></a>
 
 ### GenericResource
@@ -575,6 +592,7 @@ https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576
 | ValidatePolicy | [ValidatePolicyRequest](#rode.v1alpha1.ValidatePolicyRequest) | [ValidatePolicyResponse](#rode.v1alpha1.ValidatePolicyResponse) |  |
 | UpdatePolicy | [UpdatePolicyRequest](#rode.v1alpha1.UpdatePolicyRequest) | [Policy](#rode.v1alpha1.Policy) |  |
 | RegisterCollector | [RegisterCollectorRequest](#rode.v1alpha1.RegisterCollectorRequest) | [RegisterCollectorResponse](#rode.v1alpha1.RegisterCollectorResponse) | RegisterCollector accepts a collector ID and a list of notes that this collector will reference when creating occurrences. The response will contain the notes with the fully qualified note name. This operation is idempotent, so any notes that already exist will not be re-created. Collectors are expected to invoke this RPC each time they start. |
+| CreateNote | [CreateNoteRequest](#rode.v1alpha1.CreateNoteRequest) | [.grafeas.v1beta1.Note](#grafeas.v1beta1.Note) | CreateNote acts as a simple proxy to the grafeas CreateNote rpc |
 
  
 
