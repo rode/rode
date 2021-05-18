@@ -537,7 +537,7 @@ https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576
 
 | Name | Number | Description |
 | ---- | ------ | ----------- |
-| UNSPECIFIED | 0 |  |
+| RESOURCE_TYPE_UNSPECIFIED | 0 |  |
 | DOCKER | 1 |  |
 | GIT | 2 |  |
 | MAVEN | 3 |  |

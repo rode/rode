@@ -116,7 +116,7 @@ service Rode {
 }
 
 enum ResourceType {
-  UNSPECIFIED = 0;
+  RESOURCE_TYPE_UNSPECIFIED = 0;
   DOCKER = 1;
   GIT = 2;
   MAVEN = 3;
