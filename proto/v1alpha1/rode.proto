@@ -20,6 +20,7 @@ option go_package = "github.com/rode/rode/proto/v1alpha1";
 
 import "google/api/annotations.proto";
 import "google/api/client.proto";
+import "google/api/field_behavior.proto";
 import "proto/v1alpha1/rode-policy.proto";
 import "proto/v1beta1/grafeas.proto";
 import "google/protobuf/empty.proto";
@@ -113,6 +114,14 @@ service Rode {
       body: "*"
     };
   }
+  // CreateNote acts as a simple proxy to the grafeas CreateNote rpc
+  rpc CreateNote(CreateNoteRequest) returns (grafeas.v1beta1.Note) {
+    option (google.api.http) = {
+      post: "/v1alpha1/notes"
+      body: "note"
+    };
+    option (google.api.method_signature) = "note_id,note";
+  };
 }
 
 message GenericResource {
@@ -191,4 +200,9 @@ message RegisterCollectorRequest {
 
 message RegisterCollectorResponse {
   map<string, grafeas.v1beta1.Note> notes = 1;
+}
+
+message CreateNoteRequest {
+  string note_id = 1 [(google.api.field_behavior) = REQUIRED];
+  grafeas.v1beta1.Note note = 2 [(google.api.field_behavior) = REQUIRED];
 }

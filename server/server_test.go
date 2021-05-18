@@ -1580,6 +1580,64 @@ var _ = Describe("rode server", func() {
 		})
 	})
 
+	Context("CreateNote", func() {
+		var (
+			actualNote  *grafeas_proto.Note
+			actualError error
+
+			expectedNote   *grafeas_proto.Note
+			expectedNoteId string
+
+			expectedCreateNoteRequest *pb.CreateNoteRequest
+			expectedCreateNoteError   error
+		)
+
+		BeforeEach(func() {
+			expectedNote = &grafeas_proto.Note{
+				ShortDescription: gofakeit.LetterN(10),
+				Kind:             grafeas_common_proto.NoteKind_DISCOVERY,
+			}
+			expectedNoteId = gofakeit.LetterN(10)
+
+			expectedCreateNoteRequest = &pb.CreateNoteRequest{
+				NoteId: expectedNoteId,
+				Note:   expectedNote,
+			}
+
+			expectedCreateNoteError = nil
+		})
+
+		JustBeforeEach(func() {
+			grafeasClient.CreateNoteReturns(expectedNote, expectedCreateNoteError)
+
+			actualNote, actualError = server.CreateNote(ctx, expectedCreateNoteRequest)
+		})
+
+		It("should invoke the grafeas CreateNote rpc and return its result", func() {
+			Expect(grafeasClient.CreateNoteCallCount()).To(Equal(1))
+
+			_, createNoteRequest, _ := grafeasClient.CreateNoteArgsForCall(0)
+			Expect(createNoteRequest.NoteId).To(Equal(expectedNoteId))
+			Expect(createNoteRequest.Note).To(Equal(expectedNote))
+			Expect(createNoteRequest.Parent).To(Equal(rodeProjectSlug))
+
+			Expect(actualNote).To(Equal(expectedNote))
+			Expect(actualError).ToNot(HaveOccurred())
+		})
+
+		When("the grafeas CreateNote rpc fails", func() {
+			BeforeEach(func() {
+				expectedCreateNoteError = errors.New("error creating note")
+				expectedNote = nil
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(actualNote).To(BeNil())
+			})
+		})
+	})
+
 	When("creating a policy without a name", func() {
 		var (
 			policyEntity   *pb.PolicyEntity

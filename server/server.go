@@ -759,6 +759,19 @@ func (r *rodeServer) RegisterCollector(ctx context.Context, registerCollectorReq
 	}, nil
 }
 
+// CreateNote operates as a simple proxy to grafeas.CreateNote, for now.
+func (r *rodeServer) CreateNote(ctx context.Context, request *pb.CreateNoteRequest) (*grafeas_proto.Note, error) {
+	log := r.logger.Named("CreateNote").With(zap.String("noteId", request.NoteId))
+
+	log.Debug("creating note in grafeas")
+
+	return r.grafeasCommon.CreateNote(ctx, &grafeas_proto.CreateNoteRequest{
+		Parent: rodeProjectSlug,
+		NoteId: request.NoteId,
+		Note:   request.Note,
+	})
+}
+
 // validateRodeRequirementsForPolicy ensures that these two rules are followed:
 // 1. A policy is expected to return a pass that is simply a boolean representing the AND of all rules.
 // 2. A policy is expected to return an array of violations that are maps containing a description id message name pass. pass here is what will be used to determine the overall pass.
