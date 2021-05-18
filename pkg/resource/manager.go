@@ -58,23 +58,29 @@ func NewManager(logger *zap.Logger, esClient esutil.Client, esConfig *config.Ela
 func (m *manager) BatchCreateGenericResources(ctx context.Context, request *pb.BatchCreateOccurrencesRequest) error {
 	log := m.logger.Named("BatchCreateGenericResources")
 
-	visitedResources := map[string]bool{}
-	var resourceNames []string
+	genericResources := map[string]*pb.GenericResource{}
+	var resourceIds []string
 	for _, x := range request.Occurrences {
 		uriParts, err := parseResourceUri(x.Resource.Uri)
 		if err != nil {
 			return err
 		}
-		resourceName := uriParts.name
-		if _, ok := visitedResources[resourceName]; ok {
+
+		genericResource := &pb.GenericResource{
+			Name: uriParts.name,
+			Type: uriParts.resourceType,
+		}
+		resourceId := genericResourceId(genericResource)
+
+		if _, ok := genericResources[resourceId]; ok {
 			continue
 		}
-		visitedResources[resourceName] = true
-		resourceNames = append(resourceNames, resourceName)
+		genericResources[resourceId] = genericResource
+		resourceIds = append(resourceIds, resourceId)
 	}
 
 	multiGetResponse, err := m.esClient.MultiGet(ctx, &esutil.MultiGetRequest{
-		DocumentIds: resourceNames,
+		DocumentIds: resourceIds,
 		Index:       m.indexManager.AliasName(genericResourcesDocumentKind, ""),
 	})
 	if err != nil {
@@ -82,19 +88,17 @@ func (m *manager) BatchCreateGenericResources(ctx context.Context, request *pb.B
 	}
 
 	var bulkCreateItems []*esutil.BulkCreateRequestItem
-	for i, resourceName := range resourceNames {
+	for i, resourceId := range resourceIds {
 		if multiGetResponse.Docs[i].Found {
-			log.Debug("skipping resource creation because it already exists", zap.String("resourceName", resourceName))
+			log.Debug("skipping resource creation because it already exists", zap.String("resourceId", resourceId))
 			continue
 		}
 
-		log.Debug("Adding resource to bulk request", zap.String("resourceName", resourceName))
+		log.Debug("Adding resource to bulk request", zap.String("resourceId", resourceId))
 
 		bulkCreateItems = append(bulkCreateItems, &esutil.BulkCreateRequestItem{
-			Message: &pb.GenericResource{
-				Name: resourceName,
-			},
-			DocumentId: resourceName,
+			Message:    genericResources[resourceId],
+			DocumentId: resourceId,
 		})
 	}
 
@@ -125,4 +129,8 @@ func (m *manager) BatchCreateGenericResources(ctx context.Context, request *pb.B
 	}
 
 	return nil
+}
+
+func genericResourceId(r *pb.GenericResource) string {
+	return fmt.Sprintf("%s:%s", r.Type, r.Name)
 }

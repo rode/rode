@@ -16,43 +16,40 @@ package resource
 
 import (
 	"fmt"
+	pb "github.com/rode/rode/proto/v1alpha1"
 	"regexp"
 )
 
 var (
-	uriPatterns = []*regexp.Regexp{
-		// Docker images
-		regexp.MustCompile("(?P<name>.+)(@sha256:)(?P<version>.+)"),
-		// Git repositories
-		regexp.MustCompile("^(git:/{2})(?P<name>.+)@(?P<version>.+)"),
-		// Maven packages
-		regexp.MustCompile("^(gav:/{2})(?P<name>.+):(?P<version>.+)"),
-		// Files
-		regexp.MustCompile("^(file:/{2}sha256:)(?P<version>.+):(?P<name>.+)"),
-		// NPM packages
-		regexp.MustCompile("^(npm:/{2})(?P<name>.+):(?P<version>.+)"),
-		// NuGet packages
-		regexp.MustCompile("^(nuget:/{2})(?P<name>.+):(?P<version>.+)"),
-		// pip packages
-		regexp.MustCompile("^(pip:/{2})(?P<name>.+):(?P<version>.+)"),
-		// Debian packages
-		regexp.MustCompile("^(deb:/{2}).*:(?P<name>.+):(?P<version>.+)"),
-		// RPM packages
-		regexp.MustCompile("^(rpm:/{2}).*:(?P<name>.+):(?P<version>.+)"),
+	uriPatterns = map[pb.ResourceType]*regexp.Regexp{
+		pb.ResourceType_DOCKER: regexp.MustCompile("(?P<name>.+)(@sha256:)(?P<version>.+)"),
+		pb.ResourceType_GIT:    regexp.MustCompile("^(git:/{2})(?P<name>.+)@(?P<version>.+)"),
+		pb.ResourceType_MAVEN:  regexp.MustCompile("^(gav:/{2})(?P<name>.+):(?P<version>.+)"),
+		pb.ResourceType_FILE:   regexp.MustCompile("^(file:/{2}sha256:)(?P<version>.+):(?P<name>.+)"),
+		pb.ResourceType_NPM:    regexp.MustCompile("^(npm:/{2})(?P<name>.+):(?P<version>.+)"),
+		pb.ResourceType_NUGET:  regexp.MustCompile("^(nuget:/{2})(?P<name>.+):(?P<version>.+)"),
+		pb.ResourceType_PIP:    regexp.MustCompile("^(pip:/{2})(?P<name>.+):(?P<version>.+)"),
+		pb.ResourceType_DEBIAN: regexp.MustCompile("^(deb:/{2}).*:(?P<name>.+):(?P<version>.+)"),
+		pb.ResourceType_RPM:    regexp.MustCompile("^(rpm:/{2}).*:(?P<name>.+):(?P<version>.+)"),
 	}
 )
 
 type uriComponents struct {
-	name    string
-	version string
+	name         string
+	version      string
+	resourceType pb.ResourceType
 }
 
 func parseResourceUri(uri string) (*uriComponents, error) {
-	var resourceRegex *regexp.Regexp
+	var (
+		resourceRegex *regexp.Regexp
+		resourceType  pb.ResourceType
+	)
 
-	for _, pattern := range uriPatterns {
+	for t, pattern := range uriPatterns {
 		if pattern.MatchString(uri) {
 			resourceRegex = pattern
+			resourceType = t
 			break
 		}
 	}
@@ -65,5 +62,5 @@ func parseResourceUri(uri string) (*uriComponents, error) {
 	name := matches[resourceRegex.SubexpIndex("name")]
 	version := matches[resourceRegex.SubexpIndex("version")]
 
-	return &uriComponents{name, version}, nil
+	return &uriComponents{name, version, resourceType}, nil
 }

@@ -36,6 +36,8 @@
     - [RegisterCollectorResponse.NotesEntry](#rode.v1alpha1.RegisterCollectorResponse.NotesEntry)
     - [UpdateOccurrenceRequest](#rode.v1alpha1.UpdateOccurrenceRequest)
   
+    - [ResourceType](#rode.v1alpha1.ResourceType)
+  
     - [Rode](#rode.v1alpha1.Rode)
   
 - [Scalar Value Types](#scalar-value-types)
@@ -339,6 +341,7 @@ Response for creating occurrences in batch.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | name | [string](#string) |  |  |
+| type | [ResourceType](#rode.v1alpha1.ResourceType) |  |  |
 
 
 
@@ -542,6 +545,26 @@ https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576
 
 
  
+
+
+<a name="rode.v1alpha1.ResourceType"></a>
+
+### ResourceType
+
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| RESOURCE_TYPE_UNSPECIFIED | 0 |  |
+| DOCKER | 1 |  |
+| GIT | 2 |  |
+| MAVEN | 3 |  |
+| FILE | 4 |  |
+| NPM | 5 |  |
+| NUGET | 6 |  |
+| PIP | 7 |  |
+| DEBIAN | 8 |  |
+| RPM | 9 |  |
+
 
  
 
