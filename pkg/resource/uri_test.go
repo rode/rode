@@ -80,7 +80,7 @@ var _ = Describe("uri", func() {
 				version:      "6.7.2.7-4",
 				resourceType: pb.ResourceType_RPM,
 			}),
-			Entry("RPM without a specified distribution", "rpm://el6:i386:ImageMagick:6.7.2.7-4", &uriComponents{
+			Entry("RPM without a specified distribution", "rpm://i386:ImageMagick:6.7.2.7-4", &uriComponents{
 				name:         "ImageMagick",
 				version:      "6.7.2.7-4",
 				resourceType: pb.ResourceType_RPM,
