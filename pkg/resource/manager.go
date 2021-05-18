@@ -59,25 +59,28 @@ func (m *manager) BatchCreateGenericResources(ctx context.Context, request *pb.B
 	log := m.logger.Named("BatchCreateGenericResources")
 
 	genericResources := map[string]*pb.GenericResource{}
-	var resourceNames []string
+	var resourceIds []string
 	for _, x := range request.Occurrences {
 		uriParts, err := parseResourceUri(x.Resource.Uri)
 		if err != nil {
 			return err
 		}
-		resourceName := uriParts.name
-		if _, ok := genericResources[resourceName]; ok {
-			continue
-		}
-		genericResources[resourceName] = &pb.GenericResource{
-			Name: resourceName,
+
+		genericResource := &pb.GenericResource{
+			Name: uriParts.name,
 			Type: uriParts.resourceType,
 		}
-		resourceNames = append(resourceNames, resourceName)
+		resourceId := genericResourceId(genericResource)
+
+		if _, ok := genericResources[resourceId]; ok {
+			continue
+		}
+		genericResources[resourceId] = genericResource
+		resourceIds = append(resourceIds, resourceId)
 	}
 
 	multiGetResponse, err := m.esClient.MultiGet(ctx, &esutil.MultiGetRequest{
-		DocumentIds: resourceNames,
+		DocumentIds: resourceIds,
 		Index:       m.indexManager.AliasName(genericResourcesDocumentKind, ""),
 	})
 	if err != nil {
@@ -85,17 +88,17 @@ func (m *manager) BatchCreateGenericResources(ctx context.Context, request *pb.B
 	}
 
 	var bulkCreateItems []*esutil.BulkCreateRequestItem
-	for i, resourceName := range resourceNames {
+	for i, resourceId := range resourceIds {
 		if multiGetResponse.Docs[i].Found {
-			log.Debug("skipping resource creation because it already exists", zap.String("resourceName", resourceName))
+			log.Debug("skipping resource creation because it already exists", zap.String("resourceId", resourceId))
 			continue
 		}
 
-		log.Debug("Adding resource to bulk request", zap.String("resourceName", resourceName))
+		log.Debug("Adding resource to bulk request", zap.String("resourceId", resourceId))
 
 		bulkCreateItems = append(bulkCreateItems, &esutil.BulkCreateRequestItem{
-			Message:    genericResources[resourceName],
-			DocumentId: resourceName,
+			Message:    genericResources[resourceId],
+			DocumentId: resourceId,
 		})
 	}
 
@@ -126,4 +129,8 @@ func (m *manager) BatchCreateGenericResources(ctx context.Context, request *pb.B
 	}
 
 	return nil
+}
+
+func genericResourceId(r *pb.GenericResource) string {
+	return fmt.Sprintf("%s:%s", r.Type, r.Name)
 }
