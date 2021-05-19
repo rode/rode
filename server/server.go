@@ -110,6 +110,10 @@ func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceReque
 		return nil, createError(log, "error creating generic resources", err)
 	}
 
+	if err := r.resourceManager.BatchCreateGenericResourceVersions(ctx, occurrenceRequest); err != nil {
+		return nil, createError(log, "error creating generic resource versions", err)
+	}
+
 	occurrenceResponse, err := r.grafeasCommon.BatchCreateOccurrences(ctx, &grafeas_proto.BatchCreateOccurrencesRequest{
 		Parent:      rodeProjectSlug,
 		Occurrences: occurrenceRequest.GetOccurrences(),
@@ -260,7 +264,9 @@ func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListG
 	var genericResources []*pb.GenericResource
 	for _, hit := range hits.Hits {
 		var genericResource pb.GenericResource
-		err = protojson.Unmarshal(hit.Source, &genericResource)
+		err = protojson.UnmarshalOptions{
+			DiscardUnknown: true,
+		}.Unmarshal(hit.Source, &genericResource)
 		if err != nil {
 			return nil, err
 		}
@@ -272,6 +278,27 @@ func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListG
 		GenericResources: genericResources,
 		NextPageToken:    nextPageToken,
 	}, nil
+}
+
+func (r *rodeServer) ListGenericResourceVersions(ctx context.Context, request *pb.ListGenericResourceVersionsRequest) (*pb.ListGenericResourceVersionsResponse, error) {
+	log := r.logger.Named("ListGenericResourceVersions").With(zap.Any("resource", request.Resource))
+
+	if request.Resource == nil {
+		return nil, status.Error(codes.InvalidArgument, "resource is required")
+	}
+
+	genericResource, err := r.resourceManager.GetGenericResource(ctx, request.Resource.Name, request.Resource.Type)
+	if err != nil {
+		return nil, err
+	}
+
+	if genericResource == nil {
+		log.Debug("generic resource not found")
+
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("generic resource with name %s not found", request.Resource.Name))
+	}
+
+	return r.resourceManager.ListGenericResourceVersions(ctx, request)
 }
 
 func (r *rodeServer) initialize(ctx context.Context) error {

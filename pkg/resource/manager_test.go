@@ -67,8 +67,8 @@ var _ = Describe("resource manager", func() {
 			expectedMultiGetResponse *esutil.EsMultiGetResponse
 			expectedMultiGetError    error
 
-			expectedBulkCreateResponse *esutil.EsBulkResponse
-			expectedBulkCreateError    error
+			expectedBulkResponse *esutil.EsBulkResponse
+			expectedBulkError    error
 
 			expectedOccurrence *grafeas_go_proto.Occurrence
 
@@ -90,7 +90,7 @@ var _ = Describe("resource manager", func() {
 
 			// happy path: document needs to be created
 			expectedMultiGetResponse = &esutil.EsMultiGetResponse{
-				Docs: []*esutil.EsMultiGetDocument{
+				Docs: []*esutil.EsGetResponse{
 					{
 						Found: false,
 					},
@@ -99,7 +99,7 @@ var _ = Describe("resource manager", func() {
 			expectedMultiGetError = nil
 
 			// happy path: generic resource document created successfully
-			expectedBulkCreateResponse = &esutil.EsBulkResponse{
+			expectedBulkResponse = &esutil.EsBulkResponse{
 				Items: []*esutil.EsBulkResponseItem{
 					{
 						Create: &esutil.EsIndexDocResponse{
@@ -109,12 +109,12 @@ var _ = Describe("resource manager", func() {
 					},
 				},
 			}
-			expectedBulkCreateError = nil
+			expectedBulkError = nil
 		})
 
 		JustBeforeEach(func() {
 			esClient.MultiGetReturns(expectedMultiGetResponse, expectedMultiGetError)
-			esClient.BulkCreateReturns(expectedBulkCreateResponse, expectedBulkCreateError)
+			esClient.BulkReturns(expectedBulkResponse, expectedBulkError)
 
 			actualError = manager.BatchCreateGenericResources(ctx, expectedBatchCreateOccurrencesRequest)
 		})
@@ -129,9 +129,9 @@ var _ = Describe("resource manager", func() {
 		})
 
 		It("should make a bulk request to create all of the generic resources", func() {
-			Expect(esClient.BulkCreateCallCount()).To(Equal(1))
+			Expect(esClient.BulkCallCount()).To(Equal(1))
 
-			_, bulkCreateRequest := esClient.BulkCreateArgsForCall(0)
+			_, bulkCreateRequest := esClient.BulkArgsForCall(0)
 			Expect(bulkCreateRequest.Refresh).To(Equal(esConfig.Refresh.String()))
 			Expect(bulkCreateRequest.Index).To(Equal(genericResourcesAlias))
 			Expect(bulkCreateRequest.Items).To(HaveLen(1))
@@ -153,9 +153,9 @@ var _ = Describe("resource manager", func() {
 			})
 
 			It("should create a generic resource with the correct type", func() {
-				Expect(esClient.BulkCreateCallCount()).To(Equal(1))
+				Expect(esClient.BulkCallCount()).To(Equal(1))
 
-				_, bulkCreateRequest := esClient.BulkCreateArgsForCall(0)
+				_, bulkCreateRequest := esClient.BulkArgsForCall(0)
 				genericResource := bulkCreateRequest.Items[0].Message.(*pb.GenericResource)
 
 				Expect(genericResource.Type).To(Equal(pb.ResourceType_GIT))
@@ -179,9 +179,9 @@ var _ = Describe("resource manager", func() {
 			})
 
 			It("should only create the generic resource once", func() {
-				Expect(esClient.BulkCreateCallCount()).To(Equal(1))
+				Expect(esClient.BulkCallCount()).To(Equal(1))
 
-				_, bulkCreateRequest := esClient.BulkCreateArgsForCall(0)
+				_, bulkCreateRequest := esClient.BulkArgsForCall(0)
 				Expect(bulkCreateRequest.Items).To(HaveLen(1))
 			})
 		})
@@ -202,7 +202,7 @@ var _ = Describe("resource manager", func() {
 			})
 
 			It("should not attempt to create any resources", func() {
-				Expect(esClient.BulkCreateCallCount()).To(Equal(0))
+				Expect(esClient.BulkCallCount()).To(Equal(0))
 			})
 		})
 
@@ -216,13 +216,13 @@ var _ = Describe("resource manager", func() {
 			})
 
 			It("should not attempt to create any resources", func() {
-				Expect(esClient.BulkCreateCallCount()).To(Equal(0))
+				Expect(esClient.BulkCallCount()).To(Equal(0))
 			})
 		})
 
 		When("the bulk create fails", func() {
 			BeforeEach(func() {
-				expectedBulkCreateError = errors.New("bulk create failed")
+				expectedBulkError = errors.New("bulk create failed")
 			})
 
 			It("should return an error", func() {
@@ -232,7 +232,7 @@ var _ = Describe("resource manager", func() {
 
 		When("one resource fails to create", func() {
 			BeforeEach(func() {
-				expectedBulkCreateResponse.Items[0].Create = &esutil.EsIndexDocResponse{
+				expectedBulkResponse.Items[0].Create = &esutil.EsIndexDocResponse{
 					Error: &esutil.EsIndexDocError{
 						Reason: fake.Word(),
 					},
@@ -247,7 +247,7 @@ var _ = Describe("resource manager", func() {
 
 		When("attempting to create a generic resource that already exists", func() {
 			BeforeEach(func() {
-				expectedBulkCreateResponse.Items[0].Create = &esutil.EsIndexDocResponse{
+				expectedBulkResponse.Items[0].Create = &esutil.EsIndexDocResponse{
 					Error: &esutil.EsIndexDocError{
 						Reason: fake.Word(),
 					},

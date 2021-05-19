@@ -43,6 +43,10 @@ type RodeClient interface {
 	RegisterCollector(ctx context.Context, in *RegisterCollectorRequest, opts ...grpc.CallOption) (*RegisterCollectorResponse, error)
 	// CreateNote acts as a simple proxy to the grafeas CreateNote rpc
 	CreateNote(ctx context.Context, in *CreateNoteRequest, opts ...grpc.CallOption) (*grafeas_go_proto.Note, error)
+	// ListGenericResourceVersions can be used to list all known versions of a generic resource. Versions will always include
+	// the unique identifier (in the case of Docker images, the sha256) and will optionally include any related names (in the
+	// case of Docker images, any associated tags for the image).
+	ListGenericResourceVersions(ctx context.Context, in *ListGenericResourceVersionsRequest, opts ...grpc.CallOption) (*ListGenericResourceVersionsResponse, error)
 }
 
 type rodeClient struct {
@@ -188,6 +192,15 @@ func (c *rodeClient) CreateNote(ctx context.Context, in *CreateNoteRequest, opts
 	return out, nil
 }
 
+func (c *rodeClient) ListGenericResourceVersions(ctx context.Context, in *ListGenericResourceVersionsRequest, opts ...grpc.CallOption) (*ListGenericResourceVersionsResponse, error) {
+	out := new(ListGenericResourceVersionsResponse)
+	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/ListGenericResourceVersions", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RodeServer is the server API for Rode service.
 // All implementations must embed UnimplementedRodeServer
 // for forward compatibility
@@ -215,6 +228,10 @@ type RodeServer interface {
 	RegisterCollector(context.Context, *RegisterCollectorRequest) (*RegisterCollectorResponse, error)
 	// CreateNote acts as a simple proxy to the grafeas CreateNote rpc
 	CreateNote(context.Context, *CreateNoteRequest) (*grafeas_go_proto.Note, error)
+	// ListGenericResourceVersions can be used to list all known versions of a generic resource. Versions will always include
+	// the unique identifier (in the case of Docker images, the sha256) and will optionally include any related names (in the
+	// case of Docker images, any associated tags for the image).
+	ListGenericResourceVersions(context.Context, *ListGenericResourceVersionsRequest) (*ListGenericResourceVersionsResponse, error)
 	mustEmbedUnimplementedRodeServer()
 }
 
@@ -266,6 +283,9 @@ func (UnimplementedRodeServer) RegisterCollector(context.Context, *RegisterColle
 }
 func (UnimplementedRodeServer) CreateNote(context.Context, *CreateNoteRequest) (*grafeas_go_proto.Note, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateNote not implemented")
+}
+func (UnimplementedRodeServer) ListGenericResourceVersions(context.Context, *ListGenericResourceVersionsRequest) (*ListGenericResourceVersionsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListGenericResourceVersions not implemented")
 }
 func (UnimplementedRodeServer) mustEmbedUnimplementedRodeServer() {}
 
@@ -550,6 +570,24 @@ func _Rode_CreateNote_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Rode_ListGenericResourceVersions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListGenericResourceVersionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RodeServer).ListGenericResourceVersions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rode.v1alpha1.Rode/ListGenericResourceVersions",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RodeServer).ListGenericResourceVersions(ctx, req.(*ListGenericResourceVersionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Rode_ServiceDesc is the grpc.ServiceDesc for Rode service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -616,6 +654,10 @@ var Rode_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateNote",
 			Handler:    _Rode_CreateNote_Handler,
+		},
+		{
+			MethodName: "ListGenericResourceVersions",
+			Handler:    _Rode_ListGenericResourceVersions_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
