@@ -63,6 +63,20 @@ type FakeManager struct {
 		result1 *v1alpha1.ListGenericResourceVersionsResponse
 		result2 error
 	}
+	ListGenericResourcesStub        func(context.Context, *v1alpha1.ListGenericResourcesRequest) (*v1alpha1.ListGenericResourcesResponse, error)
+	listGenericResourcesMutex       sync.RWMutex
+	listGenericResourcesArgsForCall []struct {
+		arg1 context.Context
+		arg2 *v1alpha1.ListGenericResourcesRequest
+	}
+	listGenericResourcesReturns struct {
+		result1 *v1alpha1.ListGenericResourcesResponse
+		result2 error
+	}
+	listGenericResourcesReturnsOnCall map[int]struct {
+		result1 *v1alpha1.ListGenericResourcesResponse
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -322,6 +336,71 @@ func (fake *FakeManager) ListGenericResourceVersionsReturnsOnCall(i int, result1
 	}{result1, result2}
 }
 
+func (fake *FakeManager) ListGenericResources(arg1 context.Context, arg2 *v1alpha1.ListGenericResourcesRequest) (*v1alpha1.ListGenericResourcesResponse, error) {
+	fake.listGenericResourcesMutex.Lock()
+	ret, specificReturn := fake.listGenericResourcesReturnsOnCall[len(fake.listGenericResourcesArgsForCall)]
+	fake.listGenericResourcesArgsForCall = append(fake.listGenericResourcesArgsForCall, struct {
+		arg1 context.Context
+		arg2 *v1alpha1.ListGenericResourcesRequest
+	}{arg1, arg2})
+	stub := fake.ListGenericResourcesStub
+	fakeReturns := fake.listGenericResourcesReturns
+	fake.recordInvocation("ListGenericResources", []interface{}{arg1, arg2})
+	fake.listGenericResourcesMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeManager) ListGenericResourcesCallCount() int {
+	fake.listGenericResourcesMutex.RLock()
+	defer fake.listGenericResourcesMutex.RUnlock()
+	return len(fake.listGenericResourcesArgsForCall)
+}
+
+func (fake *FakeManager) ListGenericResourcesCalls(stub func(context.Context, *v1alpha1.ListGenericResourcesRequest) (*v1alpha1.ListGenericResourcesResponse, error)) {
+	fake.listGenericResourcesMutex.Lock()
+	defer fake.listGenericResourcesMutex.Unlock()
+	fake.ListGenericResourcesStub = stub
+}
+
+func (fake *FakeManager) ListGenericResourcesArgsForCall(i int) (context.Context, *v1alpha1.ListGenericResourcesRequest) {
+	fake.listGenericResourcesMutex.RLock()
+	defer fake.listGenericResourcesMutex.RUnlock()
+	argsForCall := fake.listGenericResourcesArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeManager) ListGenericResourcesReturns(result1 *v1alpha1.ListGenericResourcesResponse, result2 error) {
+	fake.listGenericResourcesMutex.Lock()
+	defer fake.listGenericResourcesMutex.Unlock()
+	fake.ListGenericResourcesStub = nil
+	fake.listGenericResourcesReturns = struct {
+		result1 *v1alpha1.ListGenericResourcesResponse
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeManager) ListGenericResourcesReturnsOnCall(i int, result1 *v1alpha1.ListGenericResourcesResponse, result2 error) {
+	fake.listGenericResourcesMutex.Lock()
+	defer fake.listGenericResourcesMutex.Unlock()
+	fake.ListGenericResourcesStub = nil
+	if fake.listGenericResourcesReturnsOnCall == nil {
+		fake.listGenericResourcesReturnsOnCall = make(map[int]struct {
+			result1 *v1alpha1.ListGenericResourcesResponse
+			result2 error
+		})
+	}
+	fake.listGenericResourcesReturnsOnCall[i] = struct {
+		result1 *v1alpha1.ListGenericResourcesResponse
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -333,6 +412,8 @@ func (fake *FakeManager) Invocations() map[string][][]interface{} {
 	defer fake.getGenericResourceMutex.RUnlock()
 	fake.listGenericResourceVersionsMutex.RLock()
 	defer fake.listGenericResourceVersionsMutex.RUnlock()
+	fake.listGenericResourcesMutex.RLock()
+	defer fake.listGenericResourcesMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

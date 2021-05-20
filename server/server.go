@@ -248,36 +248,7 @@ func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListG
 	log := r.logger.Named("ListGenericResources")
 	log.Debug("received request", zap.Any("request", request))
 
-	hits, nextPageToken, err := r.genericList(ctx, log, &genericListOptions{
-		index:         r.indexManager.AliasName(genericResourcesDocumentKind, ""),
-		filter:        request.Filter,
-		pageSize:      request.PageSize,
-		pageToken:     request.PageToken,
-		sortDirection: esutil.EsSortOrderAscending,
-		sortField:     "name",
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	var genericResources []*pb.GenericResource
-	for _, hit := range hits.Hits {
-		var genericResource pb.GenericResource
-		err = protojson.UnmarshalOptions{
-			DiscardUnknown: true,
-		}.Unmarshal(hit.Source, &genericResource)
-		if err != nil {
-			return nil, err
-		}
-
-		genericResources = append(genericResources, &genericResource)
-	}
-
-	return &pb.ListGenericResourcesResponse{
-		GenericResources: genericResources,
-		NextPageToken:    nextPageToken,
-	}, nil
+	return r.resourceManager.ListGenericResources(ctx, request)
 }
 
 func (r *rodeServer) ListGenericResourceVersions(ctx context.Context, request *pb.ListGenericResourceVersionsRequest) (*pb.ListGenericResourceVersionsResponse, error) {

@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/rode/rode/pkg/resource/resourcefakes"
@@ -478,285 +477,57 @@ var _ = Describe("rode server", func() {
 	})
 
 	Context("ListGenericResources", func() {
-		When("querying for generic resources", func() {
-			var (
-				actualError      error
-				actualResponse   *pb.ListGenericResourcesResponse
-				listRequest      *pb.ListGenericResourcesRequest
-				genericResources []*pb.GenericResource
-			)
+		var (
+			expectedListGenericResourcesRequest *pb.ListGenericResourcesRequest
 
-			BeforeEach(func() {
-				genericResources = []*pb.GenericResource{}
-				for i := 0; i < gofakeit.Number(3, 5); i++ {
-					genericResources = append(genericResources, &pb.GenericResource{
-						Name: gofakeit.LetterN(10),
-						Type: pb.ResourceType(gofakeit.Number(0, 8)),
-					})
-				}
+			expectedListGenericResourcesResponse *pb.ListGenericResourcesResponse
+			expectedListGenericResourcesError    error
 
-				esTransport.preparedHttpResponses = []*http.Response{
+			actualListGenericResourcesResponse *pb.ListGenericResourcesResponse
+			actualError                        error
+		)
+
+		BeforeEach(func() {
+			expectedListGenericResourcesRequest = &pb.ListGenericResourcesRequest{
+				Filter: gofakeit.LetterN(10),
+			}
+
+			expectedListGenericResourcesResponse = &pb.ListGenericResourcesResponse{
+				GenericResources: []*pb.GenericResource{
 					{
-						StatusCode: http.StatusOK,
-						Body:       createEsSearchResponseForGenericResource(genericResources),
+						Name: gofakeit.LetterN(10),
+						Type: pb.ResourceType(gofakeit.Number(0, 6)),
 					},
-				}
+				},
+			}
+			expectedListGenericResourcesError = nil
+		})
 
-				listRequest = &pb.ListGenericResourcesRequest{}
+		JustBeforeEach(func() {
+			resourceManager.ListGenericResourcesReturns(expectedListGenericResourcesResponse, expectedListGenericResourcesError)
+
+			actualListGenericResourcesResponse, actualError = server.ListGenericResources(ctx, expectedListGenericResourcesRequest)
+		})
+
+		It("should return the result from the resource manager", func() {
+			Expect(resourceManager.ListGenericResourcesCallCount()).To(Equal(1))
+
+			_, listGenericResourcesRequest := resourceManager.ListGenericResourcesArgsForCall(0)
+			Expect(listGenericResourcesRequest).To(Equal(expectedListGenericResourcesRequest))
+
+			Expect(actualListGenericResourcesResponse).To(Equal(expectedListGenericResourcesResponse))
+			Expect(actualError).ToNot(HaveOccurred())
+		})
+
+		When("the resource manager returns an error", func() {
+			BeforeEach(func() {
+				expectedListGenericResourcesResponse = nil
+				expectedListGenericResourcesError = errors.New("error listing generic resources")
 			})
 
-			JustBeforeEach(func() {
-				actualResponse, actualError = server.ListGenericResources(context.Background(), listRequest)
-			})
-
-			It("should not return an error", func() {
-				Expect(actualError).NotTo(HaveOccurred())
-			})
-
-			It("should search against the generic resources index", func() {
-				Expect(esTransport.receivedHttpRequests[0].Method).To(Equal(http.MethodGet))
-				Expect(esTransport.receivedHttpRequests[0].URL.Path).To(Equal(fmt.Sprintf("/%s/_search", expectedGenericResourceAlias)))
-				Expect(esTransport.receivedHttpRequests[0].URL.Query().Get("size")).To(Equal(strconv.Itoa(maxPageSize)))
-
-				body := readEsSearchResponse(esTransport.receivedHttpRequests[0])
-
-				Expect(body).To(Equal(&esutil.EsSearch{
-					Sort: map[string]esutil.EsSortOrder{
-						"name": esutil.EsSortOrderAscending,
-					},
-				}))
-			})
-
-			It("should return all of the resources", func() {
-				var expectedNames []string
-				var actualNames []string
-
-				for _, resource := range genericResources {
-					expectedNames = append(expectedNames, resource.Name)
-				}
-
-				for _, actual := range actualResponse.GenericResources {
-					actualNames = append(actualNames, actual.Name)
-				}
-
-				Expect(actualNames).To(ConsistOf(expectedNames))
-			})
-
-			When("a filter is provided", func() {
-				var (
-					expectedFilter string
-				)
-
-				BeforeEach(func() {
-					expectedFilter = gofakeit.LetterN(10)
-					listRequest.Filter = expectedFilter
-				})
-
-				When("the filter is valid", func() {
-					var expectedQuery *filtering.Query
-
-					BeforeEach(func() {
-						expectedQuery = &filtering.Query{
-							Term: &filtering.Term{
-								gofakeit.LetterN(10): gofakeit.LetterN(10),
-							},
-						}
-						mockFilterer.EXPECT().ParseExpression(expectedFilter).Return(expectedQuery, nil)
-					})
-
-					It("should include the filter query in the request body", func() {
-						body := readEsSearchResponse(esTransport.receivedHttpRequests[0])
-
-						Expect(body).To(Equal(&esutil.EsSearch{
-							Query: expectedQuery,
-							Sort: map[string]esutil.EsSortOrder{
-								"name": esutil.EsSortOrderAscending,
-							},
-						}))
-					})
-				})
-
-				When("the filter is invalid", func() {
-					BeforeEach(func() {
-						mockFilterer.EXPECT().ParseExpression(expectedFilter).Return(nil, errors.New(gofakeit.Word()))
-					})
-
-					It("should return an error", func() {
-						Expect(actualError).To(HaveOccurred())
-					})
-
-					It("should set a gRPC status", func() {
-						status := getGRPCStatusFromError(actualError)
-
-						Expect(status.Code()).To(Equal(codes.Internal))
-					})
-				})
-			})
-
-			When("an unexpected status code is returned from the search", func() {
-				BeforeEach(func() {
-					esTransport.preparedHttpResponses[0].StatusCode = http.StatusInternalServerError
-				})
-
-				It("should return an error", func() {
-					Expect(actualError).To(HaveOccurred())
-				})
-
-				It("should set a gRPC status", func() {
-					status := getGRPCStatusFromError(actualError)
-
-					Expect(status.Code()).To(Equal(codes.Internal))
-				})
-			})
-
-			When("an unparseable response is returned from Elasticsearch", func() {
-				BeforeEach(func() {
-					esTransport.preparedHttpResponses[0].Body = createInvalidResponseBody()
-				})
-
-				It("should return an error", func() {
-					Expect(actualError).To(HaveOccurred())
-				})
-
-				It("should set a gRPC status", func() {
-					status := getGRPCStatusFromError(actualError)
-
-					Expect(status.Code()).To(Equal(codes.Internal))
-				})
-			})
-
-			When("an error occurs during the search", func() {
-				BeforeEach(func() {
-					esTransport.actions = []func(req *http.Request) (*http.Response, error){
-						func(req *http.Request) (*http.Response, error) {
-							return nil, errors.New(gofakeit.Word())
-						},
-					}
-				})
-
-				It("should return an error", func() {
-					Expect(actualError).To(HaveOccurred())
-				})
-
-				It("should set a gRPC status", func() {
-					status := getGRPCStatusFromError(actualError)
-
-					Expect(status.Code()).To(Equal(codes.Internal))
-				})
-			})
-
-			When("listing generic resources with pagination", func() {
-				var (
-					expectedPageToken string
-					expectedPageSize  int32
-					expectedPitId     string
-					expectedFrom      int
-				)
-
-				BeforeEach(func() {
-					expectedPageSize = int32(gofakeit.Number(5, 20))
-					expectedPitId = gofakeit.LetterN(20)
-					expectedFrom = gofakeit.Number(int(expectedPageSize), 100)
-
-					listRequest.PageSize = expectedPageSize
-
-					esTransport.preparedHttpResponses[0].Body = createPaginatedEsSearchResponseForGenericResource(genericResources, gofakeit.Number(1000, 10000))
-				})
-
-				When("a page token is not specified", func() {
-					BeforeEach(func() {
-						esTransport.preparedHttpResponses = append([]*http.Response{
-							{
-								StatusCode: http.StatusOK,
-								Body: structToJsonBody(&esutil.ESPitResponse{
-									Id: expectedPitId,
-								}),
-							},
-						}, esTransport.preparedHttpResponses...)
-					})
-
-					It("should create a PIT in Elasticsearch", func() {
-						Expect(esTransport.receivedHttpRequests[0].URL.Path).To(Equal(fmt.Sprintf("/%s/_pit", expectedGenericResourceAlias)))
-						Expect(esTransport.receivedHttpRequests[0].Method).To(Equal(http.MethodPost))
-						Expect(esTransport.receivedHttpRequests[0].URL.Query().Get("keep_alive")).To(Equal("5m"))
-					})
-
-					It("should query using the PIT", func() {
-						Expect(esTransport.receivedHttpRequests[1].URL.Path).To(Equal("/_search"))
-						Expect(esTransport.receivedHttpRequests[1].Method).To(Equal(http.MethodGet))
-						request := readEsSearchResponse(esTransport.receivedHttpRequests[1])
-						Expect(request.Pit.Id).To(Equal(expectedPitId))
-						Expect(request.Pit.KeepAlive).To(Equal("5m"))
-					})
-
-					It("should not return an error", func() {
-						Expect(actualError).To(BeNil())
-					})
-
-					It("should return the next page token", func() {
-						nextPitId, nextFrom, err := esutil.ParsePageToken(actualResponse.NextPageToken)
-
-						Expect(err).ToNot(HaveOccurred())
-						Expect(nextPitId).To(Equal(expectedPitId))
-						Expect(nextFrom).To(BeEquivalentTo(expectedPageSize))
-					})
-				})
-
-				When("a valid token is specified", func() {
-					BeforeEach(func() {
-						expectedPageToken = esutil.CreatePageToken(expectedPitId, expectedFrom)
-
-						listRequest.PageToken = expectedPageToken
-					})
-
-					It("should query Elasticsearch using the PIT", func() {
-						Expect(esTransport.receivedHttpRequests[0].URL.Path).To(Equal("/_search"))
-						Expect(esTransport.receivedHttpRequests[0].Method).To(Equal(http.MethodGet))
-						request := readEsSearchResponse(esTransport.receivedHttpRequests[0])
-						Expect(request.Pit.Id).To(Equal(expectedPitId))
-						Expect(request.Pit.KeepAlive).To(Equal("5m"))
-					})
-
-					It("should return the next page token", func() {
-						nextPitId, nextFrom, err := esutil.ParsePageToken(actualResponse.NextPageToken)
-
-						Expect(err).ToNot(HaveOccurred())
-						Expect(nextPitId).To(Equal(expectedPitId))
-						Expect(nextFrom).To(BeEquivalentTo(expectedPageSize + int32(expectedFrom)))
-					})
-				})
-
-				When("an invalid token is passed (bad format)", func() {
-					BeforeEach(func() {
-						listRequest.PageToken = gofakeit.LetterN(10)
-					})
-
-					It("should not make any further Elasticsearch queries", func() {
-						Expect(esTransport.receivedHttpRequests).To(HaveLen(0))
-					})
-
-					It("should return an error", func() {
-						Expect(actualError).To(HaveOccurred())
-						Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
-						Expect(actualResponse).To(BeNil())
-					})
-				})
-
-				When("an invalid token is passed (bad from)", func() {
-					BeforeEach(func() {
-						listRequest.PageToken = esutil.CreatePageToken(expectedPitId, expectedFrom) + gofakeit.LetterN(5)
-					})
-
-					It("should not make any further Elasticsearch queries", func() {
-						Expect(esTransport.receivedHttpRequests).To(HaveLen(0))
-					})
-
-					It("should return an error", func() {
-						Expect(actualError).To(HaveOccurred())
-						Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
-						Expect(actualResponse).To(BeNil())
-					})
-				})
+			It("should return an error", func() {
+				Expect(actualListGenericResourcesResponse).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
 			})
 		})
 	})

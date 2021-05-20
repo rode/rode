@@ -98,9 +98,12 @@ func main() {
 		IndexPrefix:  "rode",
 		MappingsPath: "mappings",
 	})
-	resourceManager := resource.NewManager(logger.Named("Resource Manager"), esutilClient, c.Elasticsearch, indexManager)
 
-	rodeServer, err := server.NewRodeServer(logger.Named("rode"), grafeasClientCommon, grafeasClientProjects, opaClient, esClient, filtering.NewFilterer(), c.Elasticsearch, resourceManager, indexManager)
+	filterer := filtering.NewFilterer()
+
+	resourceManager := resource.NewManager(logger.Named("Resource Manager"), esutilClient, c.Elasticsearch, indexManager, filterer)
+
+	rodeServer, err := server.NewRodeServer(logger.Named("rode"), grafeasClientCommon, grafeasClientProjects, opaClient, esClient, filterer, c.Elasticsearch, resourceManager, indexManager)
 	if err != nil {
 		logger.Fatal("failed to create Rode server", zap.Error(err))
 	}
