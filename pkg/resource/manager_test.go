@@ -27,11 +27,15 @@ import (
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering/filteringfakes"
 	"github.com/rode/rode/config"
 	pb "github.com/rode/rode/proto/v1alpha1"
+	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/build_go_proto"
 	grafeas_common_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/common_go_proto"
 	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
+	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/provenance_go_proto"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"net/http"
+	"strings"
+	"time"
 )
 
 var _ = Describe("resource manager", func() {
@@ -263,6 +267,320 @@ var _ = Describe("resource manager", func() {
 
 		It("should not return an error", func() {
 			Expect(actualError).ToNot(HaveOccurred())
+		})
+	})
+
+	Context("BatchCreateGenericResourceVersions", func() {
+		var (
+			expectedBatchCreateOccurrencesRequest *pb.BatchCreateOccurrencesRequest
+
+			expectedDockerResourceName             string
+			expectedDockerResourceVersion          string
+			expectedDockerResourceUri              string
+			expectedDockerGenericResourceVersionId string
+			expectedDockerGenericResourceId        string
+
+			expectedMultiGetResponse *esutil.EsMultiGetResponse
+			expectedMultiGetError    error
+
+			expectedBulkResponse *esutil.EsBulkResponse
+			expectedBulkError    error
+
+			actualError error
+		)
+
+		BeforeEach(func() {
+			// simple happy path: single non-build occurrence
+			expectedDockerResourceName = strings.Split(fake.URL(), "://")[1]
+			expectedDockerResourceVersion = fake.LetterN(20)
+			expectedDockerResourceUri = fmt.Sprintf("%s@sha256:%s", expectedDockerResourceName, expectedDockerResourceVersion)
+			expectedDockerGenericResourceVersionId = fmt.Sprintf("DOCKER:%s", expectedDockerResourceUri)
+			expectedDockerGenericResourceId = fmt.Sprintf("DOCKER:%s", expectedDockerResourceName)
+
+			expectedBatchCreateOccurrencesRequest = &pb.BatchCreateOccurrencesRequest{
+				Occurrences: []*grafeas_go_proto.Occurrence{
+					{
+						Resource: &grafeas_go_proto.Resource{
+							Uri: expectedDockerResourceUri,
+						},
+						Kind: grafeas_common_proto.NoteKind_DISCOVERY,
+					},
+				},
+			}
+
+			// simple happy path: generic resource version does not exist
+			expectedMultiGetResponse = &esutil.EsMultiGetResponse{
+				Docs: []*esutil.EsGetResponse{
+					{
+						Found: false,
+					},
+				},
+			}
+			expectedMultiGetError = nil
+
+			// simple happy path: generic resource version created successfully
+			expectedBulkResponse = &esutil.EsBulkResponse{
+				Items: []*esutil.EsBulkResponseItem{
+					{
+						Create: &esutil.EsIndexDocResponse{
+							Id: fake.LetterN(10),
+						},
+					},
+				},
+			}
+			expectedBulkError = nil
+		})
+
+		JustBeforeEach(func() {
+			esClient.MultiGetReturns(expectedMultiGetResponse, expectedMultiGetError)
+			esClient.BulkReturns(expectedBulkResponse, expectedBulkError)
+
+			actualError = manager.BatchCreateGenericResourceVersions(ctx, expectedBatchCreateOccurrencesRequest)
+		})
+
+		It("should query for the generic resource version", func() {
+			Expect(esClient.MultiGetCallCount()).To(Equal(1))
+
+			_, multiGetRequest := esClient.MultiGetArgsForCall(0)
+			Expect(multiGetRequest.Index).To(Equal(genericResourcesAlias))
+			Expect(multiGetRequest.DocumentIds).To(ConsistOf(expectedDockerGenericResourceVersionId))
+		})
+
+		It("should create the generic resource version in elasticsearch", func() {
+			Expect(esClient.BulkCallCount()).To(Equal(1))
+
+			_, bulkRequest := esClient.BulkArgsForCall(0)
+			Expect(bulkRequest.Index).To(Equal(genericResourcesAlias))
+
+			Expect(bulkRequest.Items).To(HaveLen(1))
+			item := bulkRequest.Items[0]
+			Expect(item.Operation).To(Equal(esutil.BULK_CREATE))
+			Expect(item.DocumentId).To(Equal(expectedDockerGenericResourceVersionId))
+			Expect(item.Join.Field).To(Equal(genericResourceDocumentJoinField))
+			Expect(item.Join.Name).To(Equal(genericResourceVersionRelationName))
+			Expect(item.Join.Parent).To(Equal(expectedDockerGenericResourceId))
+
+			message := item.Message.(*pb.GenericResourceVersion)
+			Expect(message.Names).To(BeEmpty())
+			Expect(message.Created).ToNot(BeNil())
+			Expect(message.Version).To(Equal(expectedDockerResourceUri))
+		})
+
+		It("should not return an error", func() {
+			Expect(actualError).ToNot(HaveOccurred())
+		})
+
+		When("there are two occurrences with the same resource uri", func() {
+			BeforeEach(func() {
+				expectedBatchCreateOccurrencesRequest.Occurrences = append(expectedBatchCreateOccurrencesRequest.Occurrences, &grafeas_go_proto.Occurrence{
+					Resource: &grafeas_go_proto.Resource{
+						Uri: expectedDockerResourceUri,
+					},
+					Kind: grafeas_common_proto.NoteKind_VULNERABILITY,
+				})
+			})
+
+			It("should only query for one generic resource version", func() {
+				Expect(esClient.MultiGetCallCount()).To(Equal(1))
+
+				_, multiGetRequest := esClient.MultiGetArgsForCall(0)
+				Expect(multiGetRequest.Index).To(Equal(genericResourcesAlias))
+				Expect(multiGetRequest.DocumentIds).To(ConsistOf(expectedDockerGenericResourceVersionId))
+			})
+
+			It("should only create one generic resource version", func() {
+				Expect(esClient.BulkCallCount()).To(Equal(1))
+
+				_, bulkRequest := esClient.BulkArgsForCall(0)
+				Expect(bulkRequest.Index).To(Equal(genericResourcesAlias))
+
+				Expect(bulkRequest.Items).To(HaveLen(1))
+			})
+		})
+
+		When("the multiget request fails", func() {
+			BeforeEach(func() {
+				expectedMultiGetError = errors.New("multi get failed")
+			})
+
+			It("should not attempt the bulk request", func() {
+				Expect(esClient.BulkCallCount()).To(Equal(0))
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+			})
+		})
+
+		When("the generic resource version already exists", func() {
+			BeforeEach(func() {
+				expectedMultiGetResponse.Docs[0].Found = true
+			})
+
+			It("should not attempt a bulk request", func() {
+				Expect(esClient.BulkCallCount()).To(Equal(0))
+			})
+		})
+
+		When("the bulk request fails", func() {
+			BeforeEach(func() {
+				expectedBulkError = errors.New("bulk request failed")
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+			})
+		})
+
+		When("creating the generic resource fails", func() {
+			BeforeEach(func() {
+				expectedBulkResponse.Items[0].Create.Error = &esutil.EsIndexDocError{
+					Type:   fake.LetterN(10),
+					Reason: fake.LetterN(10),
+				}
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+			})
+		})
+
+		When("a build occurrence exists with an artifact", func() {
+			var (
+				expectedGitResourceName             string
+				expectedGitResourceVersion          string
+				expectedGitResourceUri              string
+				expectedGitGenericResourceVersionId string
+				expectedGitGenericResourceId        string
+
+				expectedDockerGenericResourceVersionName string
+				expectedCreateTime                       *timestamppb.Timestamp
+			)
+
+			BeforeEach(func() {
+				// build occurrences are usually for git resources, but they reference docker resources within `BuiltArtifacts`
+				expectedGitResourceName = strings.Split(fake.URL(), "://")[1]
+				expectedGitResourceVersion = fake.LetterN(20)
+				expectedGitResourceUri = fmt.Sprintf("git://%s@%s", expectedGitResourceName, expectedGitResourceVersion)
+				expectedGitGenericResourceVersionId = fmt.Sprintf("GIT:%s", expectedGitResourceUri)
+				expectedGitGenericResourceId = fmt.Sprintf("GIT:%s", expectedGitResourceName)
+
+				expectedDockerGenericResourceVersionName = fake.LetterN(10)
+				expectedCreateTime = timestamppb.New(time.Now().Add(time.Duration(fake.Int64())))
+
+				expectedBatchCreateOccurrencesRequest.Occurrences = append(expectedBatchCreateOccurrencesRequest.Occurrences, &grafeas_go_proto.Occurrence{
+					Resource: &grafeas_go_proto.Resource{
+						Uri: expectedGitResourceUri,
+					},
+					CreateTime: expectedCreateTime,
+					Kind:       grafeas_common_proto.NoteKind_BUILD,
+					Details: &grafeas_go_proto.Occurrence_Build{
+						Build: &build_go_proto.Details{
+							Provenance: &provenance_go_proto.BuildProvenance{
+								BuiltArtifacts: []*provenance_go_proto.Artifact{
+									{
+										Id:    expectedDockerResourceUri,
+										Names: []string{expectedDockerGenericResourceVersionName},
+									},
+								},
+							},
+						},
+					},
+				})
+
+				expectedMultiGetResponse.Docs = append(expectedMultiGetResponse.Docs, &esutil.EsGetResponse{Found: false})
+				expectedBulkResponse.Items = append(expectedBulkResponse.Items, &esutil.EsBulkResponseItem{
+					Create: &esutil.EsIndexDocResponse{
+						Id: fake.LetterN(10),
+					},
+				})
+			})
+
+			It("should query for both generic resource versions (docker and git)", func() {
+				Expect(esClient.MultiGetCallCount()).To(Equal(1))
+
+				_, multiGetRequest := esClient.MultiGetArgsForCall(0)
+				Expect(multiGetRequest.Index).To(Equal(genericResourcesAlias))
+				Expect(multiGetRequest.DocumentIds).To(ConsistOf(expectedDockerGenericResourceVersionId, expectedGitGenericResourceVersionId))
+			})
+
+			It("should create two generic resource versions, using associated names and timestamp for the docker resource", func() {
+				Expect(esClient.BulkCallCount()).To(Equal(1))
+
+				_, bulkRequest := esClient.BulkArgsForCall(0)
+				Expect(bulkRequest.Index).To(Equal(genericResourcesAlias))
+
+				Expect(bulkRequest.Items).To(HaveLen(2))
+
+				dockerItem := bulkRequest.Items[0]
+				Expect(dockerItem.Operation).To(Equal(esutil.BULK_CREATE))
+				Expect(dockerItem.DocumentId).To(Equal(expectedDockerGenericResourceVersionId))
+				Expect(dockerItem.Join.Field).To(Equal(genericResourceDocumentJoinField))
+				Expect(dockerItem.Join.Name).To(Equal(genericResourceVersionRelationName))
+				Expect(dockerItem.Join.Parent).To(Equal(expectedDockerGenericResourceId))
+
+				dockerMessage := dockerItem.Message.(*pb.GenericResourceVersion)
+				Expect(dockerMessage.Names).To(ConsistOf(expectedDockerGenericResourceVersionName))
+				Expect(dockerMessage.Created).To(Equal(expectedCreateTime))
+				Expect(dockerMessage.Version).To(Equal(expectedDockerResourceUri))
+
+				gitItem := bulkRequest.Items[1]
+				Expect(gitItem.Operation).To(Equal(esutil.BULK_CREATE))
+				Expect(gitItem.DocumentId).To(Equal(expectedGitGenericResourceVersionId))
+				Expect(gitItem.Join.Field).To(Equal(genericResourceDocumentJoinField))
+				Expect(gitItem.Join.Name).To(Equal(genericResourceVersionRelationName))
+				Expect(gitItem.Join.Parent).To(Equal(expectedGitGenericResourceId))
+
+				gitMessage := gitItem.Message.(*pb.GenericResourceVersion)
+				Expect(gitMessage.Names).To(BeEmpty())
+				Expect(gitMessage.Created).ToNot(BeNil())
+				Expect(gitMessage.Version).To(Equal(expectedGitResourceUri))
+			})
+
+			When("the docker generic resource version already exists", func() {
+				BeforeEach(func() {
+					expectedMultiGetResponse.Docs[0].Found = true
+					expectedBulkResponse.Items[0].Create = nil
+					expectedBulkResponse.Items[0].Index = &esutil.EsIndexDocResponse{
+						Id: fake.LetterN(10),
+					}
+				})
+
+				It("should update the existing docker generic resource version names", func() {
+					Expect(esClient.BulkCallCount()).To(Equal(1))
+
+					_, bulkRequest := esClient.BulkArgsForCall(0)
+					Expect(bulkRequest.Index).To(Equal(genericResourcesAlias))
+
+					Expect(bulkRequest.Items).To(HaveLen(2))
+
+					dockerItem := bulkRequest.Items[0]
+					// BULK_INDEX is used for update rather than BULK_CREATE
+					Expect(dockerItem.Operation).To(Equal(esutil.BULK_INDEX))
+					Expect(dockerItem.DocumentId).To(Equal(expectedDockerGenericResourceVersionId))
+					Expect(dockerItem.Join.Field).To(Equal(genericResourceDocumentJoinField))
+					Expect(dockerItem.Join.Name).To(Equal(genericResourceVersionRelationName))
+					Expect(dockerItem.Join.Parent).To(Equal(expectedDockerGenericResourceId))
+
+					dockerMessage := dockerItem.Message.(*pb.GenericResourceVersion)
+					Expect(dockerMessage.Names).To(ConsistOf(expectedDockerGenericResourceVersionName))
+					Expect(dockerMessage.Created).To(Equal(expectedCreateTime))
+					Expect(dockerMessage.Version).To(Equal(expectedDockerResourceUri))
+				})
+
+				When("creating the docker resource fails", func() {
+					BeforeEach(func() {
+						expectedBulkResponse.Items[0].Index.Error = &esutil.EsIndexDocError{
+							Type:   fake.LetterN(10),
+							Reason: fake.LetterN(10),
+						}
+					})
+
+					It("should return an error", func() {
+						Expect(actualError).To(HaveOccurred())
+					})
+				})
+			})
 		})
 	})
 

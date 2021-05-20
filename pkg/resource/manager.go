@@ -197,6 +197,11 @@ func (m *manager) BatchCreateGenericResourceVersions(ctx context.Context, reques
 	var bulkItems []*esutil.BulkRequestItem
 	for i, versionId := range versionIds {
 		version := genericResourceVersions[versionId]
+		parentId, err := genericResourceIdFromVersionId(versionId)
+		if err != nil {
+			return err
+		}
+
 		bulkItem := &esutil.BulkRequestItem{
 			Operation:  esutil.BULK_INDEX,
 			Message:    version,
@@ -204,7 +209,7 @@ func (m *manager) BatchCreateGenericResourceVersions(ctx context.Context, reques
 			Join: &esutil.EsJoin{
 				Field:  genericResourceDocumentJoinField,
 				Name:   genericResourceVersionRelationName,
-				Parent: genericResourceIdFromVersionId(versionId),
+				Parent: parentId,
 			},
 		}
 
@@ -251,7 +256,7 @@ func (m *manager) BatchCreateGenericResourceVersions(ctx context.Context, reques
 			if item.Create != nil && item.Create.Error != nil {
 				itemError = fmt.Errorf("error creating generic resource [%d] %s: %s", item.Create.Status, item.Create.Error.Type, item.Create.Error.Reason)
 			} else if item.Index != nil && item.Index.Error != nil {
-				itemError = fmt.Errorf("error re-indexing generic resource [%d] %s: %s", item.Create.Status, item.Create.Error.Type, item.Create.Error.Reason)
+				itemError = fmt.Errorf("error re-indexing generic resource [%d] %s: %s", item.Index.Status, item.Index.Error.Type, item.Index.Error.Reason)
 			}
 			if itemError != nil {
 				bulkItemErrors = append(bulkItemErrors, itemError)
@@ -399,26 +404,23 @@ func genericResourceVersionFromResourceUri(resourceUri string) (string, *pb.Gene
 		return "", nil, err
 	}
 
-	genericResourceVersion := &pb.GenericResourceVersion{
-		Version: resourceUri,
-	}
-
-	return genericResourceVersionId(&pb.GenericResource{
-		Name: uriParts.name,
-		Type: uriParts.resourceType,
-	}, genericResourceVersion), genericResourceVersion, nil
+	return fmt.Sprintf("%s:%s", uriParts.resourceType, resourceUri), &pb.GenericResourceVersion{Version: resourceUri}, nil
 }
 
 func genericResourceId(r *pb.GenericResource) string {
 	return fmt.Sprintf("%s:%s", r.Type, r.Name)
 }
 
-func genericResourceVersionId(r *pb.GenericResource, v *pb.GenericResourceVersion) string {
-	return fmt.Sprintf("%s:%s", genericResourceId(r), v.Version)
-}
+func genericResourceIdFromVersionId(genericResourceVersionId string) (string, error) {
+	parts := strings.SplitN(genericResourceVersionId, ":", 2) // we only want to remove the VERSION: prefix
 
-func genericResourceIdFromVersionId(genericResourceVersionId string) string {
-	parts := strings.Split(genericResourceVersionId, ":")
+	uriParts, err := parseResourceUri(parts[1])
+	if err != nil {
+		return "", err
+	}
 
-	return fmt.Sprintf("%s:%s", parts[0], parts[1])
+	return genericResourceId(&pb.GenericResource{
+		Name: uriParts.name,
+		Type: uriParts.resourceType,
+	}), nil
 }
