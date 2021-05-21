@@ -106,20 +106,20 @@ func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceReque
 	log := r.logger.Named("BatchCreateOccurrences")
 	log.Debug("received request", zap.Any("BatchCreateOccurrencesRequest", occurrenceRequest))
 
-	if err := r.resourceManager.BatchCreateGenericResources(ctx, occurrenceRequest); err != nil {
-		return nil, createError(log, "error creating generic resources", err)
-	}
-
-	if err := r.resourceManager.BatchCreateGenericResourceVersions(ctx, occurrenceRequest); err != nil {
-		return nil, createError(log, "error creating generic resource versions", err)
-	}
-
 	occurrenceResponse, err := r.grafeasCommon.BatchCreateOccurrences(ctx, &grafeas_proto.BatchCreateOccurrencesRequest{
 		Parent:      rodeProjectSlug,
 		Occurrences: occurrenceRequest.GetOccurrences(),
 	})
 	if err != nil {
 		return nil, createError(log, "error creating occurrences", err)
+	}
+
+	if err = r.resourceManager.BatchCreateGenericResources(ctx, occurrenceResponse.Occurrences); err != nil {
+		return nil, createError(log, "error creating generic resources", err)
+	}
+
+	if err = r.resourceManager.BatchCreateGenericResourceVersions(ctx, occurrenceResponse.Occurrences); err != nil {
+		return nil, createError(log, "error creating generic resource versions", err)
 	}
 
 	return &pb.BatchCreateOccurrencesResponse{

@@ -395,7 +395,8 @@ var _ = Describe("rode server", func() {
 			expectedGrafeasBatchCreateOccurrencesResponse *grafeas_proto.BatchCreateOccurrencesResponse
 			expectedGrafeasBatchCreateOccurrencesError    error
 
-			expectedBatchCreateResourcesError error
+			expectedBatchCreateResourcesError        error
+			expectedBatchCreateResourceVersionsError error
 
 			expectedResourceName string
 		)
@@ -419,20 +420,15 @@ var _ = Describe("rode server", func() {
 			}
 
 			expectedBatchCreateResourcesError = nil
+			expectedBatchCreateResourceVersionsError = nil
 		})
 
 		JustBeforeEach(func() {
-			resourceManager.BatchCreateGenericResourcesReturns(expectedBatchCreateResourcesError)
 			grafeasClient.BatchCreateOccurrencesReturns(expectedGrafeasBatchCreateOccurrencesResponse, expectedGrafeasBatchCreateOccurrencesError)
+			resourceManager.BatchCreateGenericResourcesReturns(expectedBatchCreateResourcesError)
+			resourceManager.BatchCreateGenericResourceVersionsReturns(expectedBatchCreateResourceVersionsError)
 
 			actualRodeBatchCreateOccurrencesResponse, actualError = server.BatchCreateOccurrences(ctx, expectedRodeBatchCreateOccurrencesRequest)
-		})
-
-		It("should create generic resources from the received occurrences", func() {
-			Expect(resourceManager.BatchCreateGenericResourcesCallCount()).To(Equal(1))
-
-			_, batchCreateGenericResourcesOccurrenceRequest := resourceManager.BatchCreateGenericResourcesArgsForCall(0)
-			Expect(batchCreateGenericResourcesOccurrenceRequest).To(BeEquivalentTo(expectedRodeBatchCreateOccurrencesRequest))
 		})
 
 		It("should send occurrences to Grafeas", func() {
@@ -443,10 +439,43 @@ var _ = Describe("rode server", func() {
 			Expect(batchCreateOccurrencesRequest.Occurrences[0]).To(BeEquivalentTo(expectedOccurrence))
 		})
 
+		It("should create generic resources from the received occurrences", func() {
+			Expect(resourceManager.BatchCreateGenericResourcesCallCount()).To(Equal(1))
+
+			_, occurrences := resourceManager.BatchCreateGenericResourcesArgsForCall(0)
+			Expect(occurrences).To(BeEquivalentTo(expectedRodeBatchCreateOccurrencesRequest.Occurrences))
+		})
+
+		It("should create generic resource versions from the received occurrences", func() {
+			Expect(resourceManager.BatchCreateGenericResourceVersionsCallCount()).To(Equal(1))
+
+			_, occurrences := resourceManager.BatchCreateGenericResourceVersionsArgsForCall(0)
+			Expect(occurrences).To(BeEquivalentTo(expectedRodeBatchCreateOccurrencesRequest.Occurrences))
+		})
+
 		It("should return the created occurrences", func() {
 			Expect(actualRodeBatchCreateOccurrencesResponse.Occurrences).To(HaveLen(1))
 			Expect(actualRodeBatchCreateOccurrencesResponse.Occurrences[0]).To(BeEquivalentTo(expectedOccurrence))
 			Expect(actualError).ToNot(HaveOccurred())
+		})
+
+		When("an error occurs while creating occurrences", func() {
+			BeforeEach(func() {
+				expectedGrafeasBatchCreateOccurrencesError = errors.New("error batch creating occurrences")
+			})
+
+			It("should return an error", func() {
+				Expect(actualRodeBatchCreateOccurrencesResponse).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+			})
+
+			It("should not attempt to create generic resources", func() {
+				Expect(resourceManager.BatchCreateGenericResourcesCallCount()).To(Equal(0))
+			})
+
+			It("should not attempt to create generic resource versions", func() {
+				Expect(resourceManager.BatchCreateGenericResourceVersionsCallCount()).To(Equal(0))
+			})
 		})
 
 		When("an error occurs while creating generic resources", func() {
@@ -454,8 +483,8 @@ var _ = Describe("rode server", func() {
 				expectedBatchCreateResourcesError = errors.New("error batch creating generic resources")
 			})
 
-			It("should not attempt to create occurrences in grafeas", func() {
-				Expect(grafeasClient.BatchCreateOccurrencesCallCount()).To(Equal(0))
+			It("should not attempt to create generic resource versions", func() {
+				Expect(resourceManager.BatchCreateGenericResourceVersionsCallCount()).To(Equal(0))
 			})
 
 			It("should return an error", func() {
@@ -464,9 +493,9 @@ var _ = Describe("rode server", func() {
 			})
 		})
 
-		When("an error occurs while creating occurrences", func() {
+		When("an error occurs while creating generic resource versions", func() {
 			BeforeEach(func() {
-				expectedGrafeasBatchCreateOccurrencesError = errors.New("error batch creating occurrences")
+				expectedBatchCreateResourceVersionsError = errors.New("error creating generic resource versions")
 			})
 
 			It("should return an error", func() {

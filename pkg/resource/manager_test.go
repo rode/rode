@@ -71,15 +71,14 @@ var _ = Describe("resource manager", func() {
 		var (
 			actualError error
 
-			expectedBatchCreateOccurrencesRequest *pb.BatchCreateOccurrencesRequest
+			expectedOccurrences []*grafeas_go_proto.Occurrence
+			expectedOccurrence  *grafeas_go_proto.Occurrence
 
 			expectedMultiGetResponse *esutil.EsMultiGetResponse
 			expectedMultiGetError    error
 
 			expectedBulkResponse *esutil.EsBulkResponse
 			expectedBulkError    error
-
-			expectedOccurrence *grafeas_go_proto.Occurrence
 
 			expectedResourceName string
 			expectedResourceId   string
@@ -91,10 +90,8 @@ var _ = Describe("resource manager", func() {
 			expectedResourceId = fmt.Sprintf("DOCKER:%s", expectedResourceName)
 			expectedOccurrence.Resource.Uri = fmt.Sprintf("%s@sha256:%s", expectedResourceName, fake.LetterN(10))
 
-			expectedBatchCreateOccurrencesRequest = &pb.BatchCreateOccurrencesRequest{
-				Occurrences: []*grafeas_go_proto.Occurrence{
-					expectedOccurrence,
-				},
+			expectedOccurrences = []*grafeas_go_proto.Occurrence{
+				expectedOccurrence,
 			}
 
 			// happy path: document needs to be created
@@ -125,7 +122,7 @@ var _ = Describe("resource manager", func() {
 			esClient.MultiGetReturns(expectedMultiGetResponse, expectedMultiGetError)
 			esClient.BulkReturns(expectedBulkResponse, expectedBulkError)
 
-			actualError = manager.BatchCreateGenericResources(ctx, expectedBatchCreateOccurrencesRequest)
+			actualError = manager.BatchCreateGenericResources(ctx, expectedOccurrences)
 		})
 
 		It("should check if the generic resources already exist", func() {
@@ -176,7 +173,7 @@ var _ = Describe("resource manager", func() {
 				otherOccurrence := createRandomOccurrence(grafeas_common_proto.NoteKind_BUILD)
 				otherOccurrence.Resource.Uri = expectedOccurrence.Resource.Uri
 
-				expectedBatchCreateOccurrencesRequest.Occurrences = append(expectedBatchCreateOccurrencesRequest.Occurrences, otherOccurrence)
+				expectedOccurrences = append(expectedOccurrences, otherOccurrence)
 			})
 
 			It("should only search for the existing resource once", func() {
@@ -272,7 +269,7 @@ var _ = Describe("resource manager", func() {
 
 	Context("BatchCreateGenericResourceVersions", func() {
 		var (
-			expectedBatchCreateOccurrencesRequest *pb.BatchCreateOccurrencesRequest
+			expectedOccurrences []*grafeas_go_proto.Occurrence
 
 			expectedDockerResourceName             string
 			expectedDockerResourceVersion          string
@@ -297,14 +294,12 @@ var _ = Describe("resource manager", func() {
 			expectedDockerGenericResourceVersionId = fmt.Sprintf("DOCKER:%s", expectedDockerResourceUri)
 			expectedDockerGenericResourceId = fmt.Sprintf("DOCKER:%s", expectedDockerResourceName)
 
-			expectedBatchCreateOccurrencesRequest = &pb.BatchCreateOccurrencesRequest{
-				Occurrences: []*grafeas_go_proto.Occurrence{
-					{
-						Resource: &grafeas_go_proto.Resource{
-							Uri: expectedDockerResourceUri,
-						},
-						Kind: grafeas_common_proto.NoteKind_DISCOVERY,
+			expectedOccurrences = []*grafeas_go_proto.Occurrence{
+				{
+					Resource: &grafeas_go_proto.Resource{
+						Uri: expectedDockerResourceUri,
 					},
+					Kind: grafeas_common_proto.NoteKind_DISCOVERY,
 				},
 			}
 
@@ -335,7 +330,7 @@ var _ = Describe("resource manager", func() {
 			esClient.MultiGetReturns(expectedMultiGetResponse, expectedMultiGetError)
 			esClient.BulkReturns(expectedBulkResponse, expectedBulkError)
 
-			actualError = manager.BatchCreateGenericResourceVersions(ctx, expectedBatchCreateOccurrencesRequest)
+			actualError = manager.BatchCreateGenericResourceVersions(ctx, expectedOccurrences)
 		})
 
 		It("should query for the generic resource version", func() {
@@ -372,7 +367,7 @@ var _ = Describe("resource manager", func() {
 
 		When("there are two occurrences with the same resource uri", func() {
 			BeforeEach(func() {
-				expectedBatchCreateOccurrencesRequest.Occurrences = append(expectedBatchCreateOccurrencesRequest.Occurrences, &grafeas_go_proto.Occurrence{
+				expectedOccurrences = append(expectedOccurrences, &grafeas_go_proto.Occurrence{
 					Resource: &grafeas_go_proto.Resource{
 						Uri: expectedDockerResourceUri,
 					},
@@ -468,7 +463,7 @@ var _ = Describe("resource manager", func() {
 				expectedDockerGenericResourceVersionName = fake.LetterN(10)
 				expectedCreateTime = timestamppb.New(time.Now().Add(time.Duration(fake.Int64())))
 
-				expectedBatchCreateOccurrencesRequest.Occurrences = append(expectedBatchCreateOccurrencesRequest.Occurrences, &grafeas_go_proto.Occurrence{
+				expectedOccurrences = append(expectedOccurrences, &grafeas_go_proto.Occurrence{
 					Resource: &grafeas_go_proto.Resource{
 						Uri: expectedGitResourceUri,
 					},

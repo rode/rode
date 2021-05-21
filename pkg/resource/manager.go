@@ -44,8 +44,8 @@ const (
 
 //counterfeiter:generate . Manager
 type Manager interface {
-	BatchCreateGenericResources(ctx context.Context, request *pb.BatchCreateOccurrencesRequest) error
-	BatchCreateGenericResourceVersions(ctx context.Context, request *pb.BatchCreateOccurrencesRequest) error
+	BatchCreateGenericResources(ctx context.Context, occurrences []*grafeas_proto.Occurrence) error
+	BatchCreateGenericResourceVersions(ctx context.Context, occurrences []*grafeas_proto.Occurrence) error
 	ListGenericResources(ctx context.Context, request *pb.ListGenericResourcesRequest) (*pb.ListGenericResourcesResponse, error)
 	ListGenericResourceVersions(ctx context.Context, request *pb.ListGenericResourceVersionsRequest) (*pb.ListGenericResourceVersionsResponse, error)
 	GetGenericResource(ctx context.Context, resourceName string, resourceType pb.ResourceType) (*pb.GenericResource, error)
@@ -71,12 +71,12 @@ func NewManager(logger *zap.Logger, esClient esutil.Client, esConfig *config.Ela
 
 // BatchCreateGenericResources creates generic resources from a list of occurrences. This method is intended to be invoked
 // as a side effect of BatchCreateOccurrences.
-func (m *manager) BatchCreateGenericResources(ctx context.Context, request *pb.BatchCreateOccurrencesRequest) error {
+func (m *manager) BatchCreateGenericResources(ctx context.Context, occurrences []*grafeas_proto.Occurrence) error {
 	log := m.logger.Named("BatchCreateGenericResources")
 
 	genericResources := map[string]*pb.GenericResource{}
 	var resourceIds []string
-	for _, occurrence := range request.Occurrences {
+	for _, occurrence := range occurrences {
 		uriParts, err := parseResourceUri(occurrence.Resource.Uri)
 		if err != nil {
 			return err
@@ -152,14 +152,16 @@ func (m *manager) BatchCreateGenericResources(ctx context.Context, request *pb.B
 	return nil
 }
 
-func (m *manager) BatchCreateGenericResourceVersions(ctx context.Context, request *pb.BatchCreateOccurrencesRequest) error {
+// BatchCreateGenericResourceVersions creates generic resource versions from a list of occurrences. This method is intended
+// to be invoked as a side effect of BatchCreateOccurrences, after BatchCreateGenericResources
+func (m *manager) BatchCreateGenericResourceVersions(ctx context.Context, occurrences []*grafeas_proto.Occurrence) error {
 	log := m.logger.Named("BatchCreateGenericResourceVersions")
 
 	genericResourceVersions := map[string]*pb.GenericResourceVersion{}
 	var versionIds []string
 
 	// build a list of generic resource versions from occurrences. these may or may not already exist
-	for _, occurrence := range request.Occurrences {
+	for _, occurrence := range occurrences {
 		newVersions, err := genericResourceVersionsFromOccurrence(occurrence)
 		if err != nil {
 			return err

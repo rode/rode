@@ -7,14 +7,15 @@ import (
 
 	"github.com/rode/rode/pkg/resource"
 	"github.com/rode/rode/proto/v1alpha1"
+	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 )
 
 type FakeManager struct {
-	BatchCreateGenericResourceVersionsStub        func(context.Context, *v1alpha1.BatchCreateOccurrencesRequest) error
+	BatchCreateGenericResourceVersionsStub        func(context.Context, []*grafeas_go_proto.Occurrence) error
 	batchCreateGenericResourceVersionsMutex       sync.RWMutex
 	batchCreateGenericResourceVersionsArgsForCall []struct {
 		arg1 context.Context
-		arg2 *v1alpha1.BatchCreateOccurrencesRequest
+		arg2 []*grafeas_go_proto.Occurrence
 	}
 	batchCreateGenericResourceVersionsReturns struct {
 		result1 error
@@ -22,11 +23,11 @@ type FakeManager struct {
 	batchCreateGenericResourceVersionsReturnsOnCall map[int]struct {
 		result1 error
 	}
-	BatchCreateGenericResourcesStub        func(context.Context, *v1alpha1.BatchCreateOccurrencesRequest) error
+	BatchCreateGenericResourcesStub        func(context.Context, []*grafeas_go_proto.Occurrence) error
 	batchCreateGenericResourcesMutex       sync.RWMutex
 	batchCreateGenericResourcesArgsForCall []struct {
 		arg1 context.Context
-		arg2 *v1alpha1.BatchCreateOccurrencesRequest
+		arg2 []*grafeas_go_proto.Occurrence
 	}
 	batchCreateGenericResourcesReturns struct {
 		result1 error
@@ -81,16 +82,21 @@ type FakeManager struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeManager) BatchCreateGenericResourceVersions(arg1 context.Context, arg2 *v1alpha1.BatchCreateOccurrencesRequest) error {
+func (fake *FakeManager) BatchCreateGenericResourceVersions(arg1 context.Context, arg2 []*grafeas_go_proto.Occurrence) error {
+	var arg2Copy []*grafeas_go_proto.Occurrence
+	if arg2 != nil {
+		arg2Copy = make([]*grafeas_go_proto.Occurrence, len(arg2))
+		copy(arg2Copy, arg2)
+	}
 	fake.batchCreateGenericResourceVersionsMutex.Lock()
 	ret, specificReturn := fake.batchCreateGenericResourceVersionsReturnsOnCall[len(fake.batchCreateGenericResourceVersionsArgsForCall)]
 	fake.batchCreateGenericResourceVersionsArgsForCall = append(fake.batchCreateGenericResourceVersionsArgsForCall, struct {
 		arg1 context.Context
-		arg2 *v1alpha1.BatchCreateOccurrencesRequest
-	}{arg1, arg2})
+		arg2 []*grafeas_go_proto.Occurrence
+	}{arg1, arg2Copy})
 	stub := fake.BatchCreateGenericResourceVersionsStub
 	fakeReturns := fake.batchCreateGenericResourceVersionsReturns
-	fake.recordInvocation("BatchCreateGenericResourceVersions", []interface{}{arg1, arg2})
+	fake.recordInvocation("BatchCreateGenericResourceVersions", []interface{}{arg1, arg2Copy})
 	fake.batchCreateGenericResourceVersionsMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
@@ -107,13 +113,13 @@ func (fake *FakeManager) BatchCreateGenericResourceVersionsCallCount() int {
 	return len(fake.batchCreateGenericResourceVersionsArgsForCall)
 }
 
-func (fake *FakeManager) BatchCreateGenericResourceVersionsCalls(stub func(context.Context, *v1alpha1.BatchCreateOccurrencesRequest) error) {
+func (fake *FakeManager) BatchCreateGenericResourceVersionsCalls(stub func(context.Context, []*grafeas_go_proto.Occurrence) error) {
 	fake.batchCreateGenericResourceVersionsMutex.Lock()
 	defer fake.batchCreateGenericResourceVersionsMutex.Unlock()
 	fake.BatchCreateGenericResourceVersionsStub = stub
 }
 
-func (fake *FakeManager) BatchCreateGenericResourceVersionsArgsForCall(i int) (context.Context, *v1alpha1.BatchCreateOccurrencesRequest) {
+func (fake *FakeManager) BatchCreateGenericResourceVersionsArgsForCall(i int) (context.Context, []*grafeas_go_proto.Occurrence) {
 	fake.batchCreateGenericResourceVersionsMutex.RLock()
 	defer fake.batchCreateGenericResourceVersionsMutex.RUnlock()
 	argsForCall := fake.batchCreateGenericResourceVersionsArgsForCall[i]
@@ -143,16 +149,21 @@ func (fake *FakeManager) BatchCreateGenericResourceVersionsReturnsOnCall(i int, 
 	}{result1}
 }
 
-func (fake *FakeManager) BatchCreateGenericResources(arg1 context.Context, arg2 *v1alpha1.BatchCreateOccurrencesRequest) error {
+func (fake *FakeManager) BatchCreateGenericResources(arg1 context.Context, arg2 []*grafeas_go_proto.Occurrence) error {
+	var arg2Copy []*grafeas_go_proto.Occurrence
+	if arg2 != nil {
+		arg2Copy = make([]*grafeas_go_proto.Occurrence, len(arg2))
+		copy(arg2Copy, arg2)
+	}
 	fake.batchCreateGenericResourcesMutex.Lock()
 	ret, specificReturn := fake.batchCreateGenericResourcesReturnsOnCall[len(fake.batchCreateGenericResourcesArgsForCall)]
 	fake.batchCreateGenericResourcesArgsForCall = append(fake.batchCreateGenericResourcesArgsForCall, struct {
 		arg1 context.Context
-		arg2 *v1alpha1.BatchCreateOccurrencesRequest
-	}{arg1, arg2})
+		arg2 []*grafeas_go_proto.Occurrence
+	}{arg1, arg2Copy})
 	stub := fake.BatchCreateGenericResourcesStub
 	fakeReturns := fake.batchCreateGenericResourcesReturns
-	fake.recordInvocation("BatchCreateGenericResources", []interface{}{arg1, arg2})
+	fake.recordInvocation("BatchCreateGenericResources", []interface{}{arg1, arg2Copy})
 	fake.batchCreateGenericResourcesMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
@@ -169,13 +180,13 @@ func (fake *FakeManager) BatchCreateGenericResourcesCallCount() int {
 	return len(fake.batchCreateGenericResourcesArgsForCall)
 }
 
-func (fake *FakeManager) BatchCreateGenericResourcesCalls(stub func(context.Context, *v1alpha1.BatchCreateOccurrencesRequest) error) {
+func (fake *FakeManager) BatchCreateGenericResourcesCalls(stub func(context.Context, []*grafeas_go_proto.Occurrence) error) {
 	fake.batchCreateGenericResourcesMutex.Lock()
 	defer fake.batchCreateGenericResourcesMutex.Unlock()
 	fake.BatchCreateGenericResourcesStub = stub
 }
 
-func (fake *FakeManager) BatchCreateGenericResourcesArgsForCall(i int) (context.Context, *v1alpha1.BatchCreateOccurrencesRequest) {
+func (fake *FakeManager) BatchCreateGenericResourcesArgsForCall(i int) (context.Context, []*grafeas_go_proto.Occurrence) {
 	fake.batchCreateGenericResourcesMutex.RLock()
 	defer fake.batchCreateGenericResourcesMutex.RUnlock()
 	argsForCall := fake.batchCreateGenericResourcesArgsForCall[i]

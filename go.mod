@@ -2,8 +2,6 @@ module github.com/rode/rode
 
 go 1.16
 
-replace github.com/rode/grafeas-elasticsearch => /Users/parker/Developer/grafeas-elasticsearch
-
 require (
 	github.com/antlr/antlr4 v0.0.0-20210409163025-478e46409e82 // indirect
 	github.com/brianvoe/gofakeit/v5 v5.10.1
@@ -29,7 +27,7 @@ require (
 	github.com/pquerna/cachecontrol v0.1.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/rode/es-index-manager v0.1.1
-	github.com/rode/grafeas-elasticsearch v0.7.0
+	github.com/rode/grafeas-elasticsearch v0.8.0
 	github.com/soheilhy/cmux v0.1.4
 	github.com/stretchr/testify v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
