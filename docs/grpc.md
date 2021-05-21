@@ -343,6 +343,7 @@ Response for creating occurrences in batch.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
 | name | [string](#string) |  |  |
 | type | [ResourceType](#rode.v1alpha1.ResourceType) |  |  |
 

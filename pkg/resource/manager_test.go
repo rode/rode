@@ -586,7 +586,8 @@ var _ = Describe("resource manager", func() {
 			expectedSearchResponse *esutil.SearchResponse
 			expectedSearchError    error
 
-			expectedGenericResource *pb.GenericResource
+			expectedGenericResource   *pb.GenericResource
+			expectedGenericResourceId string
 
 			expectedFilterQuery *filtering.Query
 			expectedFilterError error
@@ -597,10 +598,12 @@ var _ = Describe("resource manager", func() {
 
 		BeforeEach(func() {
 			expectedListGenericResourcesRequest = &pb.ListGenericResourcesRequest{}
+			expectedGenericResourceId = fake.LetterN(10)
 
 			expectedGenericResource = &pb.GenericResource{
 				Name: fake.LetterN(10),
 				Type: pb.ResourceType(fake.Number(0, 6)),
+				Id:   expectedGenericResourceId,
 			}
 			genericResourceJson, _ := protojson.Marshal(expectedGenericResource)
 			expectedSearchResponse = &esutil.SearchResponse{
@@ -608,6 +611,7 @@ var _ = Describe("resource manager", func() {
 					Hits: []*esutil.EsSearchResponseHit{
 						{
 							Source: genericResourceJson,
+							ID:     expectedGenericResourceId,
 						},
 					},
 				},

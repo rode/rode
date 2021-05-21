@@ -322,6 +322,7 @@ func (m *manager) ListGenericResources(ctx context.Context, request *pb.ListGene
 			return nil, err
 		}
 
+		genericResource.Id = hit.ID
 		genericResources = append(genericResources, &genericResource)
 	}
 
