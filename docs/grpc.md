@@ -637,6 +637,7 @@ https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576
 | EvaluatePolicy | [EvaluatePolicyRequest](#rode.v1alpha1.EvaluatePolicyRequest) | [EvaluatePolicyResponse](#rode.v1alpha1.EvaluatePolicyResponse) | Verify that an artifact satisfies a policy |
 | ListResources | [ListResourcesRequest](#rode.v1alpha1.ListResourcesRequest) | [ListResourcesResponse](#rode.v1alpha1.ListResourcesResponse) | List resource URI |
 | ListGenericResources | [ListGenericResourcesRequest](#rode.v1alpha1.ListGenericResourcesRequest) | [ListGenericResourcesResponse](#rode.v1alpha1.ListGenericResourcesResponse) |  |
+| ListGenericResourceVersions | [ListGenericResourceVersionsRequest](#rode.v1alpha1.ListGenericResourceVersionsRequest) | [ListGenericResourceVersionsResponse](#rode.v1alpha1.ListGenericResourceVersionsResponse) | ListGenericResourceVersions can be used to list all known versions of a generic resource. Versions will always include the unique identifier (in the case of Docker images, the sha256) and will optionally include any related names (in the case of Docker images, any associated tags for the image). |
 | ListVersionedResourceOccurrences | [ListVersionedResourceOccurrencesRequest](#rode.v1alpha1.ListVersionedResourceOccurrencesRequest) | [ListVersionedResourceOccurrencesResponse](#rode.v1alpha1.ListVersionedResourceOccurrencesResponse) |  |
 | ListOccurrences | [ListOccurrencesRequest](#rode.v1alpha1.ListOccurrencesRequest) | [ListOccurrencesResponse](#rode.v1alpha1.ListOccurrencesResponse) |  |
 | UpdateOccurrence | [UpdateOccurrenceRequest](#rode.v1alpha1.UpdateOccurrenceRequest) | [.grafeas.v1beta1.Occurrence](#grafeas.v1beta1.Occurrence) |  |
@@ -648,7 +649,6 @@ https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576
 | UpdatePolicy | [UpdatePolicyRequest](#rode.v1alpha1.UpdatePolicyRequest) | [Policy](#rode.v1alpha1.Policy) |  |
 | RegisterCollector | [RegisterCollectorRequest](#rode.v1alpha1.RegisterCollectorRequest) | [RegisterCollectorResponse](#rode.v1alpha1.RegisterCollectorResponse) | RegisterCollector accepts a collector ID and a list of notes that this collector will reference when creating occurrences. The response will contain the notes with the fully qualified note name. This operation is idempotent, so any notes that already exist will not be re-created. Collectors are expected to invoke this RPC each time they start. |
 | CreateNote | [CreateNoteRequest](#rode.v1alpha1.CreateNoteRequest) | [.grafeas.v1beta1.Note](#grafeas.v1beta1.Note) | CreateNote acts as a simple proxy to the grafeas CreateNote rpc |
-| ListGenericResourceVersions | [ListGenericResourceVersionsRequest](#rode.v1alpha1.ListGenericResourceVersionsRequest) | [ListGenericResourceVersionsResponse](#rode.v1alpha1.ListGenericResourceVersionsResponse) | ListGenericResourceVersions can be used to list all known versions of a generic resource. Versions will always include the unique identifier (in the case of Docker images, the sha256) and will optionally include any related names (in the case of Docker images, any associated tags for the image). |
 
  
 

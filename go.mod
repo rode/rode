@@ -2,6 +2,8 @@ module github.com/rode/rode
 
 go 1.16
 
+replace github.com/rode/grafeas-elasticsearch => /Users/parker/Developer/grafeas-elasticsearch
+
 require (
 	github.com/antlr/antlr4 v0.0.0-20210409163025-478e46409e82 // indirect
 	github.com/brianvoe/gofakeit/v5 v5.10.1
