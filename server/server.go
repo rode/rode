@@ -106,16 +106,20 @@ func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceReque
 	log := r.logger.Named("BatchCreateOccurrences")
 	log.Debug("received request", zap.Any("BatchCreateOccurrencesRequest", occurrenceRequest))
 
-	if err := r.resourceManager.BatchCreateGenericResources(ctx, occurrenceRequest); err != nil {
-		return nil, createError(log, "error creating generic resources", err)
-	}
-
 	occurrenceResponse, err := r.grafeasCommon.BatchCreateOccurrences(ctx, &grafeas_proto.BatchCreateOccurrencesRequest{
 		Parent:      rodeProjectSlug,
 		Occurrences: occurrenceRequest.GetOccurrences(),
 	})
 	if err != nil {
 		return nil, createError(log, "error creating occurrences", err)
+	}
+
+	if err = r.resourceManager.BatchCreateGenericResources(ctx, occurrenceResponse.Occurrences); err != nil {
+		return nil, createError(log, "error creating generic resources", err)
+	}
+
+	if err = r.resourceManager.BatchCreateGenericResourceVersions(ctx, occurrenceResponse.Occurrences); err != nil {
+		return nil, createError(log, "error creating generic resource versions", err)
 	}
 
 	return &pb.BatchCreateOccurrencesResponse{
@@ -244,34 +248,28 @@ func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListG
 	log := r.logger.Named("ListGenericResources")
 	log.Debug("received request", zap.Any("request", request))
 
-	hits, nextPageToken, err := r.genericList(ctx, log, &genericListOptions{
-		index:         r.indexManager.AliasName(genericResourcesDocumentKind, ""),
-		filter:        request.Filter,
-		pageSize:      request.PageSize,
-		pageToken:     request.PageToken,
-		sortDirection: esutil.EsSortOrderAscending,
-		sortField:     "name",
-	})
+	return r.resourceManager.ListGenericResources(ctx, request)
+}
 
+func (r *rodeServer) ListGenericResourceVersions(ctx context.Context, request *pb.ListGenericResourceVersionsRequest) (*pb.ListGenericResourceVersionsResponse, error) {
+	log := r.logger.Named("ListGenericResourceVersions").With(zap.Any("resource", request.Id))
+
+	if request.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "resource id is required")
+	}
+
+	genericResource, err := r.resourceManager.GetGenericResource(ctx, request.Id)
 	if err != nil {
 		return nil, err
 	}
 
-	var genericResources []*pb.GenericResource
-	for _, hit := range hits.Hits {
-		var genericResource pb.GenericResource
-		err = protojson.Unmarshal(hit.Source, &genericResource)
-		if err != nil {
-			return nil, err
-		}
+	if genericResource == nil {
+		log.Debug("generic resource not found")
 
-		genericResources = append(genericResources, &genericResource)
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("generic resource with id %s not found", request.Id))
 	}
 
-	return &pb.ListGenericResourcesResponse{
-		GenericResources: genericResources,
-		NextPageToken:    nextPageToken,
-	}, nil
+	return r.resourceManager.ListGenericResourceVersions(ctx, request)
 }
 
 func (r *rodeServer) initialize(ctx context.Context) error {

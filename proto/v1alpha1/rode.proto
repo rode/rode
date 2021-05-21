@@ -25,6 +25,7 @@ import "proto/v1alpha1/rode-policy.proto";
 import "proto/v1beta1/grafeas.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
 
 service Rode {
   // Create occurrences
@@ -122,6 +123,15 @@ service Rode {
     };
     option (google.api.method_signature) = "note_id,note";
   };
+  // ListGenericResourceVersions can be used to list all known versions of a generic resource. Versions will always include
+  // the unique identifier (in the case of Docker images, the sha256) and will optionally include any related names (in the
+  // case of Docker images, any associated tags for the image).
+  rpc ListGenericResourceVersions(ListGenericResourceVersionsRequest) returns (ListGenericResourceVersionsResponse) {
+    option (google.api.http) = {
+      get: "/v1alpha1/generic-resource-versions"
+    };
+    option (google.api.method_signature) = "resource";
+  }
 }
 
 enum ResourceType {
@@ -138,8 +148,21 @@ enum ResourceType {
 }
 
 message GenericResource {
-  string name = 1;
-  ResourceType type = 2;
+  string id = 1;
+  string name = 2;
+  ResourceType type = 3;
+}
+
+message GenericResourceVersion {
+  // Version represents the unique artifact version as a fully qualified URI.
+  // Example: a Docker image version might look like this: harbor.liatr.io/rode-demo/node-app@sha256:a235554754f9bf075ac1c1b70c224ef5997176b776f0c56e340aeb63f429ace8
+  string version = 1;
+
+  // Names represents related artifact names, if they exist. This information will be sourced from build occurrences.
+  // Example: a Docker image name might look like this: harbor.liatr.io/rode-demo/node-app:latest
+  repeated string names = 2;
+
+  google.protobuf.Timestamp created = 3;
 }
 
 // Request to create occurrences in batch.
@@ -219,4 +242,17 @@ message RegisterCollectorResponse {
 message CreateNoteRequest {
   string note_id = 1 [(google.api.field_behavior) = REQUIRED];
   grafeas.v1beta1.Note note = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message ListGenericResourceVersionsRequest {
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
+  string filter = 2;
+
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListGenericResourceVersionsResponse {
+  repeated GenericResourceVersion versions = 1;
+  string next_page_token = 2;
 }

@@ -23,6 +23,9 @@
     - [BatchCreateOccurrencesResponse](#rode.v1alpha1.BatchCreateOccurrencesResponse)
     - [CreateNoteRequest](#rode.v1alpha1.CreateNoteRequest)
     - [GenericResource](#rode.v1alpha1.GenericResource)
+    - [GenericResourceVersion](#rode.v1alpha1.GenericResourceVersion)
+    - [ListGenericResourceVersionsRequest](#rode.v1alpha1.ListGenericResourceVersionsRequest)
+    - [ListGenericResourceVersionsResponse](#rode.v1alpha1.ListGenericResourceVersionsResponse)
     - [ListGenericResourcesRequest](#rode.v1alpha1.ListGenericResourcesRequest)
     - [ListGenericResourcesResponse](#rode.v1alpha1.ListGenericResourcesResponse)
     - [ListOccurrencesRequest](#rode.v1alpha1.ListOccurrencesRequest)
@@ -340,8 +343,60 @@ Response for creating occurrences in batch.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
 | name | [string](#string) |  |  |
 | type | [ResourceType](#rode.v1alpha1.ResourceType) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.GenericResourceVersion"></a>
+
+### GenericResourceVersion
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| version | [string](#string) |  | Version represents the unique artifact version as a fully qualified URI. Example: a Docker image version might look like this: harbor.liatr.io/rode-demo/node-app@sha256:a235554754f9bf075ac1c1b70c224ef5997176b776f0c56e340aeb63f429ace8 |
+| names | [string](#string) | repeated | Names represents related artifact names, if they exist. This information will be sourced from build occurrences. Example: a Docker image name might look like this: harbor.liatr.io/rode-demo/node-app:latest |
+| created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ListGenericResourceVersionsRequest"></a>
+
+### ListGenericResourceVersionsRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| filter | [string](#string) |  |  |
+| page_size | [int32](#int32) |  |  |
+| page_token | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ListGenericResourceVersionsResponse"></a>
+
+### ListGenericResourceVersionsResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| versions | [GenericResourceVersion](#rode.v1alpha1.GenericResourceVersion) | repeated |  |
+| next_page_token | [string](#string) |  |  |
 
 
 
@@ -593,6 +648,7 @@ https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576
 | UpdatePolicy | [UpdatePolicyRequest](#rode.v1alpha1.UpdatePolicyRequest) | [Policy](#rode.v1alpha1.Policy) |  |
 | RegisterCollector | [RegisterCollectorRequest](#rode.v1alpha1.RegisterCollectorRequest) | [RegisterCollectorResponse](#rode.v1alpha1.RegisterCollectorResponse) | RegisterCollector accepts a collector ID and a list of notes that this collector will reference when creating occurrences. The response will contain the notes with the fully qualified note name. This operation is idempotent, so any notes that already exist will not be re-created. Collectors are expected to invoke this RPC each time they start. |
 | CreateNote | [CreateNoteRequest](#rode.v1alpha1.CreateNoteRequest) | [.grafeas.v1beta1.Note](#grafeas.v1beta1.Note) | CreateNote acts as a simple proxy to the grafeas CreateNote rpc |
+| ListGenericResourceVersions | [ListGenericResourceVersionsRequest](#rode.v1alpha1.ListGenericResourceVersionsRequest) | [ListGenericResourceVersionsResponse](#rode.v1alpha1.ListGenericResourceVersionsResponse) | ListGenericResourceVersions can be used to list all known versions of a generic resource. Versions will always include the unique identifier (in the case of Docker images, the sha256) and will optionally include any related names (in the case of Docker images, any associated tags for the image). |
 
  
 
