@@ -359,8 +359,8 @@ Response for creating occurrences in batch.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| version | [string](#string) |  | Version represents the unique artifact version. For Docker images, this will be the sha256. |
-| names | [string](#string) | repeated | Names represents related artifact names, if they exist. This information will be sourced from build occurrences. For Docker images, this field represents image tags. |
+| version | [string](#string) |  | Version represents the unique artifact version as a fully qualified URI. Example: a Docker image version might look like this: harbor.liatr.io/rode-demo/node-app@sha256:a235554754f9bf075ac1c1b70c224ef5997176b776f0c56e340aeb63f429ace8 |
+| names | [string](#string) | repeated | Names represents related artifact names, if they exist. This information will be sourced from build occurrences. Example: a Docker image name might look like this: harbor.liatr.io/rode-demo/node-app:latest |
 | created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
 
 

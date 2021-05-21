@@ -169,10 +169,11 @@ type GenericResourceVersion struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// Version represents the unique artifact version. For Docker images, this will be the sha256.
+	// Version represents the unique artifact version as a fully qualified URI.
+	// Example: a Docker image version might look like this: harbor.liatr.io/rode-demo/node-app@sha256:a235554754f9bf075ac1c1b70c224ef5997176b776f0c56e340aeb63f429ace8
 	Version string `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
-	// Names represents related artifact names, if they exist. This information will be sourced from build occurrences. For
-	// Docker images, this field represents image tags.
+	// Names represents related artifact names, if they exist. This information will be sourced from build occurrences.
+	// Example: a Docker image name might look like this: harbor.liatr.io/rode-demo/node-app:latest
 	Names   []string             `protobuf:"bytes,2,rep,name=names,proto3" json:"names,omitempty"`
 	Created *timestamp.Timestamp `protobuf:"bytes,3,opt,name=created,proto3" json:"created,omitempty"`
 }
