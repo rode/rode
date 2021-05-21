@@ -27,7 +27,6 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"net/http"
 )
 
 //go:generate counterfeiter -generate
@@ -101,7 +100,7 @@ func (m *manager) BatchCreateGenericResources(ctx context.Context, occurrences [
 		return err
 	}
 
-	var bulkCreateItems []*esutil.BulkRequestItem
+	var bulkItems []*esutil.BulkRequestItem
 	for i, resourceId := range resourceIds {
 		if multiGetResponse.Docs[i].Found {
 			log.Debug("skipping resource creation because it already exists", zap.String("resourceId", resourceId))
@@ -110,8 +109,8 @@ func (m *manager) BatchCreateGenericResources(ctx context.Context, occurrences [
 
 		log.Debug("Adding resource to bulk request", zap.String("resourceId", resourceId))
 
-		bulkCreateItems = append(bulkCreateItems, &esutil.BulkRequestItem{
-			Operation:  esutil.BULK_CREATE,
+		bulkItems = append(bulkItems, &esutil.BulkRequestItem{
+			Operation:  esutil.BULK_INDEX,
 			Message:    genericResources[resourceId],
 			DocumentId: resourceId,
 			Join: &esutil.EsJoin{
@@ -121,23 +120,23 @@ func (m *manager) BatchCreateGenericResources(ctx context.Context, occurrences [
 		})
 	}
 
-	if len(bulkCreateItems) == 0 {
+	if len(bulkItems) == 0 {
 		return nil
 	}
 
-	bulkCreateResponse, err := m.esClient.Bulk(ctx, &esutil.BulkRequest{
+	bulkResponse, err := m.esClient.Bulk(ctx, &esutil.BulkRequest{
 		Index:   m.indexManager.AliasName(genericResourcesDocumentKind, ""),
 		Refresh: m.esConfig.Refresh.String(),
-		Items:   bulkCreateItems,
+		Items:   bulkItems,
 	})
 	if err != nil {
 		return err
 	}
 
 	var bulkItemErrors []error
-	for i := range bulkCreateResponse.Items {
-		item := bulkCreateResponse.Items[i].Create
-		if item.Error != nil && item.Status != http.StatusConflict {
+	for i := range bulkResponse.Items {
+		item := bulkResponse.Items[i].Index
+		if item.Error != nil {
 			itemError := fmt.Errorf("error creating generic resource [%d] %s: %s", item.Status, item.Error.Type, item.Error.Reason)
 			bulkItemErrors = append(bulkItemErrors, itemError)
 		}

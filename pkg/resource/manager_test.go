@@ -108,7 +108,7 @@ var _ = Describe("resource manager", func() {
 			expectedBulkResponse = &esutil.EsBulkResponse{
 				Items: []*esutil.EsBulkResponseItem{
 					{
-						Create: &esutil.EsIndexDocResponse{
+						Index: &esutil.EsIndexDocResponse{
 							Id:     expectedResourceName,
 							Status: http.StatusOK,
 						},
@@ -137,13 +137,14 @@ var _ = Describe("resource manager", func() {
 		It("should make a bulk request to create all of the generic resources", func() {
 			Expect(esClient.BulkCallCount()).To(Equal(1))
 
-			_, bulkCreateRequest := esClient.BulkArgsForCall(0)
-			Expect(bulkCreateRequest.Refresh).To(Equal(esConfig.Refresh.String()))
-			Expect(bulkCreateRequest.Index).To(Equal(genericResourcesAlias))
-			Expect(bulkCreateRequest.Items).To(HaveLen(1))
+			_, bulkRequest := esClient.BulkArgsForCall(0)
+			Expect(bulkRequest.Refresh).To(Equal(esConfig.Refresh.String()))
+			Expect(bulkRequest.Index).To(Equal(genericResourcesAlias))
+			Expect(bulkRequest.Items).To(HaveLen(1))
 
-			Expect(bulkCreateRequest.Items[0].DocumentId).To(Equal(expectedResourceId))
-			genericResource := bulkCreateRequest.Items[0].Message.(*pb.GenericResource)
+			Expect(bulkRequest.Items[0].DocumentId).To(Equal(expectedResourceId))
+			Expect(bulkRequest.Items[0].Operation).To(Equal(esutil.BULK_INDEX))
+			genericResource := bulkRequest.Items[0].Message.(*pb.GenericResource)
 
 			Expect(genericResource.Name).To(Equal(expectedResourceName))
 			Expect(genericResource.Type).To(Equal(pb.ResourceType_DOCKER))
@@ -238,7 +239,7 @@ var _ = Describe("resource manager", func() {
 
 		When("one resource fails to create", func() {
 			BeforeEach(func() {
-				expectedBulkResponse.Items[0].Create = &esutil.EsIndexDocResponse{
+				expectedBulkResponse.Items[0].Index = &esutil.EsIndexDocResponse{
 					Error: &esutil.EsIndexDocError{
 						Reason: fake.Word(),
 					},
@@ -253,7 +254,7 @@ var _ = Describe("resource manager", func() {
 
 		When("attempting to create a generic resource that already exists", func() {
 			BeforeEach(func() {
-				expectedBulkResponse.Items[0].Create = &esutil.EsIndexDocResponse{
+				expectedBulkResponse.Items[0].Index = &esutil.EsIndexDocResponse{
 					Error: &esutil.EsIndexDocError{
 						Reason: fake.Word(),
 					},
