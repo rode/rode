@@ -21,29 +21,50 @@ import (
 )
 
 var (
-	uriPrefixes = map[pb.ResourceType]string{
-		pb.ResourceType_DOCKER: "",
-		pb.ResourceType_GIT:    "git://",
-		pb.ResourceType_MAVEN:  "gav://",
-		pb.ResourceType_FILE:   "file://",
-		pb.ResourceType_NPM:    "npm://",
-		pb.ResourceType_NUGET:  "nuget://",
-		pb.ResourceType_PIP:    "pip://",
-		pb.ResourceType_DEBIAN: "deb://",
-		pb.ResourceType_RPM:    "rpm://",
-	}
-	uriPatterns = map[pb.ResourceType]*regexp.Regexp{
-		pb.ResourceType_DOCKER: regexp.MustCompile("(?P<name>.+)(@sha256:)(?P<version>.+)"),
-		pb.ResourceType_GIT:    regexp.MustCompile("^git:/{2}(?P<name>.+)@(?P<version>.+)"),
-		pb.ResourceType_MAVEN:  regexp.MustCompile("^gav:/{2}(?P<name>.+):(?P<version>.+)"),
-		pb.ResourceType_FILE:   regexp.MustCompile("^file:/{2}sha256:(?P<version>.+):(?P<name>.+)"),
-		pb.ResourceType_NPM:    regexp.MustCompile("^npm:/{2}(?P<name>.+):(?P<version>.+)"),
-		pb.ResourceType_NUGET:  regexp.MustCompile("^nuget:/{2}(?P<name>.+):(?P<version>.+)"),
-		pb.ResourceType_PIP:    regexp.MustCompile("^pip:/{2}(?P<name>.+):(?P<version>.+)"),
-		pb.ResourceType_DEBIAN: regexp.MustCompile("^deb:/{2}.*:(?P<name>.+):(?P<version>.+)"),
-		pb.ResourceType_RPM:    regexp.MustCompile("^rpm:/{2}.*:(?P<name>.+):(?P<version>.+)"),
+	uriHandlers = map[pb.ResourceType]*uriHandler{
+		pb.ResourceType_DOCKER: {
+			prefix:  "",
+			pattern: regexp.MustCompile("(?P<name>.+)(@sha256:)(?P<version>.+)"),
+		},
+		pb.ResourceType_GIT: {
+			prefix:  "git://",
+			pattern: regexp.MustCompile("^git:/{2}(?P<name>.+)@(?P<version>.+)"),
+		},
+		pb.ResourceType_MAVEN: {
+			prefix:  "gav://",
+			pattern: regexp.MustCompile("^gav:/{2}(?P<name>.+):(?P<version>.+)"),
+		},
+		pb.ResourceType_FILE: {
+			prefix:  "file://",
+			pattern: regexp.MustCompile("^file:/{2}sha256:(?P<version>.+):(?P<name>.+)"),
+		},
+		pb.ResourceType_NPM: {
+			prefix:  "npm://",
+			pattern: regexp.MustCompile("^npm:/{2}(?P<name>.+):(?P<version>.+)"),
+		},
+		pb.ResourceType_NUGET: {
+			prefix:  "nuget://",
+			pattern: regexp.MustCompile("^nuget:/{2}(?P<name>.+):(?P<version>.+)"),
+		},
+		pb.ResourceType_PIP: {
+			prefix:  "pip://",
+			pattern: regexp.MustCompile("^pip:/{2}(?P<name>.+):(?P<version>.+)"),
+		},
+		pb.ResourceType_DEBIAN: {
+			prefix:  "deb://",
+			pattern: regexp.MustCompile("^deb:/{2}.*:(?P<name>.+):(?P<version>.+)"),
+		},
+		pb.ResourceType_RPM: {
+			prefix:  "rpm://",
+			pattern: regexp.MustCompile("^rpm:/{2}.*:(?P<name>.+):(?P<version>.+)"),
+		},
 	}
 )
+
+type uriHandler struct {
+	prefix  string
+	pattern *regexp.Regexp
+}
 
 type uriComponents struct {
 	name         string
@@ -58,9 +79,9 @@ func parseResourceUri(uri string) (*uriComponents, error) {
 		resourceType  pb.ResourceType
 	)
 
-	for t, pattern := range uriPatterns {
-		if pattern.MatchString(uri) {
-			resourceRegex = pattern
+	for t, handler := range uriHandlers {
+		if handler.pattern.MatchString(uri) {
+			resourceRegex = handler.pattern
 			resourceType = t
 			break
 		}
@@ -73,7 +94,7 @@ func parseResourceUri(uri string) (*uriComponents, error) {
 	matches := resourceRegex.FindStringSubmatch(uri)
 	name := matches[resourceRegex.SubexpIndex("name")]
 	version := matches[resourceRegex.SubexpIndex("version")]
-	prefixedName := uriPrefixes[resourceType] + name
+	prefixedName := uriHandlers[resourceType].prefix + name
 
 	return &uriComponents{name, version, resourceType, prefixedName}, nil
 }
