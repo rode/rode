@@ -243,8 +243,7 @@ message CreateNoteRequest {
 }
 
 message ListGenericResourceVersionsRequest {
-  // Resource represents the generic resource that versions should be returned for.
-  GenericResource resource = 1 [(google.api.field_behavior) = REQUIRED];
+  string id = 1 [(google.api.field_behavior) = REQUIRED];
   string filter = 2;
 
   int32 page_size = 3;

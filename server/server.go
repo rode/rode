@@ -252,13 +252,13 @@ func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListG
 }
 
 func (r *rodeServer) ListGenericResourceVersions(ctx context.Context, request *pb.ListGenericResourceVersionsRequest) (*pb.ListGenericResourceVersionsResponse, error) {
-	log := r.logger.Named("ListGenericResourceVersions").With(zap.Any("resource", request.Resource))
+	log := r.logger.Named("ListGenericResourceVersions").With(zap.Any("resource", request.Id))
 
-	if request.Resource == nil {
-		return nil, status.Error(codes.InvalidArgument, "resource is required")
+	if request.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "resource id is required")
 	}
 
-	genericResource, err := r.resourceManager.GetGenericResource(ctx, request.Resource.Name, request.Resource.Type)
+	genericResource, err := r.resourceManager.GetGenericResource(ctx, request.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -266,7 +266,7 @@ func (r *rodeServer) ListGenericResourceVersions(ctx context.Context, request *p
 	if genericResource == nil {
 		log.Debug("generic resource not found")
 
-		return nil, status.Error(codes.NotFound, fmt.Sprintf("generic resource with name %s not found", request.Resource.Name))
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("generic resource with id %s not found", request.Id))
 	}
 
 	return r.resourceManager.ListGenericResourceVersions(ctx, request)

@@ -35,12 +35,11 @@ type FakeManager struct {
 	batchCreateGenericResourcesReturnsOnCall map[int]struct {
 		result1 error
 	}
-	GetGenericResourceStub        func(context.Context, string, v1alpha1.ResourceType) (*v1alpha1.GenericResource, error)
+	GetGenericResourceStub        func(context.Context, string) (*v1alpha1.GenericResource, error)
 	getGenericResourceMutex       sync.RWMutex
 	getGenericResourceArgsForCall []struct {
 		arg1 context.Context
 		arg2 string
-		arg3 v1alpha1.ResourceType
 	}
 	getGenericResourceReturns struct {
 		result1 *v1alpha1.GenericResource
@@ -216,20 +215,19 @@ func (fake *FakeManager) BatchCreateGenericResourcesReturnsOnCall(i int, result1
 	}{result1}
 }
 
-func (fake *FakeManager) GetGenericResource(arg1 context.Context, arg2 string, arg3 v1alpha1.ResourceType) (*v1alpha1.GenericResource, error) {
+func (fake *FakeManager) GetGenericResource(arg1 context.Context, arg2 string) (*v1alpha1.GenericResource, error) {
 	fake.getGenericResourceMutex.Lock()
 	ret, specificReturn := fake.getGenericResourceReturnsOnCall[len(fake.getGenericResourceArgsForCall)]
 	fake.getGenericResourceArgsForCall = append(fake.getGenericResourceArgsForCall, struct {
 		arg1 context.Context
 		arg2 string
-		arg3 v1alpha1.ResourceType
-	}{arg1, arg2, arg3})
+	}{arg1, arg2})
 	stub := fake.GetGenericResourceStub
 	fakeReturns := fake.getGenericResourceReturns
-	fake.recordInvocation("GetGenericResource", []interface{}{arg1, arg2, arg3})
+	fake.recordInvocation("GetGenericResource", []interface{}{arg1, arg2})
 	fake.getGenericResourceMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2, arg3)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -243,17 +241,17 @@ func (fake *FakeManager) GetGenericResourceCallCount() int {
 	return len(fake.getGenericResourceArgsForCall)
 }
 
-func (fake *FakeManager) GetGenericResourceCalls(stub func(context.Context, string, v1alpha1.ResourceType) (*v1alpha1.GenericResource, error)) {
+func (fake *FakeManager) GetGenericResourceCalls(stub func(context.Context, string) (*v1alpha1.GenericResource, error)) {
 	fake.getGenericResourceMutex.Lock()
 	defer fake.getGenericResourceMutex.Unlock()
 	fake.GetGenericResourceStub = stub
 }
 
-func (fake *FakeManager) GetGenericResourceArgsForCall(i int) (context.Context, string, v1alpha1.ResourceType) {
+func (fake *FakeManager) GetGenericResourceArgsForCall(i int) (context.Context, string) {
 	fake.getGenericResourceMutex.RLock()
 	defer fake.getGenericResourceMutex.RUnlock()
 	argsForCall := fake.getGenericResourceArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeManager) GetGenericResourceReturns(result1 *v1alpha1.GenericResource, result2 error) {

@@ -87,7 +87,7 @@ var _ = Describe("resource manager", func() {
 		BeforeEach(func() {
 			expectedOccurrence = createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED)
 			expectedResourceName = fake.URL()
-			expectedResourceId = fmt.Sprintf("DOCKER:%s", expectedResourceName)
+			expectedResourceId = expectedResourceName
 			expectedOccurrence.Resource.Uri = fmt.Sprintf("%s@sha256:%s", expectedResourceName, fake.LetterN(10))
 
 			expectedOccurrences = []*grafeas_go_proto.Occurrence{
@@ -291,8 +291,8 @@ var _ = Describe("resource manager", func() {
 			expectedDockerResourceName = strings.Split(fake.URL(), "://")[1]
 			expectedDockerResourceVersion = fake.LetterN(20)
 			expectedDockerResourceUri = fmt.Sprintf("%s@sha256:%s", expectedDockerResourceName, expectedDockerResourceVersion)
-			expectedDockerGenericResourceVersionId = fmt.Sprintf("DOCKER:%s", expectedDockerResourceUri)
-			expectedDockerGenericResourceId = fmt.Sprintf("DOCKER:%s", expectedDockerResourceName)
+			expectedDockerGenericResourceVersionId = expectedDockerResourceUri
+			expectedDockerGenericResourceId = expectedDockerResourceName
 
 			expectedOccurrences = []*grafeas_go_proto.Occurrence{
 				{
@@ -457,8 +457,8 @@ var _ = Describe("resource manager", func() {
 				expectedGitResourceName = strings.Split(fake.URL(), "://")[1]
 				expectedGitResourceVersion = fake.LetterN(20)
 				expectedGitResourceUri = fmt.Sprintf("git://%s@%s", expectedGitResourceName, expectedGitResourceVersion)
-				expectedGitGenericResourceVersionId = fmt.Sprintf("GIT:%s", expectedGitResourceUri)
-				expectedGitGenericResourceId = fmt.Sprintf("GIT:%s", expectedGitResourceName)
+				expectedGitGenericResourceVersionId = expectedGitResourceUri
+				expectedGitGenericResourceId = fmt.Sprintf("git://%s", expectedGitResourceName)
 
 				expectedDockerGenericResourceVersionName = fake.LetterN(10)
 				expectedCreateTime = timestamppb.New(time.Now().Add(time.Duration(fake.Int64())))

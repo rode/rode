@@ -21,16 +21,27 @@ import (
 )
 
 var (
+	uriPrefixes = map[pb.ResourceType]string{
+		pb.ResourceType_DOCKER: "",
+		pb.ResourceType_GIT:    "git://",
+		pb.ResourceType_MAVEN:  "gav://",
+		pb.ResourceType_FILE:   "file://",
+		pb.ResourceType_NPM:    "npm://",
+		pb.ResourceType_NUGET:  "nuget://",
+		pb.ResourceType_PIP:    "pip://",
+		pb.ResourceType_DEBIAN: "deb://",
+		pb.ResourceType_RPM:    "rpm://",
+	}
 	uriPatterns = map[pb.ResourceType]*regexp.Regexp{
 		pb.ResourceType_DOCKER: regexp.MustCompile("(?P<name>.+)(@sha256:)(?P<version>.+)"),
-		pb.ResourceType_GIT:    regexp.MustCompile("^(git:/{2})(?P<name>.+)@(?P<version>.+)"),
-		pb.ResourceType_MAVEN:  regexp.MustCompile("^(gav:/{2})(?P<name>.+):(?P<version>.+)"),
-		pb.ResourceType_FILE:   regexp.MustCompile("^(file:/{2}sha256:)(?P<version>.+):(?P<name>.+)"),
-		pb.ResourceType_NPM:    regexp.MustCompile("^(npm:/{2})(?P<name>.+):(?P<version>.+)"),
-		pb.ResourceType_NUGET:  regexp.MustCompile("^(nuget:/{2})(?P<name>.+):(?P<version>.+)"),
-		pb.ResourceType_PIP:    regexp.MustCompile("^(pip:/{2})(?P<name>.+):(?P<version>.+)"),
-		pb.ResourceType_DEBIAN: regexp.MustCompile("^(deb:/{2}).*:(?P<name>.+):(?P<version>.+)"),
-		pb.ResourceType_RPM:    regexp.MustCompile("^(rpm:/{2}).*:(?P<name>.+):(?P<version>.+)"),
+		pb.ResourceType_GIT:    regexp.MustCompile("^git:/{2}(?P<name>.+)@(?P<version>.+)"),
+		pb.ResourceType_MAVEN:  regexp.MustCompile("^gav:/{2}(?P<name>.+):(?P<version>.+)"),
+		pb.ResourceType_FILE:   regexp.MustCompile("^file:/{2}sha256:(?P<version>.+):(?P<name>.+)"),
+		pb.ResourceType_NPM:    regexp.MustCompile("^npm:/{2}(?P<name>.+):(?P<version>.+)"),
+		pb.ResourceType_NUGET:  regexp.MustCompile("^nuget:/{2}(?P<name>.+):(?P<version>.+)"),
+		pb.ResourceType_PIP:    regexp.MustCompile("^pip:/{2}(?P<name>.+):(?P<version>.+)"),
+		pb.ResourceType_DEBIAN: regexp.MustCompile("^deb:/{2}.*:(?P<name>.+):(?P<version>.+)"),
+		pb.ResourceType_RPM:    regexp.MustCompile("^rpm:/{2}.*:(?P<name>.+):(?P<version>.+)"),
 	}
 )
 
@@ -38,6 +49,7 @@ type uriComponents struct {
 	name         string
 	version      string
 	resourceType pb.ResourceType
+	prefixedName string
 }
 
 func parseResourceUri(uri string) (*uriComponents, error) {
@@ -61,6 +73,7 @@ func parseResourceUri(uri string) (*uriComponents, error) {
 	matches := resourceRegex.FindStringSubmatch(uri)
 	name := matches[resourceRegex.SubexpIndex("name")]
 	version := matches[resourceRegex.SubexpIndex("version")]
+	prefixedName := uriPrefixes[resourceType] + name
 
-	return &uriComponents{name, version, resourceType}, nil
+	return &uriComponents{name, version, resourceType, prefixedName}, nil
 }

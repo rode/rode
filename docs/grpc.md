@@ -376,7 +376,7 @@ Response for creating occurrences in batch.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| resource | [GenericResource](#rode.v1alpha1.GenericResource) |  | Resource represents the generic resource that versions should be returned for. |
+| id | [string](#string) |  |  |
 | filter | [string](#string) |  |  |
 | page_size | [int32](#int32) |  |  |
 | page_token | [string](#string) |  |  |

@@ -17,19 +17,17 @@ package resource
 import (
 	"context"
 	"fmt"
+	"github.com/rode/es-index-manager/indexmanager"
+	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
+	"github.com/rode/rode/config"
+	pb "github.com/rode/rode/proto/v1alpha1"
 	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/common_go_proto"
 	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
+	"go.uber.org/zap"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"net/http"
-	"strings"
-
-	"github.com/rode/es-index-manager/indexmanager"
-	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
-	"github.com/rode/rode/config"
-	pb "github.com/rode/rode/proto/v1alpha1"
-	"go.uber.org/zap"
 )
 
 //go:generate counterfeiter -generate
@@ -48,7 +46,7 @@ type Manager interface {
 	BatchCreateGenericResourceVersions(ctx context.Context, occurrences []*grafeas_proto.Occurrence) error
 	ListGenericResources(ctx context.Context, request *pb.ListGenericResourcesRequest) (*pb.ListGenericResourcesResponse, error)
 	ListGenericResourceVersions(ctx context.Context, request *pb.ListGenericResourceVersionsRequest) (*pb.ListGenericResourceVersionsResponse, error)
-	GetGenericResource(ctx context.Context, resourceName string, resourceType pb.ResourceType) (*pb.GenericResource, error)
+	GetGenericResource(ctx context.Context, resourceId string) (*pb.GenericResource, error)
 }
 
 type manager struct {
@@ -86,7 +84,7 @@ func (m *manager) BatchCreateGenericResources(ctx context.Context, occurrences [
 			Name: uriParts.name,
 			Type: uriParts.resourceType,
 		}
-		resourceId := genericResourceId(genericResource)
+		resourceId := uriParts.prefixedName
 
 		if _, ok := genericResources[resourceId]; ok {
 			continue
@@ -162,10 +160,7 @@ func (m *manager) BatchCreateGenericResourceVersions(ctx context.Context, occurr
 
 	// build a list of generic resource versions from occurrences. these may or may not already exist
 	for _, occurrence := range occurrences {
-		newVersions, err := genericResourceVersionsFromOccurrence(occurrence)
-		if err != nil {
-			return err
-		}
+		newVersions := genericResourceVersionsFromOccurrence(occurrence)
 
 		// check if we already know about these versions
 		for versionId, newVersion := range newVersions {
@@ -199,7 +194,7 @@ func (m *manager) BatchCreateGenericResourceVersions(ctx context.Context, occurr
 	var bulkItems []*esutil.BulkRequestItem
 	for i, versionId := range versionIds {
 		version := genericResourceVersions[versionId]
-		parentId, err := genericResourceIdFromVersionId(versionId)
+		uriParts, err := parseResourceUri(versionId)
 		if err != nil {
 			return err
 		}
@@ -211,7 +206,7 @@ func (m *manager) BatchCreateGenericResourceVersions(ctx context.Context, occurr
 			Join: &esutil.EsJoin{
 				Field:  genericResourceDocumentJoinField,
 				Name:   genericResourceVersionRelationName,
-				Parent: parentId,
+				Parent: uriParts.prefixedName,
 			},
 		}
 
@@ -341,15 +336,12 @@ func (m *manager) ListGenericResourceVersions(ctx context.Context, request *pb.L
 	return nil, nil
 }
 
-func (m *manager) GetGenericResource(ctx context.Context, resourceName string, resourceType pb.ResourceType) (*pb.GenericResource, error) {
-	log := m.logger.Named("GetGenericResource").With(zap.String("resource", resourceName))
+func (m *manager) GetGenericResource(ctx context.Context, resourceId string) (*pb.GenericResource, error) {
+	log := m.logger.Named("GetGenericResource").With(zap.String("resource", resourceId))
 
 	response, err := m.esClient.Get(ctx, &esutil.GetRequest{
-		Index: m.indexManager.AliasName(genericResourcesDocumentKind, ""),
-		DocumentId: genericResourceId(&pb.GenericResource{
-			Name: resourceName,
-			Type: resourceType,
-		}),
+		Index:      m.indexManager.AliasName(genericResourcesDocumentKind, ""),
+		DocumentId: resourceId,
 	})
 	if err != nil {
 		return nil, err
@@ -372,57 +364,24 @@ func (m *manager) GetGenericResource(ctx context.Context, resourceName string, r
 
 // genericResourceVersionsFromOccurrence will create a map of generic versions, keyed by their IDs, from an occurrence.
 // if the occurrence is a build occurrence, generic resource versions will also be created for each built artifact.
-func genericResourceVersionsFromOccurrence(o *grafeas_proto.Occurrence) (map[string]*pb.GenericResourceVersion, error) {
+func genericResourceVersionsFromOccurrence(o *grafeas_proto.Occurrence) map[string]*pb.GenericResourceVersion {
 	result := make(map[string]*pb.GenericResourceVersion)
 
-	id, version, err := genericResourceVersionFromResourceUri(o.Resource.Uri)
-	if err != nil {
-		return nil, err
+	result[o.Resource.Uri] = &pb.GenericResourceVersion{
+		Version: o.Resource.Uri,
 	}
-
-	result[id] = version
 
 	if o.Kind == common_go_proto.NoteKind_BUILD {
 		details := o.Details.(*grafeas_proto.Occurrence_Build)
 
 		for _, artifact := range details.Build.Provenance.BuiltArtifacts {
-			artifactId, artifactVersion, err := genericResourceVersionFromResourceUri(artifact.Id)
-			if err != nil {
-				return nil, err
+			result[artifact.Id] = &pb.GenericResourceVersion{
+				Version: artifact.Id,
+				Names:   artifact.Names,
+				Created: o.CreateTime,
 			}
-
-			artifactVersion.Names = artifact.Names
-			artifactVersion.Created = o.CreateTime
-			result[artifactId] = artifactVersion
 		}
 	}
 
-	return result, nil
-}
-
-func genericResourceVersionFromResourceUri(resourceUri string) (string, *pb.GenericResourceVersion, error) {
-	uriParts, err := parseResourceUri(resourceUri)
-	if err != nil {
-		return "", nil, err
-	}
-
-	return fmt.Sprintf("%s:%s", uriParts.resourceType, resourceUri), &pb.GenericResourceVersion{Version: resourceUri}, nil
-}
-
-func genericResourceId(r *pb.GenericResource) string {
-	return fmt.Sprintf("%s:%s", r.Type, r.Name)
-}
-
-func genericResourceIdFromVersionId(genericResourceVersionId string) (string, error) {
-	parts := strings.SplitN(genericResourceVersionId, ":", 2) // we only want to remove the VERSION: prefix
-
-	uriParts, err := parseResourceUri(parts[1])
-	if err != nil {
-		return "", err
-	}
-
-	return genericResourceId(&pb.GenericResource{
-		Name: uriParts.name,
-		Type: uriParts.resourceType,
-	}), nil
+	return result
 }
