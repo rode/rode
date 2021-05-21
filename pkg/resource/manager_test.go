@@ -318,7 +318,7 @@ var _ = Describe("resource manager", func() {
 			expectedBulkResponse = &esutil.EsBulkResponse{
 				Items: []*esutil.EsBulkResponseItem{
 					{
-						Create: &esutil.EsIndexDocResponse{
+						Index: &esutil.EsIndexDocResponse{
 							Id: fake.LetterN(10),
 						},
 					},
@@ -350,7 +350,7 @@ var _ = Describe("resource manager", func() {
 
 			Expect(bulkRequest.Items).To(HaveLen(1))
 			item := bulkRequest.Items[0]
-			Expect(item.Operation).To(Equal(esutil.BULK_CREATE))
+			Expect(item.Operation).To(Equal(esutil.BULK_INDEX))
 			Expect(item.DocumentId).To(Equal(expectedDockerGenericResourceVersionId))
 			Expect(item.Join.Field).To(Equal(genericResourceDocumentJoinField))
 			Expect(item.Join.Name).To(Equal(genericResourceVersionRelationName))
@@ -430,7 +430,7 @@ var _ = Describe("resource manager", func() {
 
 		When("creating the generic resource fails", func() {
 			BeforeEach(func() {
-				expectedBulkResponse.Items[0].Create.Error = &esutil.EsIndexDocError{
+				expectedBulkResponse.Items[0].Index.Error = &esutil.EsIndexDocError{
 					Type:   fake.LetterN(10),
 					Reason: fake.LetterN(10),
 				}
@@ -486,7 +486,7 @@ var _ = Describe("resource manager", func() {
 
 				expectedMultiGetResponse.Docs = append(expectedMultiGetResponse.Docs, &esutil.EsGetResponse{Found: false})
 				expectedBulkResponse.Items = append(expectedBulkResponse.Items, &esutil.EsBulkResponseItem{
-					Create: &esutil.EsIndexDocResponse{
+					Index: &esutil.EsIndexDocResponse{
 						Id: fake.LetterN(10),
 					},
 				})
@@ -509,7 +509,7 @@ var _ = Describe("resource manager", func() {
 				Expect(bulkRequest.Items).To(HaveLen(2))
 
 				dockerItem := bulkRequest.Items[0]
-				Expect(dockerItem.Operation).To(Equal(esutil.BULK_CREATE))
+				Expect(dockerItem.Operation).To(Equal(esutil.BULK_INDEX))
 				Expect(dockerItem.DocumentId).To(Equal(expectedDockerGenericResourceVersionId))
 				Expect(dockerItem.Join.Field).To(Equal(genericResourceDocumentJoinField))
 				Expect(dockerItem.Join.Name).To(Equal(genericResourceVersionRelationName))
@@ -521,7 +521,7 @@ var _ = Describe("resource manager", func() {
 				Expect(dockerMessage.Version).To(Equal(expectedDockerResourceUri))
 
 				gitItem := bulkRequest.Items[1]
-				Expect(gitItem.Operation).To(Equal(esutil.BULK_CREATE))
+				Expect(gitItem.Operation).To(Equal(esutil.BULK_INDEX))
 				Expect(gitItem.DocumentId).To(Equal(expectedGitGenericResourceVersionId))
 				Expect(gitItem.Join.Field).To(Equal(genericResourceDocumentJoinField))
 				Expect(gitItem.Join.Name).To(Equal(genericResourceVersionRelationName))
@@ -536,7 +536,6 @@ var _ = Describe("resource manager", func() {
 			When("the docker generic resource version already exists", func() {
 				BeforeEach(func() {
 					expectedMultiGetResponse.Docs[0].Found = true
-					expectedBulkResponse.Items[0].Create = nil
 					expectedBulkResponse.Items[0].Index = &esutil.EsIndexDocResponse{
 						Id: fake.LetterN(10),
 					}
@@ -551,7 +550,6 @@ var _ = Describe("resource manager", func() {
 					Expect(bulkRequest.Items).To(HaveLen(2))
 
 					dockerItem := bulkRequest.Items[0]
-					// BULK_INDEX is used for update rather than BULK_CREATE
 					Expect(dockerItem.Operation).To(Equal(esutil.BULK_INDEX))
 					Expect(dockerItem.DocumentId).To(Equal(expectedDockerGenericResourceVersionId))
 					Expect(dockerItem.Join.Field).To(Equal(genericResourceDocumentJoinField))

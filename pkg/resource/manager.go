@@ -134,11 +134,9 @@ func (m *manager) BatchCreateGenericResources(ctx context.Context, occurrences [
 	}
 
 	var bulkItemErrors []error
-	for i := range bulkResponse.Items {
-		item := bulkResponse.Items[i].Index
-		if item.Error != nil {
-			itemError := fmt.Errorf("error creating generic resource [%d] %s: %s", item.Status, item.Error.Type, item.Error.Reason)
-			bulkItemErrors = append(bulkItemErrors, itemError)
+	for _, item := range bulkResponse.Items {
+		if item.Index.Error != nil {
+			bulkItemErrors = append(bulkItemErrors, fmt.Errorf("error creating generic resource [%d] %s: %s", item.Index.Status, item.Index.Error.Type, item.Index.Error.Reason))
 		}
 	}
 
@@ -214,7 +212,6 @@ func (m *manager) BatchCreateGenericResourceVersions(ctx context.Context, occurr
 			// if we have a list of names, update the existing version with the new one
 			// otherwise, we have nothing to do here
 			if len(version.Names) != 0 {
-				bulkItem.Operation = esutil.BULK_INDEX
 				log.Debug("updating generic resource version", zap.Any("version", version))
 			} else {
 				bulkItem = nil
@@ -226,7 +223,6 @@ func (m *manager) BatchCreateGenericResourceVersions(ctx context.Context, occurr
 				version.Created = timestamppb.Now()
 			}
 
-			bulkItem.Operation = esutil.BULK_CREATE
 			log.Debug("creating generic resource version", zap.Any("version", version))
 		}
 
@@ -248,14 +244,8 @@ func (m *manager) BatchCreateGenericResourceVersions(ctx context.Context, occurr
 		}
 
 		for _, item := range bulkResponse.Items {
-			var itemError error
-			if item.Create != nil && item.Create.Error != nil {
-				itemError = fmt.Errorf("error creating generic resource [%d] %s: %s", item.Create.Status, item.Create.Error.Type, item.Create.Error.Reason)
-			} else if item.Index != nil && item.Index.Error != nil {
-				itemError = fmt.Errorf("error re-indexing generic resource [%d] %s: %s", item.Index.Status, item.Index.Error.Type, item.Index.Error.Reason)
-			}
-			if itemError != nil {
-				bulkItemErrors = append(bulkItemErrors, itemError)
+			if item.Index.Error != nil {
+				bulkItemErrors = append(bulkItemErrors, fmt.Errorf("error indexing generic resource [%d] %s: %s", item.Index.Status, item.Index.Error.Type, item.Index.Error.Reason))
 			}
 		}
 	}
