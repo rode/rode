@@ -629,6 +629,7 @@ var _ = Describe("resource manager", func() {
 			Expect(esClient.SearchCallCount()).To(Equal(1))
 
 			_, searchRequest := esClient.SearchArgsForCall(0)
+			Expect(searchRequest.Index).To(Equal(genericResourcesAlias))
 
 			// no pagination options were specified
 			Expect(searchRequest.Pagination).To(BeNil())
@@ -714,6 +715,17 @@ var _ = Describe("resource manager", func() {
 				Expect(searchRequest.Pagination.Token).To(Equal(expectedListGenericResourcesRequest.PageToken))
 			})
 		})
+
+		When("the search fails", func() {
+			BeforeEach(func() {
+				expectedSearchError = errors.New("search failed")
+			})
+
+			It("should return an error", func() {
+				Expect(actualListGenericResourcesResponse).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+			})
+		})
 	})
 
 	Context("ListGenericResourceVersions", func() {
@@ -771,6 +783,7 @@ var _ = Describe("resource manager", func() {
 			Expect(esClient.SearchCallCount()).To(Equal(1))
 
 			_, searchRequest := esClient.SearchArgsForCall(0)
+			Expect(searchRequest.Index).To(Equal(genericResourcesAlias))
 
 			// no pagination options were specified
 			Expect(searchRequest.Pagination).To(BeNil())
@@ -842,6 +855,17 @@ var _ = Describe("resource manager", func() {
 			})
 		})
 
+		When("the search fails", func() {
+			BeforeEach(func() {
+				expectedSearchError = errors.New("search failed")
+			})
+
+			It("should return an error", func() {
+				Expect(actualListGenericResourceVersionsResponse).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+			})
+		})
+
 		When("pagination is used", func() {
 			BeforeEach(func() {
 				expectedListGenericResourceVersionsRequest.PageSize = int32(fake.Number(1, 10))
@@ -856,6 +880,77 @@ var _ = Describe("resource manager", func() {
 				Expect(searchRequest.Pagination).ToNot(BeNil())
 				Expect(searchRequest.Pagination.Size).To(BeEquivalentTo(expectedListGenericResourceVersionsRequest.PageSize))
 				Expect(searchRequest.Pagination.Token).To(Equal(expectedListGenericResourceVersionsRequest.PageToken))
+			})
+		})
+	})
+
+	Context("GetGenericResource", func() {
+		var (
+			actualGenericResource *pb.GenericResource
+			actualError           error
+
+			expectedResourceId      string
+			expectedGenericResource *pb.GenericResource
+
+			expectedGetResponse *esutil.EsGetResponse
+			expectedGetError    error
+		)
+
+		BeforeEach(func() {
+			expectedResourceId = fake.LetterN(10)
+			expectedGenericResource = &pb.GenericResource{
+				Id:   expectedResourceId,
+				Name: fake.LetterN(10),
+				Type: pb.ResourceType(fake.Number(0, 7)),
+			}
+
+			genericResourceJson, _ := protojson.Marshal(expectedGenericResource)
+			expectedGetResponse = &esutil.EsGetResponse{
+				Found:  true,
+				Source: genericResourceJson,
+			}
+			expectedGetError = nil
+		})
+
+		JustBeforeEach(func() {
+			esClient.GetReturns(expectedGetResponse, expectedGetError)
+
+			actualGenericResource, actualError = manager.GetGenericResource(ctx, expectedResourceId)
+		})
+
+		It("should query elasticsearch for the generic resource", func() {
+			Expect(esClient.GetCallCount()).To(Equal(1))
+
+			_, getRequest := esClient.GetArgsForCall(0)
+
+			Expect(getRequest.DocumentId).To(Equal(expectedResourceId))
+			Expect(getRequest.Index).To(Equal(genericResourcesAlias))
+		})
+
+		It("should return the generic resource and no error", func() {
+			Expect(actualGenericResource).To(Equal(expectedGenericResource))
+			Expect(actualError).ToNot(HaveOccurred())
+		})
+
+		When("the generic resource is not found", func() {
+			BeforeEach(func() {
+				expectedGetResponse.Found = false
+			})
+
+			It("should return nil", func() {
+				Expect(actualGenericResource).To(BeNil())
+				Expect(actualError).ToNot(HaveOccurred())
+			})
+		})
+
+		When("the get request fails", func() {
+			BeforeEach(func() {
+				expectedGetError = errors.New("get failed")
+			})
+
+			It("should return an error", func() {
+				Expect(actualGenericResource).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
 			})
 		})
 	})
