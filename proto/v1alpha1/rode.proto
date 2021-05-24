@@ -21,7 +21,7 @@ option go_package = "github.com/rode/rode/proto/v1alpha1";
 import "google/api/annotations.proto";
 import "google/api/client.proto";
 import "google/api/field_behavior.proto";
-import "proto/v1alpha1/rode-policy.proto";
+import "proto/v1alpha1/rode_policy.proto";
 import "proto/v1beta1/grafeas.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/field_mask.proto";
