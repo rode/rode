@@ -715,6 +715,150 @@ var _ = Describe("resource manager", func() {
 			})
 		})
 	})
+
+	Context("ListGenericResourceVersions", func() {
+		var (
+			expectedListGenericResourceVersionsRequest *pb.ListGenericResourceVersionsRequest
+
+			expectedSearchResponse *esutil.SearchResponse
+			expectedSearchError    error
+
+			expectedGenericResourceVersion   *pb.GenericResourceVersion
+			expectedGenericResourceVersionId string
+			expectedGenericResourceId        string
+
+			expectedFilterQuery *filtering.Query
+			expectedFilterError error
+
+			actualListGenericResourceVersionsResponse *pb.ListGenericResourceVersionsResponse
+			actualError                               error
+		)
+
+		BeforeEach(func() {
+			expectedGenericResourceId = fake.LetterN(10)
+			expectedListGenericResourceVersionsRequest = &pb.ListGenericResourceVersionsRequest{
+				Id: expectedGenericResourceId,
+			}
+			expectedGenericResourceVersionId = fake.LetterN(10)
+
+			expectedGenericResourceVersion = &pb.GenericResourceVersion{
+				Version: expectedGenericResourceVersionId,
+				Names:   []string{fake.LetterN(10)},
+				Created: timestamppb.Now(),
+			}
+			genericResourceVersionJson, _ := protojson.Marshal(expectedGenericResourceVersion)
+			expectedSearchResponse = &esutil.SearchResponse{
+				Hits: &esutil.EsSearchResponseHits{
+					Hits: []*esutil.EsSearchResponseHit{
+						{
+							Source: genericResourceVersionJson,
+							ID:     expectedGenericResourceVersionId,
+						},
+					},
+				},
+			}
+			expectedSearchError = nil
+		})
+
+		JustBeforeEach(func() {
+			mockFilterer.ParseExpressionReturns(expectedFilterQuery, expectedFilterError)
+			esClient.SearchReturns(expectedSearchResponse, expectedSearchError)
+
+			actualListGenericResourceVersionsResponse, actualError = manager.ListGenericResourceVersions(ctx, expectedListGenericResourceVersionsRequest)
+		})
+
+		It("should perform a search", func() {
+			Expect(esClient.SearchCallCount()).To(Equal(1))
+
+			_, searchRequest := esClient.SearchArgsForCall(0)
+
+			// no pagination options were specified
+			Expect(searchRequest.Pagination).To(BeNil())
+
+			// no filter was specified, so we should only have one query
+			Expect(*searchRequest.Search.Query.Bool.Must).To(HaveLen(1))
+
+			// the only query should specify parent
+			hasParent := (*searchRequest.Search.Query.Bool.Must)[0].(*filtering.Query).HasParent
+			Expect(hasParent.ParentType).To(Equal(genericResourceRelationName))
+
+			Expect((*hasParent.Query.Term)["_id"]).To(Equal(expectedGenericResourceId))
+		})
+
+		It("should not attempt to parse a filter", func() {
+			Expect(mockFilterer.ParseExpressionCallCount()).To(Equal(0))
+		})
+
+		It("should return the generic resource versions and no error", func() {
+			Expect(actualListGenericResourceVersionsResponse.Versions).To(HaveLen(1))
+			Expect(actualListGenericResourceVersionsResponse.Versions[0]).To(Equal(expectedGenericResourceVersion))
+
+			Expect(actualError).ToNot(HaveOccurred())
+		})
+
+		When("a filter is specified", func() {
+			BeforeEach(func() {
+				expectedListGenericResourceVersionsRequest.Filter = fake.LetterN(10)
+
+				expectedFilterQuery = &filtering.Query{
+					Term: &filtering.Term{
+						fake.LetterN(10): fake.LetterN(10),
+					},
+				}
+				expectedFilterError = nil
+			})
+
+			It("should attempt to parse the filter", func() {
+				Expect(mockFilterer.ParseExpressionCallCount()).To(Equal(1))
+
+				filter := mockFilterer.ParseExpressionArgsForCall(0)
+				Expect(filter).To(Equal(expectedListGenericResourceVersionsRequest.Filter))
+			})
+
+			It("should use the filter query when searching", func() {
+				Expect(esClient.SearchCallCount()).To(Equal(1))
+
+				_, searchRequest := esClient.SearchArgsForCall(0)
+
+				Expect(*searchRequest.Search.Query.Bool.Must).To(HaveLen(2))
+
+				filterQuery := (*searchRequest.Search.Query.Bool.Must)[1].(*filtering.Query)
+				Expect(filterQuery).To(Equal(expectedFilterQuery))
+			})
+
+			When("an error occurs while attempting to parse the filter", func() {
+				BeforeEach(func() {
+					expectedFilterError = errors.New("error parsing filter")
+				})
+
+				It("should not attempt a search", func() {
+					Expect(esClient.SearchCallCount()).To(Equal(0))
+				})
+
+				It("should return an error", func() {
+					Expect(actualListGenericResourceVersionsResponse).To(BeNil())
+					Expect(actualError).To(HaveOccurred())
+				})
+			})
+		})
+
+		When("pagination is used", func() {
+			BeforeEach(func() {
+				expectedListGenericResourceVersionsRequest.PageSize = int32(fake.Number(1, 10))
+				expectedListGenericResourceVersionsRequest.PageToken = fake.LetterN(10)
+			})
+
+			It("should use pagination when searching", func() {
+				Expect(esClient.SearchCallCount()).To(Equal(1))
+
+				_, searchRequest := esClient.SearchArgsForCall(0)
+
+				Expect(searchRequest.Pagination).ToNot(BeNil())
+				Expect(searchRequest.Pagination.Size).To(BeEquivalentTo(expectedListGenericResourceVersionsRequest.PageSize))
+				Expect(searchRequest.Pagination.Token).To(Equal(expectedListGenericResourceVersionsRequest.PageToken))
+			})
+		})
+	})
 })
 
 func createRandomOccurrence(kind grafeas_common_proto.NoteKind) *grafeas_go_proto.Occurrence {
