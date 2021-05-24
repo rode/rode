@@ -561,6 +561,131 @@ var _ = Describe("rode server", func() {
 		})
 	})
 
+	Context("ListGenericResourceVersions", func() {
+		var (
+			actualListGenericResourceVersionsResponse *pb.ListGenericResourceVersionsResponse
+			actualError                               error
+
+			expectedResourceId              string
+			expectedGenericResource         *pb.GenericResource
+			expectedGetGenericResourceError error
+
+			expectedListGenericResourceVersionsRequest  *pb.ListGenericResourceVersionsRequest
+			expectedListGenericResourceVersionsResponse *pb.ListGenericResourceVersionsResponse
+			expectedListGenericResourceVersionsError    error
+		)
+
+		BeforeEach(func() {
+			expectedResourceId = gofakeit.LetterN(10)
+			expectedGenericResource = &pb.GenericResource{
+				Id:   expectedResourceId,
+				Name: gofakeit.LetterN(10),
+				Type: pb.ResourceType(gofakeit.Number(0, 7)),
+			}
+
+			expectedListGenericResourceVersionsRequest = &pb.ListGenericResourceVersionsRequest{
+				Id: expectedResourceId,
+			}
+			expectedListGenericResourceVersionsResponse = &pb.ListGenericResourceVersionsResponse{
+				Versions: []*pb.GenericResourceVersion{
+					{
+						Version: gofakeit.LetterN(10),
+						Names:   []string{gofakeit.LetterN(10)},
+						Created: timestamppb.Now(),
+					},
+				},
+			}
+
+			expectedGetGenericResourceError = nil
+			expectedListGenericResourceVersionsError = nil
+		})
+
+		JustBeforeEach(func() {
+			resourceManager.GetGenericResourceReturns(expectedGenericResource, expectedGetGenericResourceError)
+			resourceManager.ListGenericResourceVersionsReturns(expectedListGenericResourceVersionsResponse, expectedListGenericResourceVersionsError)
+
+			actualListGenericResourceVersionsResponse, actualError = server.ListGenericResourceVersions(ctx, expectedListGenericResourceVersionsRequest)
+		})
+
+		It("should fetch the generic resource with the provided id", func() {
+			Expect(resourceManager.GetGenericResourceCallCount()).To(Equal(1))
+
+			_, id := resourceManager.GetGenericResourceArgsForCall(0)
+			Expect(id).To(Equal(expectedResourceId))
+		})
+
+		It("should list generic resource versions", func() {
+			Expect(resourceManager.ListGenericResourceVersionsCallCount()).To(Equal(1))
+
+			_, request := resourceManager.ListGenericResourceVersionsArgsForCall(0)
+			Expect(request).To(Equal(expectedListGenericResourceVersionsRequest))
+		})
+
+		It("should return the result and no error", func() {
+			Expect(actualListGenericResourceVersionsResponse).To(Equal(expectedListGenericResourceVersionsResponse))
+			Expect(actualError).ToNot(HaveOccurred())
+		})
+
+		When("the generic resource id is not specified", func() {
+			BeforeEach(func() {
+				expectedListGenericResourceVersionsRequest.Id = ""
+			})
+
+			It("should not list generic resource versions", func() {
+				Expect(resourceManager.ListGenericResourceVersionsCallCount()).To(Equal(0))
+			})
+
+			It("should return an invalid argument error", func() {
+				Expect(actualListGenericResourceVersionsResponse).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.InvalidArgument))
+			})
+		})
+
+		When("the generic resource is not found", func() {
+			BeforeEach(func() {
+				expectedGenericResource = nil
+			})
+
+			It("should return a not found error", func() {
+				Expect(actualListGenericResourceVersionsResponse).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.NotFound))
+			})
+
+			It("should not list generic resource versions", func() {
+				Expect(resourceManager.ListGenericResourceVersionsCallCount()).To(Equal(0))
+			})
+		})
+
+		When("getting the generic resource fails", func() {
+			BeforeEach(func() {
+				expectedGetGenericResourceError = errors.New("getting generic resource failed")
+			})
+
+			It("should not list generic resource versions", func() {
+				Expect(resourceManager.ListGenericResourceVersionsCallCount()).To(Equal(0))
+			})
+
+			It("should return an error", func() {
+				Expect(actualListGenericResourceVersionsResponse).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+			})
+		})
+
+		When("listing generic resource versions fails", func() {
+			BeforeEach(func() {
+				expectedListGenericResourceVersionsError = errors.New("list generic resource versions failed")
+				expectedListGenericResourceVersionsResponse = nil
+			})
+
+			It("should return an error", func() {
+				Expect(actualListGenericResourceVersionsResponse).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+			})
+		})
+	})
+
 	Context("ListVersionedResourceOccurrences", func() {
 		var (
 			listBuildOccurrencesResponse *grafeas_proto.ListOccurrencesResponse
