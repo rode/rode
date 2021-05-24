@@ -53,6 +53,14 @@ service Rode {
       get: "/v1alpha1/generic-resources"
     };
   }
+  // ListGenericResourceVersions can be used to list all known versions of a generic resource. Versions will always include
+  // the unique identifier (in the case of Docker images, the sha256) and will optionally include any related names (in the
+  // case of Docker images, any associated tags for the image).
+  rpc ListGenericResourceVersions(ListGenericResourceVersionsRequest) returns (ListGenericResourceVersionsResponse) {
+    option (google.api.http) = {
+      get: "/v1alpha1/generic-resource-versions"
+    };
+  }
   rpc ListVersionedResourceOccurrences(ListVersionedResourceOccurrencesRequest) returns (ListVersionedResourceOccurrencesResponse) {
     option (google.api.http) = {
       get: "/v1alpha1/versioned-resource-occurrences"
@@ -123,15 +131,6 @@ service Rode {
     };
     option (google.api.method_signature) = "note_id,note";
   };
-  // ListGenericResourceVersions can be used to list all known versions of a generic resource. Versions will always include
-  // the unique identifier (in the case of Docker images, the sha256) and will optionally include any related names (in the
-  // case of Docker images, any associated tags for the image).
-  rpc ListGenericResourceVersions(ListGenericResourceVersionsRequest) returns (ListGenericResourceVersionsResponse) {
-    option (google.api.http) = {
-      get: "/v1alpha1/generic-resource-versions"
-    };
-    option (google.api.method_signature) = "resource";
-  }
 }
 
 enum ResourceType {
