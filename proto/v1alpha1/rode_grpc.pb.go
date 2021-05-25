@@ -202,7 +202,7 @@ func (c *rodeClient) CreateNote(ctx context.Context, in *CreateNoteRequest, opts
 }
 
 // RodeServer is the server API for Rode service.
-// All implementations must embed UnimplementedRodeServer
+// All implementations should embed UnimplementedRodeServer
 // for forward compatibility
 type RodeServer interface {
 	// Create occurrences
@@ -232,10 +232,9 @@ type RodeServer interface {
 	RegisterCollector(context.Context, *RegisterCollectorRequest) (*RegisterCollectorResponse, error)
 	// CreateNote acts as a simple proxy to the grafeas CreateNote rpc
 	CreateNote(context.Context, *CreateNoteRequest) (*grafeas_go_proto.Note, error)
-	mustEmbedUnimplementedRodeServer()
 }
 
-// UnimplementedRodeServer must be embedded to have forward compatible implementations.
+// UnimplementedRodeServer should be embedded to have forward compatible implementations.
 type UnimplementedRodeServer struct {
 }
 
@@ -287,7 +286,6 @@ func (UnimplementedRodeServer) RegisterCollector(context.Context, *RegisterColle
 func (UnimplementedRodeServer) CreateNote(context.Context, *CreateNoteRequest) (*grafeas_go_proto.Note, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateNote not implemented")
 }
-func (UnimplementedRodeServer) mustEmbedUnimplementedRodeServer() {}
 
 // UnsafeRodeServer may be embedded to opt out of forward compatibility for this service.
 // Use of this interface is not recommended, as added methods to RodeServer will
