@@ -412,11 +412,11 @@ func (m *manager) UpdatePolicy(ctx context.Context, updatePolicyRequest *pb.Upda
 	return nil, nil
 }
 
-func (m *manager) ValidatePolicy(ctx context.Context, policy *pb.ValidatePolicyRequest) (*pb.ValidatePolicyResponse, error) {
+func (m *manager) ValidatePolicy(_ context.Context, policy *pb.ValidatePolicyRequest) (*pb.ValidatePolicyResponse, error) {
 	log := m.logger.Named("ValidatePolicy")
 
 	if len(policy.Policy) == 0 {
-		return nil, createError(log, "empty policy passed in", nil)
+		return nil, createErrorWithCode(log, "empty policy passed in", nil, codes.InvalidArgument)
 	}
 
 	// Generate the AST
@@ -458,7 +458,7 @@ func (m *manager) ValidatePolicy(ctx context.Context, policy *pb.ValidatePolicyR
 
 	}
 
-	internalErrors := validateRodeRequirementsForPolicy(mod, policy.Policy)
+	internalErrors := validateRodeRequirementsForPolicy(mod)
 	if len(internalErrors) != 0 {
 		var stringifiedErrorList []string
 		for _, err := range internalErrors {
@@ -580,7 +580,7 @@ func createError(log *zap.Logger, message string, err error, fields ...zap.Field
 // validateRodeRequirementsForPolicy ensures that these two rules are followed:
 // 1. A policy is expected to return a pass that is simply a boolean representing the AND of all rules.
 // 2. A policy is expected to return an array of violations that are maps containing a description id message name pass. pass here is what will be used to determine the overall pass.
-func validateRodeRequirementsForPolicy(mod *ast.Module, regoContent string) []error {
+func validateRodeRequirementsForPolicy(mod *ast.Module) []error {
 	errorsList := []error{}
 	// policy must contains a pass block somewhere in the code
 	passBlockExists := len(mod.RuleSet("pass")) > 0
@@ -606,15 +606,15 @@ func validateRodeRequirementsForPolicy(mod *ast.Module, regoContent string) []er
 	}
 
 	if !passBlockExists {
-		err := errors.New("all policies must contain a \"pass\" block that returns a boolean result of the policy")
+		err := errors.New(`all policies must contain a "pass" block that returns a boolean result of the policy`)
 		errorsList = append(errorsList, err)
 	}
 	if !violationsBlockExists {
-		err := errors.New("all policies must contain a \"violations\" block that returns a map of results")
+		err := errors.New(`all policies must contain a "violations" block that returns a map of results`)
 		errorsList = append(errorsList, err)
 	}
 	if !returnFieldsExist {
-		err := errors.New("all \"violations\" blocks must return a \"result\" that contains pass, id, message, and name fields")
+		err := errors.New(`all "violations" blocks must return a "result" that contains pass, id, message, and name fields`)
 		errorsList = append(errorsList, err)
 	}
 

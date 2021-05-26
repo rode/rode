@@ -20,23 +20,23 @@ import (
 )
 
 var (
-	//go:embed data/good.rego
+	//go:embed test/good.rego
 	goodPolicy string
-	////go:embed data/missing_rode_fields.rego
-	//compilablePolicyMissingRodeFields string
-	////go:embed data/missing_results_fields.rego
-	//compilablePolicyMissingResultsFields string
-	////go:embed data/missing_results_return.rego
-	//compilablePolicyMissingResultsReturn string
-	////go:embed data/uncompilable.rego
-	//uncompilablePolicy string
-	//unparseablePolicy = `
-	//	package play
-	//	default hello = false
-	//	hello
-	//		m := input.message
-	//		m == "world"
-	//	}`
+	//go:embed test/missing_rode_fields.rego
+	compilablePolicyMissingRodeFields string
+	//go:embed test/missing_results_fields.rego
+	compilablePolicyMissingResultsFields string
+	//go:embed test/missing_results_return.rego
+	compilablePolicyMissingResultsReturn string
+	//go:embed test/uncompilable.rego
+	uncompilablePolicy string
+	unparseablePolicy  = `
+		package play
+		default hello = false
+		hello
+			m := input.message
+			m == "world"
+		}`
 	invalidJson = []byte{'}'}
 )
 
@@ -246,6 +246,130 @@ var _ = Describe("PolicyManager", func() {
 				Expect(actualError).To(HaveOccurred())
 				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
 			})
+		})
+	})
+
+	Context("ValidatePolicy", func() {
+		var (
+			request *pb.ValidatePolicyRequest
+
+			actualResponse *pb.ValidatePolicyResponse
+			actualError    error
+		)
+
+		BeforeEach(func() {
+			request = &pb.ValidatePolicyRequest{
+				Policy: goodPolicy,
+			}
+		})
+
+		JustBeforeEach(func() {
+			actualResponse, actualError = manager.ValidatePolicy(ctx, request)
+		})
+
+		When("the policy is valid", func() {
+			It("should not return an error", func() {
+				Expect(actualError).NotTo(HaveOccurred())
+			})
+
+			It("should indicate successful compilation in the response", func() {
+				Expect(actualResponse.Compile).To(BeTrue())
+			})
+
+			It("should not return any policy errors", func() {
+				Expect(actualResponse.Errors).To(BeEmpty())
+			})
+		})
+
+		When("the policy is empty", func() {
+			BeforeEach(func() {
+				request.Policy = ""
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.InvalidArgument))
+			})
+		})
+
+		When("the policy fails to compile", func() {
+			BeforeEach(func() {
+				request.Policy = uncompilablePolicy
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.InvalidArgument))
+			})
+
+			It("should indicate that compilation failed in the response", func() {
+				Expect(actualResponse.Compile).To(BeFalse())
+			})
+
+			It("should return the compilation errors", func() {
+				Expect(len(actualResponse.Errors)).To(BeNumerically(">", 0))
+			})
+		})
+
+		When("the policy is missing required fields in the result", func() {
+			BeforeEach(func() {
+				request.Policy = compilablePolicyMissingResultsFields
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.InvalidArgument))
+			})
+
+			It("should include an error message about the missing field", func() {
+				Expect(actualResponse.Errors).To(HaveLen(1))
+			})
+		})
+
+		When("the policy does not contain a rule that returns results", func() {
+			BeforeEach(func() {
+				request.Policy = compilablePolicyMissingResultsReturn
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.InvalidArgument))
+			})
+
+			It("should include an error message about the missing result", func() {
+				Expect(actualResponse.Errors).To(HaveLen(1))
+			})
+		})
+
+		When("the policy does not have pass or violations rules", func() {
+			BeforeEach(func() {
+				request.Policy = compilablePolicyMissingRodeFields
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.InvalidArgument))
+			})
+
+			It("should include an error message about the missing rules", func() {
+				Expect(actualResponse.Errors).To(HaveLen(3))
+			})
+		})
+
+		When("the policy cannot be parsed", func() {
+			BeforeEach(func() {
+				request.Policy = unparseablePolicy
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.InvalidArgument))
+			})
+
+			It("should include an error message", func() {
+				Expect(actualResponse.Errors).To(HaveLen(1))
+			})
+
 		})
 	})
 })
