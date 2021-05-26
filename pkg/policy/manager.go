@@ -141,7 +141,6 @@ func (m *manager) CreatePolicy(ctx context.Context, policy *pb.Policy) (*pb.Poli
 	var bulkErrors []error
 	for _, item := range response.Items {
 		if item.Create.Error != nil {
-			fmt.Printf("wtaf %v", item.Create.Error)
 			bulkErrors = append(bulkErrors, fmt.Errorf("error creating policy [%d] %s: %s", item.Create.Status, item.Create.Error.Type, item.Create.Error.Reason))
 		}
 	}
