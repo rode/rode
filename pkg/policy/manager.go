@@ -25,10 +25,13 @@ import (
 )
 
 const (
-	rodeProjectSlug      = "projects/rode"
-	policiesDocumentKind = "policies"
-	maxPageSize          = 1000
-	pitKeepAlive         = "5m"
+	rodeProjectSlug           = "projects/rode"
+	policiesDocumentKind      = "policies"
+	maxPageSize               = 1000
+	pitKeepAlive              = "5m"
+	policyDocumentJoinField   = "join"
+	policyRelationName        = "policy"
+	policyVersionRelationName = "version"
 )
 
 type Manager interface {
@@ -44,7 +47,6 @@ type Manager interface {
 type manager struct {
 	logger *zap.Logger
 
-	//esClient      *elasticsearch.Client
 	esClient      esutil.Client
 	esConfig      *config.ElasticsearchConfig
 	indexManager  indexmanager.IndexManager
@@ -117,8 +119,8 @@ func (m *manager) CreatePolicy(ctx context.Context, policy *pb.Policy) (*pb.Poli
 				Message:    policy,
 				DocumentId: policyId,
 				Join: &esutil.EsJoin{
-					Field: "join",
-					Name:  "policy",
+					Field: policyDocumentJoinField,
+					Name:  policyRelationName,
 				},
 			},
 			{
@@ -127,8 +129,8 @@ func (m *manager) CreatePolicy(ctx context.Context, policy *pb.Policy) (*pb.Poli
 				DocumentId: policyVersionId,
 				Join: &esutil.EsJoin{
 					Parent: policyId,
-					Field:  "join",
-					Name:   "version",
+					Field:  policyDocumentJoinField,
+					Name:   policyVersionRelationName,
 				},
 			},
 		},
@@ -191,18 +193,21 @@ func (m *manager) GetPolicy(ctx context.Context, request *pb.GetPolicyRequest) (
 	}
 
 	if !response.Found {
-		log.Debug("policy not found")
-
 		return nil, createErrorWithCode(log, "policy not found", err, codes.NotFound)
 	}
 
 	var policy pb.Policy
 	err = protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(response.Source, &policy)
 	if err != nil {
-		return nil, createError(log, "no", err)
+		return nil, createError(log, "error unmarshalling policy", err)
 	}
 
 	response, err = m.esClient.Get(ctx, &esutil.GetRequest{
+		Join: &esutil.EsJoin{
+			Field:  policyDocumentJoinField,
+			Name:   policyVersionRelationName,
+			Parent: request.Id,
+		},
 		Index:      m.policiesAlias(),
 		DocumentId: policyVersionId(policy.Id, policy.CurrentVersion),
 	})
@@ -211,31 +216,20 @@ func (m *manager) GetPolicy(ctx context.Context, request *pb.GetPolicyRequest) (
 		return nil, createError(log, "unable to determine current policy version", err)
 	}
 
+	if !response.Found {
+		return nil, createError(log, "policy entity not found", nil)
+	}
+
+	log = log.With(zap.Int32("version", policy.CurrentVersion))
+
 	var policyEntity pb.PolicyEntity
 	err = protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(response.Source, &policyEntity)
 	if err != nil {
-		return nil, createError(log, "no", err)
+		return nil, createError(log, "error unmarshalling policy version", err)
 	}
 
 	policy.Policy = &policyEntity
 
-	//
-	//search := &esutil.EsSearch{
-	//	Query: &filtering.Query{
-	//		Term: &filtering.Term{
-	//			"id": getPolicyRequest.Id,
-	//		},
-	//	},
-	//}
-	//
-	//policy := &pb.Policy{}
-	//
-	//_, err := m.genericGet(ctx, log, search, m.indexManager.IndexName(policiesDocumentKind, ""), policy)
-	//if err != nil {
-	//	return nil, createError(log, "error getting policy", err)
-	//}
-	//
-	//return policy, nil
 	return &policy, nil
 }
 
@@ -248,7 +242,7 @@ func (m *manager) DeletePolicy(ctx context.Context, request *pb.DeletePolicyRequ
 
 	deletePolicyVersionsQuery := &filtering.Query{
 		HasParent: &filtering.HasParent{
-			ParentType: "policy",
+			ParentType: policyRelationName,
 			Query: &filtering.Query{
 				Term: &filtering.Term{
 					"_id": request.Id,
@@ -846,8 +840,3 @@ func withRefreshBool(o config.RefreshOption) bool {
 func policyVersionId(policyId string, version int32) string {
 	return fmt.Sprintf("%s.%d", policyId, version)
 }
-
-// {\"create\":{\"_id\":\"ff95489c-7e35-42b4-a3b2-4acb1a1677cb\",\"_index\":\"rode-policies\"}}
-// {\"created\":\"2021-05-25T21:43:17.763123Z\",\"currentVersion\":1,\"description\":\"my very bad policy\",\"id\":\"ff95489c-7e35-42b4-a3b2-4acb1a1677cb\",\"join\":{\"name\":\"policy\"},\"name\":\"bad stuff2\",\"policy\":null,\"updated\":\"2021-05-25T21:43:17.763123Z\"}
-// {\"create\":{\"_id\":\"ff95489c-7e35-42b4-a3b2-4acb1a1677cb.1\",\"_index\":\"rode-policies\"}}
-// {\"created\":\"2021-05-25T21:43:17.763123Z\",\"join\":{\"name\":\"version\"},\"message\":\"Initial creation\",\"regoContent\":\"package example1\\n\\npass = true {\\n    count(violation_count) == 0\\n}\\n\\nviolation_count[v] {\\n    violations[v].pass == false\\n}\\n\\nharbor_scan_finished[o] {\\n    input.occurrences[i].noteName == \\\"projects/rode/notes/harbor\\\"\\n    input.occurrences[i].kind == \\\"DISCOVERY\\\"\\n    input.occurrences[i].discovered.discovered.analysisStatus == \\\"FINISHED_SUCCESS\\\"\\n    o := input.occurrences[i]\\n}\\n\\nharbor_scan_last[t] {\\n    input.occurrences[i].noteName == \\\"projects/rode/notes/harbor\\\"\\n    input.occurrences[i].kind == \\\"DISCOVERY\\\"\\n    input.occurrences[i].discovered.discovered.analysisStatus == \\\"FINISHED_SUCCESS\\\"\\n    t := input.occurrences[i].createTime\\n}\\n\\nharbor_scan_vulnerability_low[o] {\\n    input.occurrences[i].noteName == \\\"projects/rode/notes/harbor\\\"\\n    input.occurrences[i].kind == \\\"VULNERABILITY\\\"\\n    input.occurrences[i].vulnerability.effectiveSeverity == \\\"LOW\\\"\\n    o := input.occurrences[i]\\n}\\n\\nharbor_scan_vulnerability_low[o] {\\n    input.occurrences[i].noteName == \\\"projects/rode/notes/harbor\\\"\\n    input.occurrences[i].kind == \\\"VULNERABILITY\\\"\\n    input.occurrences[i].vulnerability.effectiveSeverity == \\\"LOW\\\"\\n    o := input.occurrences[i]\\n}\\n\\nharbor_scan_vulnerability_medium[o] {\\n    input.occurrences[i].noteName == \\\"projects/rode/notes/harbor\\\"\\n    input.occurrences[i].kind == \\\"VULNERABILITY\\\"\\n    input.occurrences[i].vulnerability.effectiveSeverity == \\\"MEDIUM\\\"\\n    o := input.occurrences[i]\\n}\\n\\nharbor_scan_vulnerability_high[o] {\\n    input.occurrences[i].noteName == \\\"projects/rode/notes/harbor\\\"\\n    input.occurrences[i].kind == \\\"VULNERABILITY\\\"\\n    input.occurrences[i].vulnerability.effectiveSeverity == \\\"HIGH\\\"\\n    o := input.occurrences[i]\\n}\\n\\nviolations[result] {\\n    finished := harbor_scan_finished\\n    last := harbor_scan_last\\n    result := {\\n        \\\"pass\\\": count(finished) \\u003e= 1,\\n        \\\"id\\\": \\\"harbor_scan_completed\\\",\\n        \\\"name\\\": \\\"Harbor Scan\\\",\\n        \\\"description\\\": \\\"Verify Harbor image scan completed\\\",\\n        \\\"message\\\": sprintf(\\\"Harbor scanned image %v times. Last completed at %v\\\", [count(finished), last]),\\n    }\\n}\\n\\nviolations[result] {\\n    args := {\\n        \\\"max\\\": 10,\\n    }\\n    v := harbor_scan_vulnerability_low\\n    c := count(v)\\n    result := {\\n        \\\"pass\\\": c \\u003c= args.max,\\n        \\\"id\\\": \\\"harbor_scan_vulnerability_low\\\",\\n        \\\"name\\\": \\\"Harbor low severity vulnerability count\\\",\\n        \\\"description\\\": \\\"Verify scan result low severity vulnerability result\\\",\\n        \\\"message\\\": sprintf(\\\"Harbor scan found %v low severity vulnerabilities (max: %v)\\\", [c, args.max]),\\n    }\\n}\\n\\nviolations[result] {\\n    args := {\\n        \\\"max\\\": 10,\\n    }\\n    v := harbor_scan_vulnerability_medium\\n    c := count(v)\\n    result := {\\n        \\\"pass\\\": c \\u003c= args.max,\\n        \\\"id\\\": \\\"harbor_scan_vulnerability_medium\\\",\\n        \\\"name\\\": \\\"Harbor medium severity vulnerability count\\\",\\n        \\\"description\\\": \\\"Verify scan result medium severity vulnerability result\\\",\\n        \\\"message\\\": sprintf(\\\"Harbor scan found %v medium severity vulnerabilities (max: %v)\\\", [c, args.max]),\\n    }\\n}\\n\\nviolations[result] {\\n    args := {\\n        \\\"max\\\": 2,\\n    }\\n    v := harbor_scan_vulnerability_high\\n    c := count(v)\\n    result := {\\n        \\\"pass\\\": c \\u003c= args.max,\\n        \\\"id\\\": \\\"harbor_scan_vulnerability_high\\\",\\n        \\\"name\\\": \\\"Harbor high severity vulnerability count\\\",\\n        \\\"description\\\": \\\"Verify scan result high severity vulnerability result\\\",\\n        \\\"message\\\": sprintf(\\\"Harbor scan found %v high severity vulnerabilities (max: %v)\\\", [c, args.max]),\\n    }\\n}\\n\",\"sourcePath\":\"\",\"version\":1}\n
