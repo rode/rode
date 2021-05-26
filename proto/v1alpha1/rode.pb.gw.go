@@ -414,7 +414,7 @@ func local_request_Rode_UpdateOccurrence_0(ctx context.Context, marshaler runtim
 }
 
 func request_Rode_CreatePolicy_0(ctx context.Context, marshaler runtime.Marshaler, client RodeClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq PolicyEntity
+	var protoReq Policy
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -431,7 +431,7 @@ func request_Rode_CreatePolicy_0(ctx context.Context, marshaler runtime.Marshale
 }
 
 func local_request_Rode_CreatePolicy_0(ctx context.Context, marshaler runtime.Marshaler, server RodeServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq PolicyEntity
+	var protoReq Policy
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
