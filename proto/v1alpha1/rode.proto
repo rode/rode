@@ -78,7 +78,7 @@ service Rode {
     };
     option (google.api.method_signature) = "name,occurrence,update_mask";
   }
-  rpc CreatePolicy(PolicyEntity) returns (Policy) {
+  rpc CreatePolicy(Policy) returns (Policy) {
     option (google.api.http) = {
       post: "/v1alpha1/policies"
       body: "*"
