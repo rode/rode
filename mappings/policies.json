@@ -1,5 +1,5 @@
 {
-  "version": "v1alpha1",
+  "version": "v1alpha2",
   "mappings": {
     "_meta": {
       "type": "rode"
@@ -7,6 +7,12 @@
     "properties": {
       "created": {
         "type": "date"
+      },
+      "join": {
+        "type": "join",
+        "relations": {
+          "policy": "version"
+        }
       }
     },
     "dynamic_templates": [
