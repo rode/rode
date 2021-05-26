@@ -15,39 +15,31 @@
 package server
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
+	"github.com/rode/rode/pkg/policy"
 	"github.com/rode/rode/pkg/resource"
 	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/common_go_proto"
 
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/elastic/go-elasticsearch/v7/esapi"
-	"github.com/gogo/protobuf/protoc-gen-gogo/generator"
 	"github.com/rode/es-index-manager/indexmanager"
 
-	"github.com/google/uuid"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
-	"github.com/rode/rode/opa"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	grafeas_project_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/project_go_proto"
 
 	"github.com/golang/protobuf/proto"
-	fieldmask_utils "github.com/mennanov/fieldmask-utils"
-	"github.com/open-policy-agent/opa/ast"
 	"github.com/rode/rode/config"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/types/known/emptypb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -64,24 +56,25 @@ func NewRodeServer(
 	logger *zap.Logger,
 	grafeasCommon grafeas_proto.GrafeasV1Beta1Client,
 	grafeasProjects grafeas_project_proto.ProjectsClient,
-	opa opa.Client,
 	esClient *elasticsearch.Client,
 	filterer filtering.Filterer,
 	elasticsearchConfig *config.ElasticsearchConfig,
 	resourceManager resource.Manager,
 	indexManager indexmanager.IndexManager,
+	policyManager policy.Manager,
 ) (pb.RodeServer, error) {
 	rodeServer := &rodeServer{
-		logger:              logger,
-		grafeasCommon:       grafeasCommon,
-		grafeasProjects:     grafeasProjects,
-		opa:                 opa,
-		esClient:            esClient,
-		filterer:            filterer,
-		elasticsearchConfig: elasticsearchConfig,
-		resourceManager:     resourceManager,
-		indexManager:        indexManager,
+		logger,
+		esClient,
+		filterer,
+		grafeasCommon,
+		grafeasProjects,
+		elasticsearchConfig,
+		resourceManager,
+		indexManager,
+		policyManager,
 	}
+
 	if err := rodeServer.initialize(context.Background()); err != nil {
 		return nil, fmt.Errorf("failed to initialize rode server: %s", err)
 	}
@@ -90,16 +83,15 @@ func NewRodeServer(
 }
 
 type rodeServer struct {
-	pb.UnimplementedRodeServer
 	logger              *zap.Logger
 	esClient            *elasticsearch.Client
 	filterer            filtering.Filterer
 	grafeasCommon       grafeas_proto.GrafeasV1Beta1Client
 	grafeasProjects     grafeas_project_proto.ProjectsClient
-	opa                 opa.Client
 	elasticsearchConfig *config.ElasticsearchConfig
 	resourceManager     resource.Manager
 	indexManager        indexmanager.IndexManager
+	policy.Manager
 }
 
 func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceRequest *pb.BatchCreateOccurrencesRequest) (*pb.BatchCreateOccurrencesResponse, error) {
@@ -124,84 +116,6 @@ func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceReque
 
 	return &pb.BatchCreateOccurrencesResponse{
 		Occurrences: occurrenceResponse.GetOccurrences(),
-	}, nil
-}
-
-func (r *rodeServer) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePolicyRequest) (*pb.EvaluatePolicyResponse, error) {
-	var err error
-	log := r.logger.Named("EvaluatePolicy").With(zap.String("policy", request.Policy), zap.String("resource", request.ResourceUri))
-	log.Debug("evaluate policy request received")
-
-	if request.ResourceUri == "" {
-		return nil, createErrorWithCode(log, "resource uri is required", nil, codes.InvalidArgument)
-	}
-
-	policy, err := r.GetPolicy(ctx, &pb.GetPolicyRequest{Id: request.Policy})
-	if err != nil {
-		return nil, createError(log, "error fetching policy", err)
-	}
-
-	// check OPA policy has been loaded, using the policy id
-	err = r.opa.InitializePolicy(request.Policy, policy.Policy.RegoContent)
-	if err != nil {
-		return nil, createError(log, "error initializing policy in OPA", err)
-	}
-
-	// fetch occurrences from grafeas
-	listOccurrencesResponse, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{
-		Parent:   rodeProjectSlug,
-		Filter:   fmt.Sprintf(`"resource.uri" == "%s"`, request.ResourceUri),
-		PageSize: maxPageSize,
-	})
-	if err != nil {
-		return nil, createError(log, "error listing occurrences", err)
-	}
-
-	log.Debug("Occurrences found", zap.Any("occurrences", listOccurrencesResponse))
-
-	input, _ := protojson.Marshal(proto.MessageV2(listOccurrencesResponse))
-
-	evaluatePolicyResponse := &opa.EvaluatePolicyResponse{
-		Result: &opa.EvaluatePolicyResult{
-			Pass:       false,
-			Violations: []*opa.EvaluatePolicyViolation{},
-		},
-	}
-	// evaluate OPA policy
-	evaluatePolicyResponse, err = r.opa.EvaluatePolicy(policy.Policy.RegoContent, input)
-	if err != nil {
-		return nil, createError(log, "error evaluating policy", err)
-	}
-
-	log.Debug("Evaluate policy result", zap.Any("policy result", evaluatePolicyResponse))
-
-	attestation := &pb.EvaluatePolicyResult{}
-	attestation.Created = timestamppb.Now()
-	if evaluatePolicyResponse.Result != nil {
-		attestation.Pass = evaluatePolicyResponse.Result.Pass
-
-		for _, violation := range evaluatePolicyResponse.Result.Violations {
-			attestation.Violations = append(attestation.Violations, &pb.EvaluatePolicyViolation{
-				Id:          violation.ID,
-				Name:        violation.Name,
-				Description: violation.Description,
-				Message:     violation.Message,
-				Link:        violation.Link,
-				Pass:        violation.Pass,
-			})
-		}
-	} else {
-		evaluatePolicyResponse.Result = &opa.EvaluatePolicyResult{
-			Pass: false,
-		}
-	}
-
-	return &pb.EvaluatePolicyResponse{
-		Pass: evaluatePolicyResponse.Result.Pass,
-		Result: []*pb.EvaluatePolicyResult{
-			attestation,
-		},
-		Explanation: *evaluatePolicyResponse.Explanation,
 	}, nil
 }
 
@@ -419,279 +333,10 @@ func (r *rodeServer) UpdateOccurrence(ctx context.Context, occurrenceRequest *pb
 	return updatedOccurrence, nil
 }
 
-func (r *rodeServer) ValidatePolicy(ctx context.Context, policy *pb.ValidatePolicyRequest) (*pb.ValidatePolicyResponse, error) {
-	log := r.logger.Named("ValidatePolicy")
-
-	if len(policy.Policy) == 0 {
-		return nil, createError(log, "empty policy passed in", nil)
-	}
-
-	// Generate the AST
-	mod, err := ast.ParseModule("validate_module", policy.Policy)
-	if err != nil {
-		log.Debug("failed to parse the policy", zap.Any("policy", err))
-		message := &pb.ValidatePolicyResponse{
-			Policy:  policy.Policy,
-			Compile: false,
-			Errors:  []string{err.Error()},
-		}
-		s, _ := status.New(codes.InvalidArgument, "failed to parse the policy").WithDetails(message)
-		return message, s.Err()
-	}
-
-	// Create a new compiler instance and compile the module
-	c := ast.NewCompiler()
-
-	mods := map[string]*ast.Module{
-		"validate_module": mod,
-	}
-
-	if c.Compile(mods); c.Failed() {
-		log.Debug("compilation error", zap.Any("payload", c.Errors))
-		length := len(c.Errors)
-		errorsList := make([]string, length)
-
-		for i := range c.Errors {
-			errorsList = append(errorsList, c.Errors[i].Error())
-		}
-
-		message := &pb.ValidatePolicyResponse{
-			Policy:  policy.Policy,
-			Compile: false,
-			Errors:  errorsList,
-		}
-		s, _ := status.New(codes.InvalidArgument, "failed to compile the policy").WithDetails(message)
-		return message, s.Err()
-
-	}
-
-	internalErrors := validateRodeRequirementsForPolicy(mod, policy.Policy)
-	if len(internalErrors) != 0 {
-		var stringifiedErrorList []string
-		for _, err := range internalErrors {
-			stringifiedErrorList = append(stringifiedErrorList, err.Error())
-		}
-		message := &pb.ValidatePolicyResponse{
-			Policy:  policy.Policy,
-			Compile: false,
-			Errors:  stringifiedErrorList,
-		}
-		s, _ := status.New(codes.InvalidArgument, "policy compiled successfully but is missing Rode required fields").WithDetails(message)
-		return message, s.Err()
-	}
-
-	return &pb.ValidatePolicyResponse{
-		Policy:  policy.Policy,
-		Compile: true,
-		Errors:  nil,
-	}, nil
-}
-
-func (r *rodeServer) CreatePolicy(ctx context.Context, policyEntity *pb.PolicyEntity) (*pb.Policy, error) {
-	// TODO maybe check if it already exists (if we think a unique name is required)
-
-	log := r.logger.Named("CreatePolicy")
-	// Name field is a requirement
-	if len(policyEntity.Name) == 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "policy name not provided")
-	}
-
-	// CheckPolicy before writing to elastic
-	result, err := r.ValidatePolicy(ctx, &pb.ValidatePolicyRequest{Policy: policyEntity.RegoContent})
-	if (err != nil) || !result.Compile {
-		message := &pb.ValidatePolicyResponse{
-			Policy:  policyEntity.RegoContent,
-			Compile: false,
-			Errors:  result.Errors,
-		}
-		s, _ := status.New(codes.InvalidArgument, "failed to compile the provided policy").WithDetails(message)
-		return nil, s.Err()
-	}
-	currentTime := timestamppb.Now()
-	policy := &pb.Policy{
-		Id:      uuid.New().String(),
-		Policy:  policyEntity,
-		Created: currentTime,
-		Updated: currentTime,
-	}
-	str, err := protojson.MarshalOptions{EmitUnpopulated: true}.Marshal(proto.MessageV2(policy))
-	if err != nil {
-		return nil, createError(log, fmt.Sprintf("error marshalling %T to json", policy), err)
-	}
-
-	res, err := r.esClient.Index(
-		r.indexManager.AliasName(policiesDocumentKind, ""),
-		bytes.NewReader(str),
-		r.esClient.Index.WithContext(ctx),
-		r.esClient.Index.WithRefresh(r.elasticsearchConfig.Refresh.String()),
-	)
-	if err != nil {
-		return nil, createError(log, "error sending request to elasticsearch", err)
-	}
-	if res.IsError() {
-		return nil, createError(log, "error indexing document in elasticsearch", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
-	}
-
-	return policy, nil
-}
-
-func (r *rodeServer) GetPolicy(ctx context.Context, getPolicyRequest *pb.GetPolicyRequest) (*pb.Policy, error) {
-	log := r.logger.Named("GetPolicy")
-
-	search := &esutil.EsSearch{
-		Query: &filtering.Query{
-			Term: &filtering.Term{
-				"id": getPolicyRequest.Id,
-			},
-		},
-	}
-
-	policy := &pb.Policy{}
-
-	_, err := r.genericGet(ctx, log, search, r.indexManager.IndexName(policiesDocumentKind, ""), policy)
-	if err != nil {
-		return nil, createError(log, "error getting policy", err)
-	}
-
-	return policy, nil
-
-}
-
-func (r *rodeServer) DeletePolicy(ctx context.Context, deletePolicyRequest *pb.DeletePolicyRequest) (*emptypb.Empty, error) {
-	log := r.logger.Named("DeletePolicy")
-
-	search := &esutil.EsSearch{
-		Query: &filtering.Query{
-			Term: &filtering.Term{
-				"id": deletePolicyRequest.Id,
-			},
-		},
-	}
-
-	encodedBody, requestJSON := esutil.EncodeRequest(search)
-	log.Debug("es request payload", zap.Any("payload", requestJSON))
-
-	res, err := r.esClient.DeleteByQuery(
-		[]string{r.indexManager.IndexName(policiesDocumentKind, "")},
-		encodedBody,
-		r.esClient.DeleteByQuery.WithContext(ctx),
-		r.esClient.DeleteByQuery.WithRefresh(withRefreshBool(r.elasticsearchConfig.Refresh)),
-	)
-	if err != nil {
-		return nil, createError(log, "error sending request to elasticsearch", err)
-	}
-	if res.IsError() {
-		return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()))
-	}
-
-	var deletedResults esutil.EsDeleteResponse
-	if err = esutil.DecodeResponse(res.Body, &deletedResults); err != nil {
-		return nil, createError(log, "error unmarshalling elasticsearch response", err)
-	}
-
-	if deletedResults.Deleted == 0 {
-		return nil, createError(log, "elasticsearch returned zero deleted documents", nil, zap.Any("response", deletedResults))
-	}
-
-	return &emptypb.Empty{}, nil
-}
-
-func (r *rodeServer) ListPolicies(ctx context.Context, listPoliciesRequest *pb.ListPoliciesRequest) (*pb.ListPoliciesResponse, error) {
-	log := r.logger.Named("List Policies")
-	hits, nextPageToken, err := r.genericList(ctx, log, &genericListOptions{
-		index:         r.indexManager.AliasName(policiesDocumentKind, ""),
-		filter:        listPoliciesRequest.Filter,
-		pageSize:      listPoliciesRequest.PageSize,
-		pageToken:     listPoliciesRequest.PageToken,
-		sortDirection: esutil.EsSortOrderDescending,
-		sortField:     "created",
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	var policies []*pb.Policy
-	for _, hit := range hits.Hits {
-		hitLogger := log.With(zap.String("policy raw", string(hit.Source)))
-
-		policy := &pb.Policy{}
-		err := protojson.Unmarshal(hit.Source, proto.MessageV2(policy))
-		if err != nil {
-			return nil, createError(hitLogger, "error converting _doc to policy", err)
-		}
-
-		hitLogger.Debug("policy hit", zap.Any("policy", policy))
-
-		policies = append(policies, policy)
-	}
-
-	return &pb.ListPoliciesResponse{
-		Policies:      policies,
-		NextPageToken: nextPageToken,
-	}, nil
-}
-
 // UpdatePolicy will update only the fields provided by the user
-func (r *rodeServer) UpdatePolicy(ctx context.Context, updatePolicyRequest *pb.UpdatePolicyRequest) (*pb.Policy, error) {
-	log := r.logger.Named("Update Policy")
+//func (r *rodeServer) UpdatePolicy(ctx context.Context, updatePolicyRequest *pb.UpdatePolicyRequest) (*pb.Policy, error) {
 
-	// check if the policy exists
-	search := &esutil.EsSearch{
-		Query: &filtering.Query{
-			Term: &filtering.Term{
-				"id": updatePolicyRequest.Id,
-			},
-		},
-	}
-
-	policy := &pb.Policy{}
-	targetDocumentID, err := r.genericGet(ctx, log, search, r.indexManager.IndexName(policiesDocumentKind, ""), policy)
-	if err != nil {
-		return nil, createError(log, "error fetching policy", err)
-	}
-
-	log.Debug("field masks", zap.Any("response", updatePolicyRequest.UpdateMask.Paths))
-	// if one of the fields being updated is the rego policy, revalidate the policy
-	if contains(updatePolicyRequest.UpdateMask.Paths, "rego_content") {
-		_, err = r.ValidatePolicy(ctx, &pb.ValidatePolicyRequest{Policy: updatePolicyRequest.Policy.RegoContent})
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	m, err := fieldmask_utils.MaskFromPaths(updatePolicyRequest.UpdateMask.Paths, generator.CamelCase)
-	if err != nil {
-		return nil, createError(log, "error mapping field masks", err)
-	}
-
-	err = fieldmask_utils.StructToStruct(m, updatePolicyRequest.Policy, policy.Policy)
-	if err != nil {
-		return nil, createError(log, "error copying struct via field masks", err)
-	}
-
-	policy.Updated = timestamppb.Now()
-	str, err := protojson.MarshalOptions{EmitUnpopulated: true}.Marshal(proto.MessageV2(policy))
-	if err != nil {
-		return nil, createError(log, fmt.Sprintf("error marshalling %T to json", policy), err)
-	}
-
-	res, err := r.esClient.Index(
-		r.indexManager.IndexName(policiesDocumentKind, ""),
-		bytes.NewReader(str),
-		r.esClient.Index.WithDocumentID(targetDocumentID),
-		r.esClient.Index.WithContext(ctx),
-		r.esClient.Index.WithRefresh(r.elasticsearchConfig.Refresh.String()),
-	)
-	if err != nil {
-		return nil, createError(log, "error sending request to elasticsearch", err)
-	}
-	if res.IsError() {
-		return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
-	}
-
-	return policy, nil
-}
+//}
 
 func (r *rodeServer) RegisterCollector(ctx context.Context, registerCollectorRequest *pb.RegisterCollectorRequest) (*pb.RegisterCollectorResponse, error) {
 	log := r.logger.Named("RegisterCollector")
@@ -774,87 +419,6 @@ func (r *rodeServer) CreateNote(ctx context.Context, request *pb.CreateNoteReque
 		NoteId: request.NoteId,
 		Note:   request.Note,
 	})
-}
-
-// validateRodeRequirementsForPolicy ensures that these two rules are followed:
-// 1. A policy is expected to return a pass that is simply a boolean representing the AND of all rules.
-// 2. A policy is expected to return an array of violations that are maps containing a description id message name pass. pass here is what will be used to determine the overall pass.
-func validateRodeRequirementsForPolicy(mod *ast.Module, regoContent string) []error {
-	errorsList := []error{}
-	// policy must contains a pass block somewhere in the code
-	passBlockExists := (len(mod.RuleSet("pass")) > 0)
-	// policy must contains a violations block somewhere in the code
-	violationsBlockExists := (len(mod.RuleSet("violations")) > 0)
-	// missing field from result return response
-	returnFieldsExist := false
-
-	violations := mod.RuleSet("violations")
-
-	for x, r := range violations {
-		if r.Head.Key == nil || r.Head.Key.Value.String() != "result" {
-			// found a violations block that does not return a result object, break immediately
-			break
-		}
-		if !validateResultTermsInBody(r.Body) {
-			break
-		}
-		// if the end of the loop is reached, all violations blocks have the required fields
-		if x == len(violations)-1 {
-			returnFieldsExist = true
-		}
-	}
-
-	if !passBlockExists {
-		err := errors.New("all policies must contain a \"pass\" block that returns a boolean result of the policy")
-		errorsList = append(errorsList, err)
-	}
-	if !violationsBlockExists {
-		err := errors.New("all policies must contain a \"violations\" block that returns a map of results")
-		errorsList = append(errorsList, err)
-	}
-	if !returnFieldsExist {
-		err := errors.New("all \"violations\" blocks must return a \"result\" that contains pass, id, message, and name fields")
-		errorsList = append(errorsList, err)
-	}
-
-	return errorsList
-}
-
-func validateResultTermsInBody(body ast.Body) bool {
-	for _, b := range body {
-		// find the assignment
-		if b.Operator().String() == "assign" || b.Operator().String() == "eq" {
-			terms := (b.Terms).([]*ast.Term)
-			for i, t := range terms {
-				object, ok := t.Value.(ast.Object)
-				if ok {
-					// look at the previous terms to check that it was assigned to result
-					if terms[i-1].String() == "result" {
-						keyMap := make(map[string]interface{})
-						for _, key := range object.Keys() {
-							keyVal, err := strconv.Unquote(key.Value.String())
-							if err != nil {
-								keyVal = key.Value.String()
-							}
-							keyMap[keyVal] = object.Get(key)
-						}
-
-						_, passExists := keyMap["pass"]
-						_, nameExists := keyMap["name"]
-						_, idExists := keyMap["id"]
-						_, messageExists := keyMap["message"]
-
-						if !passExists || !nameExists || !idExists || !messageExists {
-							return false
-						}
-					}
-				} else {
-					continue
-				}
-			}
-		}
-	}
-	return true
 }
 
 func (r *rodeServer) genericGet(ctx context.Context, log *zap.Logger, search *esutil.EsSearch, index string, protoMessage interface{}) (string, error) {
@@ -1033,23 +597,6 @@ func createErrorWithCode(log *zap.Logger, message string, err error, code codes.
 
 	log.Error(message, append(fields, zap.Error(err))...)
 	return status.Errorf(code, "%s: %s", message, err)
-}
-
-// contains returns a boolean describing whether or not a string slice contains a particular string
-func contains(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
-}
-
-func withRefreshBool(o config.RefreshOption) bool {
-	if o == config.RefreshFalse {
-		return false
-	}
-	return true
 }
 
 func buildNoteIdFromCollectorId(collectorId string, note *grafeas_proto.Note) string {

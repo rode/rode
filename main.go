@@ -28,6 +28,7 @@ import (
 
 	"github.com/rode/es-index-manager/indexmanager"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
+	"github.com/rode/rode/pkg/policy"
 	"github.com/rode/rode/pkg/resource"
 	"github.com/soheilhy/cmux"
 
@@ -102,8 +103,8 @@ func main() {
 	filterer := filtering.NewFilterer()
 
 	resourceManager := resource.NewManager(logger.Named("Resource Manager"), esutilClient, c.Elasticsearch, indexManager, filterer)
-
-	rodeServer, err := server.NewRodeServer(logger.Named("rode"), grafeasClientCommon, grafeasClientProjects, opaClient, esClient, filterer, c.Elasticsearch, resourceManager, indexManager)
+	policyManager := policy.NewManager(logger.Named("PolicyManager"), esutilClient, c.Elasticsearch, indexManager, filterer, opaClient, grafeasClientCommon)
+	rodeServer, err := server.NewRodeServer(logger.Named("rode"), grafeasClientCommon, grafeasClientProjects, esClient, filterer, c.Elasticsearch, resourceManager, indexManager, policyManager)
 	if err != nil {
 		logger.Fatal("failed to create Rode server", zap.Error(err))
 	}
