@@ -14,6 +14,7 @@ import (
 	immocks "github.com/rode/es-index-manager/mocks"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil/esutilfakes"
+	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 	"github.com/rode/rode/config"
 	"github.com/rode/rode/mocks"
 	"github.com/rode/rode/opa"
@@ -481,6 +482,74 @@ var _ = Describe("PolicyManager", func() {
 
 			It("should return an error", func() {
 				Expect(actualPolicy).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+		})
+	})
+
+	Context("DeletePolicy", func() {
+		var (
+			policyId    string
+			request     *pb.DeletePolicyRequest
+			deleteError error
+			actualError error
+		)
+
+		BeforeEach(func() {
+			deleteError = nil
+			policyId = fake.UUID()
+			request = &pb.DeletePolicyRequest{Id: policyId}
+		})
+
+		JustBeforeEach(func() {
+			esClient.DeleteReturns(deleteError)
+			_, actualError = manager.DeletePolicy(ctx, request)
+		})
+
+		When("a policy is deleted", func() {
+			It("should not return an error", func() {
+				Expect(actualError).NotTo(HaveOccurred())
+			})
+
+			It("should delete the policy and all of its versions", func() {
+				Expect(indexManager.AliasNameCallCount()).To(Equal(1))
+
+				Expect(esClient.DeleteCallCount()).To(Equal(1))
+				_, actualRequest := esClient.DeleteArgsForCall(0)
+
+				Expect(actualRequest.Index).To(Equal(expectedPoliciesAlias))
+				Expect(actualRequest.Refresh).To(Equal(esConfig.Refresh.String()))
+				Expect(actualRequest.Join).NotTo(BeNil())
+				Expect(actualRequest.Join.Parent).To(Equal(policyId))
+				Expect(*actualRequest.Search.Query.Bool.Should).To(HaveLen(2))
+
+				deleteVersionsQuery := (*actualRequest.Search.Query.Bool.Should)[0].(*filtering.Query)
+				deletePolicyQuery := (*actualRequest.Search.Query.Bool.Should)[1].(*filtering.Query)
+
+				Expect(deleteVersionsQuery.HasParent.ParentType).To(Equal("policy"))
+				Expect((*deleteVersionsQuery.HasParent.Query.Term)["_id"]).To(Equal(policyId))
+				Expect((*deletePolicyQuery.Term)["_id"]).Should(Equal(policyId))
+			})
+		})
+
+		When("the policy id isn't specified", func() {
+			BeforeEach(func() {
+				request.Id = ""
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.InvalidArgument))
+			})
+		})
+
+		When("an error occurs deleting policy", func() {
+			BeforeEach(func() {
+				deleteError = errors.New("delete error")
+			})
+
+			It("should return an error", func() {
 				Expect(actualError).To(HaveOccurred())
 				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
 			})

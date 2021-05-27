@@ -217,11 +217,12 @@ func (m *manager) GetPolicy(ctx context.Context, request *pb.GetPolicyRequest) (
 }
 
 func (m *manager) DeletePolicy(ctx context.Context, request *pb.DeletePolicyRequest) (*emptypb.Empty, error) {
+	log := m.logger.Named("DeletePolicy").With(zap.String("id", request.Id))
+	log.Debug("received request")
 
-	//response, err := m.esClient.Get(ctx, &esutil.GetRequest{
-	//	Index: m.indexManager.AliasName(policiesDocumentKind, ""),
-	//	DocumentId: request.Id,
-	//})
+	if request.Id == "" {
+		return nil, createErrorWithCode(log, "must specify policy id", nil, codes.InvalidArgument)
+	}
 
 	deletePolicyVersionsQuery := &filtering.Query{
 		HasParent: &filtering.HasParent{
@@ -252,48 +253,16 @@ func (m *manager) DeletePolicy(ctx context.Context, request *pb.DeletePolicyRequ
 				},
 			},
 		},
+		Join: &esutil.EsJoin{
+			Parent: request.Id,
+		},
 		Refresh: m.esConfig.Refresh.String(),
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, createError(log, "error deleting policy and its versions", err)
 	}
 
-	//log := m.logger.Named("DeletePolicy")
-	//
-	//search := &esutil.EsSearch{
-	//	Query: &filtering.Query{
-	//		Term: &filtering.Term{
-	//			"id": deletePolicyRequest.Id,
-	//		},
-	//	},
-	//}
-	//
-	//encodedBody, requestJSON := esutil.EncodeRequest(search)
-	//log.Debug("es request payload", zap.Any("payload", requestJSON))
-	//
-	//res, err := m.esClient.DeleteByQuery(
-	//	[]string{m.indexManager.IndexName(policiesDocumentKind, "")},
-	//	encodedBody,
-	//	m.esClient.DeleteByQuery.WithContext(ctx),
-	//	m.esClient.DeleteByQuery.WithRefresh(withRefreshBool(m.esConfig.Refresh)),
-	//)
-	//if err != nil {
-	//	return nil, createError(log, "error sending request to elasticsearch", err)
-	//}
-	//if res.IsError() {
-	//	return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()))
-	//}
-	//
-	//var deletedResults esutil.EsDeleteResponse
-	//if err = esutil.DecodeResponse(res.Body, &deletedResults); err != nil {
-	//	return nil, createError(log, "error unmarshalling elasticsearch response", err)
-	//}
-	//
-	//if deletedResults.Deleted == 0 {
-	//	return nil, createError(log, "elasticsearch returned zero deleted documents", nil, zap.Any("response", deletedResults))
-	//}
-	//
 	return &emptypb.Empty{}, nil
 }
 
@@ -641,34 +610,6 @@ func validateResultTermsInBody(body ast.Body) bool {
 	return true
 }
 
-//func (m *manager) genericGet(ctx context.Context, log *zap.Logger, search *esutil.EsSearch, index string, protoMessage interface{}) (string, error) {
-//	encodedBody, requestJson := esutil.EncodeRequest(search)
-//	log = log.With(zap.String("request", requestJson))
-//
-//	res, err := m.esClient.Search(
-//		m.esClient.Search.WithContext(ctx),
-//		m.esClient.Search.WithIndex(index),
-//		m.esClient.Search.WithBody(encodedBody),
-//	)
-//	if err != nil {
-//		return "", createError(log, "error sending request to elasticsearch", err)
-//	}
-//	if res.IsError() {
-//		return "", createError(log, "error searching elasticsearch for document", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
-//	}
-//
-//	var searchResults esutil.EsSearchResponse
-//	if err := esutil.DecodeResponse(res.Body, &searchResults); err != nil {
-//		return "", createError(log, "error unmarshalling elasticsearch response", err)
-//	}
-//
-//	if searchResults.Hits.Total.Value == 0 {
-//		log.Debug("document not found", zap.Any("search", search))
-//		return "", status.Error(codes.NotFound, fmt.Sprintf("%T not found", protoMessage))
-//	}
-//
-//	return searchResults.Hits.Hits[0].ID, protojson.Unmarshal(searchResults.Hits.Hits[0].Source, proto.MessageV2(protoMessage))
-//}
 //
 //type genericListOptions struct {
 //	index         string
@@ -811,13 +752,6 @@ func contains(s []string, e string) bool {
 		}
 	}
 	return false
-}
-
-func withRefreshBool(o config.RefreshOption) bool {
-	if o == config.RefreshFalse {
-		return false
-	}
-	return true
 }
 
 func policyVersionId(policyId string, version int32) string {
