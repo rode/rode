@@ -28,7 +28,10 @@ import (
 	"go.uber.org/zap"
 )
 
+//go:generate counterfeiter -generate
+
 // Client is an interface for sending requests to the OPA API
+//counterfeiter:generate . Client
 type Client interface {
 	InitializePolicy(policy string, policyData string) ClientError
 	EvaluatePolicy(policy string, input []byte) (*EvaluatePolicyResponse, error)
