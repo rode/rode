@@ -421,35 +421,6 @@ func (r *rodeServer) CreateNote(ctx context.Context, request *pb.CreateNoteReque
 	})
 }
 
-func (r *rodeServer) genericGet(ctx context.Context, log *zap.Logger, search *esutil.EsSearch, index string, protoMessage interface{}) (string, error) {
-	encodedBody, requestJson := esutil.EncodeRequest(search)
-	log = log.With(zap.String("request", requestJson))
-
-	res, err := r.esClient.Search(
-		r.esClient.Search.WithContext(ctx),
-		r.esClient.Search.WithIndex(index),
-		r.esClient.Search.WithBody(encodedBody),
-	)
-	if err != nil {
-		return "", createError(log, "error sending request to elasticsearch", err)
-	}
-	if res.IsError() {
-		return "", createError(log, "error searching elasticsearch for document", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
-	}
-
-	var searchResults esutil.EsSearchResponse
-	if err := esutil.DecodeResponse(res.Body, &searchResults); err != nil {
-		return "", createError(log, "error unmarshalling elasticsearch response", err)
-	}
-
-	if searchResults.Hits.Total.Value == 0 {
-		log.Debug("document not found", zap.Any("search", search))
-		return "", status.Error(codes.NotFound, fmt.Sprintf("%T not found", protoMessage))
-	}
-
-	return searchResults.Hits.Hits[0].ID, protojson.Unmarshal(searchResults.Hits.Hits[0].Source, proto.MessageV2(protoMessage))
-}
-
 type genericListOptions struct {
 	index         string
 	filter        string

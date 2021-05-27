@@ -26,7 +26,5 @@ coverage: test
 	go tool cover -html=coverage.txt
 
 mocks:
-	mockgen -package mocks -mock_names Client=MockOpaClient github.com/rode/rode/opa Client > mocks/opaClient.go
-	mockgen -package mocks github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering Filterer > mocks/grafeasElasticsearch.go
 	go install github.com/maxbrunsfeld/counterfeiter/v6@v6.4.1
 	COUNTERFEITER_NO_GENERATE_WARNING="true" go generate ./...

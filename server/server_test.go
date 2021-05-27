@@ -24,12 +24,13 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering/filteringfakes"
+	"github.com/rode/rode/pkg/policy/policyfakes"
 	"github.com/rode/rode/pkg/resource/resourcefakes"
 
 	"github.com/brianvoe/gofakeit/v5"
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/elastic/go-elasticsearch/v7/esapi"
-	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -38,7 +39,6 @@ import (
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 	"github.com/rode/rode/config"
 	"github.com/rode/rode/mocks"
-	"github.com/rode/rode/opa"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/build_go_proto"
 	grafeas_common_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/common_go_proto"
@@ -49,117 +49,21 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var _ = Describe("rode server", func() {
-	const (
-		goodPolicy = `
-		package harborfail
-		pass = true {
-				count(violation_count) == 0
-		}
-		violation_count[v] {
-				violations[v].pass == false
-		}
-		#######################################################################################
-		note_name_dne[o]{
-			m := input.occurrences
-			#trace(sprintf("this %v",[count({x | m[x]; f(m[x]) })]))
-			o = count({x | m[x]; f(m[x]) })
-		}
-		f(x) = true { x.note_name == "not this" }
-		# No occurrence should be missing a note name
-		violations[result] {
-			result = {
-				"pass": note_name_dne[i] == 0,
-				"id": "note_names_exist",
-				"name": "Occurrences containing note names",
-				"description": "Verify that all occurrences contain a note name",
-				"message": sprintf("found %v occurrences with missing note names", [note_name_dne[i]]),
-			}
-		}
-		###################################################################################
-		uses_gcr[o]{
-			m := input.occurrences
-			#trace(sprintf("this %v",[count({x | m[x]; f(m[x]) })]))
-			o = count({x | m[x]; g(m[x]) })
-		}
-		g(x) = true { contains(x.resource.uri, "gcr.io") }
-		# All occurrences should have a resource uri containing a gcr endpoint
-		violations[result] {
-			result = {
-				"pass": uses_gcr[i] == 0,
-				"id": "uses_gcr",
-				"name": "Occurrences use GCR URIs",
-				"description": "Verify that all occurrences contain a resource uri from gcr",
-				"message": sprintf("found %v occurrences with non gcr resource uris", [uses_gcr[i]]),
-			}
-		}`
-		compilablePolicyMissingRodeFields = `
-		package play
-		default hello = false
-		hello {
-			m := input.message
-			m == "world"
-		}`
-		compilablePolicyMissingResultsFields = `
-		package harborfail
-		pass = true {
-				3 == 3
-		}
-
-		violations[result] {
-			result := {
-				"pass": true,
-				"name": "Occurrences containing note names",
-				"description": "Verify that all occurrences contain a note name",
-				"message": sprintf("found %v occurrences with missing note names", ["hi"]),
-			}
-		}`
-		compilablePolicyMissingResultsReturn = `
-		package harborfail
-		pass = true {
-				3 == 3
-		}
-
-		violations {
-			a := {
-				"pass": true,
-				"name": "Occurrences containing note names",
-				"description": "Verify that all occurrences contain a note name",
-				"message": sprintf("found %v occurrences with missing note names", ["hi"]),
-			}
-		}`
-		unparseablePolicy = `
-		package play
-		default hello = false
-		hello 
-			m := input.message
-			m == "world"
-		}`
-		uncompilablePolicy = `
-		package play
-		default hello = false
-		hello {
-			m := input.message
-			m2 == "world"
-		}`
-	)
-
 	var (
 		server                pb.RodeServer
 		grafeasClient         *mocks.FakeGrafeasV1Beta1Client
 		grafeasProjectsClient *mocks.FakeProjectsClient
-		opaClient             *mocks.MockOpaClient
 		esClient              *elasticsearch.Client
 		esTransport           *mockEsTransport
-		mockFilterer          *mocks.MockFilterer
-		mockCtrl              *gomock.Controller
+		filterer              *filteringfakes.FakeFilterer
 		elasticsearchConfig   *config.ElasticsearchConfig
 		resourceManager       *resourcefakes.FakeManager
+		policyManager         *policyfakes.FakeManager
 		indexManager          *immocks.FakeIndexManager
 		ctx                   context.Context
 
@@ -170,21 +74,19 @@ var _ = Describe("rode server", func() {
 	)
 
 	BeforeEach(func() {
-		mockCtrl = gomock.NewController(GinkgoT())
 		grafeasClient = &mocks.FakeGrafeasV1Beta1Client{}
 		grafeasProjectsClient = &mocks.FakeProjectsClient{}
 		resourceManager = &resourcefakes.FakeManager{}
-		opaClient = mocks.NewMockOpaClient(mockCtrl)
 		elasticsearchConfig = &config.ElasticsearchConfig{
 			Refresh: "true",
 		}
+		filterer = &filteringfakes.FakeFilterer{}
 
 		esTransport = &mockEsTransport{}
 		esClient = &elasticsearch.Client{
 			Transport: esTransport,
 			API:       esapi.New(esTransport),
 		}
-		mockFilterer = mocks.NewMockFilterer(mockCtrl)
 
 		expectedPoliciesIndex = gofakeit.LetterN(10)
 		expectedPoliciesAlias = gofakeit.LetterN(10)
@@ -213,17 +115,12 @@ var _ = Describe("rode server", func() {
 			logger:              logger,
 			grafeasCommon:       grafeasClient,
 			grafeasProjects:     grafeasProjectsClient,
-			opa:                 opaClient,
 			esClient:            esClient,
-			filterer:            mockFilterer,
+			filterer:            filterer,
 			elasticsearchConfig: elasticsearchConfig,
 			resourceManager:     resourceManager,
 			indexManager:        indexManager,
 		}
-	})
-
-	AfterEach(func() {
-		mockCtrl.Finish()
 	})
 
 	Context("initialize", func() {
@@ -250,7 +147,7 @@ var _ = Describe("rode server", func() {
 			grafeasProjectsClient.GetProjectReturns(expectedProject, expectedGetProjectError)
 			grafeasProjectsClient.CreateProjectReturns(expectedProject, expectedCreateProjectError)
 
-			actualRodeServer, actualError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, opaClient, esClient, mockFilterer, elasticsearchConfig, resourceManager, indexManager)
+			actualRodeServer, actualError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, esClient, filterer, elasticsearchConfig, resourceManager, indexManager, policyManager)
 		})
 
 		It("should check if the rode project exists", func() {
@@ -999,146 +896,6 @@ var _ = Describe("rode server", func() {
 		})
 	})
 
-	Context("EvaluatePolicy", func() {
-		var (
-			policy                    string
-			resourceURI               string
-			evaluatePolicyRequest     *pb.EvaluatePolicyRequest
-			opaEvaluatePolicyResponse *opa.EvaluatePolicyResponse
-
-			expectedListOccurrencesResponse *grafeas_proto.ListOccurrencesResponse
-			expectedListOccurrencesError    error
-		)
-
-		BeforeEach(func() {
-			resourceURI = gofakeit.URL()
-			policy = goodPolicy
-			occurrences := []*grafeas_proto.Occurrence{
-				createRandomOccurrence(grafeas_common_proto.NoteKind_VULNERABILITY),
-				createRandomOccurrence(grafeas_common_proto.NoteKind_ATTESTATION),
-			}
-
-			evaluatePolicyRequest = &pb.EvaluatePolicyRequest{
-				ResourceUri: resourceURI,
-				Policy:      policy,
-			}
-			opaEvaluatePolicyResponse = &opa.EvaluatePolicyResponse{
-				Result: &opa.EvaluatePolicyResult{
-					Pass: false,
-				},
-				Explanation: &[]string{},
-			}
-			createPolicyRequest := createRandomPolicyEntity(goodPolicy)
-			esTransport.preparedHttpResponses = []*http.Response{
-				{
-					StatusCode: http.StatusOK,
-				},
-			}
-			createPolicyResponse, _ := server.CreatePolicy(context.Background(), createPolicyRequest)
-			esTransport.preparedHttpResponses = []*http.Response{
-
-				{
-					StatusCode: http.StatusOK,
-					Body:       createEsSearchResponseForPolicy([]*pb.Policy{createPolicyResponse}),
-				},
-				{
-					StatusCode: http.StatusOK,
-					Body:       createEsSearchResponse(occurrences),
-				},
-			}
-
-			expectedListOccurrencesResponse = &grafeas_proto.ListOccurrencesResponse{
-				Occurrences: []*grafeas_proto.Occurrence{
-					createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED),
-				},
-			}
-			expectedListOccurrencesError = nil
-		})
-
-		JustBeforeEach(func() {
-			grafeasClient.ListOccurrencesReturns(expectedListOccurrencesResponse, expectedListOccurrencesError)
-		})
-
-		It("should initialize OPA policy", func() {
-			// ignore non test calls
-			opaClient.EXPECT().EvaluatePolicy(gomock.Any(), gomock.Any()).AnyTimes().Return(opaEvaluatePolicyResponse, nil)
-
-			// expect OPA initialize policy call
-			opaClient.EXPECT().InitializePolicy(policy, goodPolicy).Return(nil)
-
-			_, _ = server.EvaluatePolicy(context.Background(), evaluatePolicyRequest)
-		})
-
-		It("should return an error if resource uri is not specified", func() {
-			opaClient.EXPECT().EvaluatePolicy(gomock.Any(), gomock.Any()).Times(0)
-			opaClient.EXPECT().InitializePolicy(policy, goodPolicy).Times(0)
-
-			evaluatePolicyRequest.ResourceUri = ""
-			_, err := server.EvaluatePolicy(context.Background(), evaluatePolicyRequest)
-			Expect(err).To(HaveOccurred())
-			Expect(err).To(BeEquivalentTo(status.Errorf(codes.InvalidArgument, "resource uri is required")))
-			Expect(grafeasClient.ListOccurrencesCallCount()).To(Equal(0))
-		})
-
-		When("OPA policy initializes", func() {
-			BeforeEach(func() {
-				opaClient.EXPECT().InitializePolicy(gomock.Any(), goodPolicy).AnyTimes().Return(nil)
-			})
-
-			It("should list Grafeas occurrences", func() {
-				// ingore non test calls
-				opaClient.EXPECT().EvaluatePolicy(gomock.Any(), gomock.Any()).AnyTimes().Return(opaEvaluatePolicyResponse, nil)
-
-				_, _ = server.EvaluatePolicy(context.Background(), evaluatePolicyRequest)
-
-				Expect(grafeasClient.ListOccurrencesCallCount()).To(Equal(1))
-				_, listOccurrencesRequest, _ := grafeasClient.ListOccurrencesArgsForCall(0)
-
-				Expect(listOccurrencesRequest.Parent).To(Equal(rodeProjectSlug))
-				Expect(listOccurrencesRequest.PageSize).To(Equal(int32(maxPageSize)))
-				Expect(listOccurrencesRequest.Filter).To(Equal(fmt.Sprintf(`"resource.uri" == "%s"`, resourceURI)))
-			})
-
-			When("Grafeas list occurrences response is ok", func() {
-				It("should evaluate OPA policy", func() {
-					opaClient.EXPECT().EvaluatePolicy(gomock.Eq(policy), gomock.Any()).Return(opaEvaluatePolicyResponse, nil)
-
-					_, _ = server.EvaluatePolicy(context.Background(), evaluatePolicyRequest)
-				})
-
-				When("evalute OPA policy returns error", func() {
-					It("should return error", func() {
-						opaClient.EXPECT().EvaluatePolicy(gomock.Eq(policy), gomock.Any()).Return(nil, fmt.Errorf("OPA Error"))
-
-						_, evaluatePolicyError := server.EvaluatePolicy(context.Background(), evaluatePolicyRequest)
-						Expect(evaluatePolicyError).To(HaveOccurred())
-						Expect(evaluatePolicyError.Error()).To(ContainSubstring("error evaluating policy"))
-					})
-				})
-			})
-
-			When("Grafeas list occurrences response is error", func() {
-				BeforeEach(func() {
-					expectedListOccurrencesError = errors.New("error listing occurrences")
-				})
-
-				It("should return an error", func() {
-					_, evaluatePolicyError := server.EvaluatePolicy(context.Background(), evaluatePolicyRequest)
-					Expect(evaluatePolicyError).To(HaveOccurred())
-				})
-			})
-		})
-
-		When("OPA policy is not found", func() {
-			It("should return an error", func() {
-				opaClient.EXPECT().InitializePolicy(gomock.Any(), goodPolicy).Return(opa.NewClientError("policy not found", opa.OpaClientErrorTypePolicyNotFound, fmt.Errorf("es search result empty")))
-
-				_, evaluatePolicyError := server.EvaluatePolicy(context.Background(), evaluatePolicyRequest)
-				Expect(evaluatePolicyError).To(HaveOccurred())
-			})
-		})
-	})
-
 	Context("ListResources", func() {
 		var (
 			occurrences              []*grafeas_proto.Occurrence
@@ -1163,7 +920,7 @@ var _ = Describe("rode server", func() {
 
 		When("querying for resources without a filter", func() {
 			BeforeEach(func() {
-				mockFilterer.EXPECT().ParseExpression(gomock.Any()).Times(0)
+				Expect(filterer.ParseExpressionCallCount()).To(Equal(0))
 
 				listResourcesResponse, listResourcesResponseErr = server.ListResources(context.Background(), request)
 			})
@@ -1214,9 +971,12 @@ var _ = Describe("rode server", func() {
 			})
 
 			It("should pass the filter to the filterer", func() {
-				mockFilterer.EXPECT().ParseExpression(request.Filter)
-
 				_, _ = server.ListResources(context.Background(), request)
+
+				Expect(filterer.ParseExpressionCallCount()).To(Equal(1))
+				actualFilter := filterer.ParseExpressionArgsForCall(0)
+
+				Expect(actualFilter).To(Equal(request.Filter))
 			})
 
 			It("should include the Elasticsearch query in the response", func() {
@@ -1225,7 +985,7 @@ var _ = Describe("rode server", func() {
 						gofakeit.UUID(): gofakeit.UUID(),
 					},
 				}
-				mockFilterer.EXPECT().ParseExpression(gomock.Any()).Return(expectedQuery, nil)
+				filterer.ParseExpressionReturns(expectedQuery, nil)
 
 				_, err := server.ListResources(context.Background(), request)
 				Expect(err).To(BeNil())
@@ -1566,645 +1326,547 @@ var _ = Describe("rode server", func() {
 		})
 	})
 
-	When("creating a policy without a name", func() {
-		var (
-			policyEntity   *pb.PolicyEntity
-			policyResponse *pb.Policy
-			err            error
-		)
-
-		BeforeEach(func() {
-			policyEntity = &pb.PolicyEntity{
-				Name: "",
-			}
-
-			policyResponse, err = server.CreatePolicy(context.Background(), policyEntity)
-		})
-
-		It("should throw a Bad Request Error", func() {
-			Expect(err).To(HaveOccurred())
-			Expect(err).To(BeEquivalentTo(status.Errorf(codes.InvalidArgument, "policy name not provided")))
-			Expect(policyResponse).To(BeNil())
-		})
-	})
-
-	When("creating a policy", func() {
-		var (
-			policyEntity   *pb.PolicyEntity
-			policyResponse *pb.Policy
-			err            error
-		)
-
-		BeforeEach(func() {
-			policyEntity = createRandomPolicyEntity(goodPolicy)
-			esTransport.preparedHttpResponses = []*http.Response{
-				{
-					StatusCode: http.StatusOK,
-				},
-			}
-			policyResponse, err = server.CreatePolicy(context.Background(), policyEntity)
-		})
-
-		It("should have a correct url path", func() {
-			Expect(esTransport.receivedHttpRequests[0].URL.Path).To(Equal(fmt.Sprintf("/%s/_doc", expectedPoliciesAlias)))
-		})
-
-		It("should match the policy entity", func() {
-			Expect(err).To(Not(HaveOccurred()))
-			Expect(policyResponse.Policy).To(BeEquivalentTo(policyEntity))
-		})
-
-		When("attempting to retrieve the same policy", func() {
-			var (
-				getResponse *pb.Policy
-				err         error
-			)
-			BeforeEach(func() {
-
-				esTransport.preparedHttpResponses = []*http.Response{
-					{
-						StatusCode: http.StatusOK,
-						Body:       createEsSearchResponseForPolicy([]*pb.Policy{policyResponse}),
-					},
-				}
-				getResponse, err = server.GetPolicy(context.Background(), &pb.GetPolicyRequest{Id: policyResponse.Id})
-			})
-			It("should not return an error", func() {
-				Expect(err).To(Not(HaveOccurred()))
-			})
-			It("should have the same id as the one originally created", func() {
-				Expect(getResponse.Id).To(Equal(policyResponse.Id))
-			})
-		})
-
-		When("attempting to delete the same policy", func() {
-			var deleteResponse *emptypb.Empty
-
-			BeforeEach(func() {
-				esTransport.preparedHttpResponses = []*http.Response{
-					{
-						StatusCode: http.StatusOK,
-						Body:       structToJsonBody(createEsDeleteDocResponse()),
-					},
-				}
-				deleteResponse, err = server.DeletePolicy(context.Background(), &pb.DeletePolicyRequest{Id: policyResponse.Id})
-			})
-			It("should not return an error", func() {
-				Expect(err).To(Not(HaveOccurred()))
-			})
-			It("should have returned an empty response", func() {
-				Expect(deleteResponse).To(BeEquivalentTo(&emptypb.Empty{}))
-			})
-		})
-	})
-
-	When("creating multiple policies sequentially", func() {
-		var (
-			policyEntityOne   *pb.PolicyEntity
-			policyEntityTwo   *pb.PolicyEntity
-			policyResponseOne *pb.Policy
-			policyResponseTwo *pb.Policy
-			err               error
-		)
-
-		BeforeEach(func() {
-			policyEntityOne = createRandomPolicyEntity(goodPolicy)
-			policyEntityTwo = createRandomPolicyEntity(goodPolicy)
-			esTransport.preparedHttpResponses = []*http.Response{
-				{
-					StatusCode: http.StatusOK,
-				},
-				{
-					StatusCode: http.StatusOK,
-				},
-			}
-			policyResponseOne, err = server.CreatePolicy(context.Background(), policyEntityOne)
-			policyResponseTwo, err = server.CreatePolicy(context.Background(), policyEntityTwo)
-		})
-		It("should not return an error", func() {
-			Expect(err).To(Not(HaveOccurred()))
-		})
-		It("should have created two different policies", func() {
-			Expect(policyResponseOne.Id).To(Not(Equal(policyResponseTwo.Id)))
-		})
-
-		When("attempting to list the policies", func() {
-			var (
-				listRequest   *pb.ListPoliciesRequest
-				listResponse  *pb.ListPoliciesResponse
-				policiesList  []*pb.Policy
-				err           error
-				filter        string
-				expectedQuery *filtering.Query
-			)
-
-			BeforeEach(func() {
-				policiesList = append(policiesList, policyResponseOne)
-				policiesList = append(policiesList, policyResponseOne)
-
-				filter = `name=="abc"`
-				expectedQuery := &filtering.Query{
-					Term: &filtering.Term{
-						"name": "abc",
-					},
-				}
-
-				listRequest = &pb.ListPoliciesRequest{Filter: filter}
-				esTransport.preparedHttpResponses = []*http.Response{
-					{
-						StatusCode: http.StatusOK,
-						Body:       createEsSearchResponseForPolicy(policiesList),
-					},
-					{
-						StatusCode: http.StatusOK,
-						Body:       createEsSearchResponseForPolicy(policiesList),
-					},
-				}
-
-				mockFilterer.EXPECT().ParseExpression(gomock.Any()).Return(expectedQuery, nil)
-				listResponse, err = server.ListPolicies(context.Background(), listRequest)
-			})
-
-			It("should not return an error", func() {
-				Expect(err).To(Not(HaveOccurred()))
-			})
-
-			It("should have listed 4 different policies", func() {
-				Expect(listResponse.Policies).To(HaveLen(4))
-			})
-
-			It("should have generated a filter query", func() {
-				actualRequest := esTransport.receivedHttpRequests[0]
-				search := readEsSearchResponse(actualRequest)
-
-				Expect(search.Query).To(Equal(expectedQuery))
-			})
-
-			It("should have generated a filter query", func() {
-				actualRequest := esTransport.receivedHttpRequests[0]
-				search := readEsSearchResponse(actualRequest)
-
-				Expect(search.Query).To(Equal(expectedQuery))
-			})
-		})
-	})
-
-	When("listing policies with pagination", func() {
-		var (
-			listRequest  *pb.ListPoliciesRequest
-			listResponse *pb.ListPoliciesResponse
-			actualError  error
-
-			expectedPageToken string
-			expectedPageSize  int32
-			expectedPitId     string
-			expectedFrom      int
-		)
-
-		BeforeEach(func() {
-			expectedPageSize = int32(gofakeit.Number(5, 20))
-			expectedPitId = gofakeit.LetterN(20)
-			expectedFrom = gofakeit.Number(int(expectedPageSize), 100)
-
-			listRequest = &pb.ListPoliciesRequest{
-				PageSize: expectedPageSize,
-			}
-
-			esTransport.preparedHttpResponses = []*http.Response{
-				{
-					StatusCode: http.StatusOK,
-					Body: createPaginatedEsSearchResponseForPolicy([]*pb.Policy{
-						{
-							Id:     gofakeit.UUID(),
-							Policy: createRandomPolicyEntity(goodPolicy),
-						},
-					}, gofakeit.Number(1000, 10000)),
-				},
-			}
-		})
-
-		JustBeforeEach(func() {
-			listResponse, actualError = server.ListPolicies(context.Background(), listRequest)
-		})
-
-		When("a page token is not specified", func() {
-			BeforeEach(func() {
-				esTransport.preparedHttpResponses = append([]*http.Response{
-					{
-						StatusCode: http.StatusOK,
-						Body: structToJsonBody(&esutil.ESPitResponse{
-							Id: expectedPitId,
-						}),
-					},
-				}, esTransport.preparedHttpResponses...)
-			})
-
-			It("should create a PIT in Elasticsearch", func() {
-				Expect(esTransport.receivedHttpRequests[0].URL.Path).To(Equal(fmt.Sprintf("/%s/_pit", expectedPoliciesAlias)))
-				Expect(esTransport.receivedHttpRequests[0].Method).To(Equal(http.MethodPost))
-				Expect(esTransport.receivedHttpRequests[0].URL.Query().Get("keep_alive")).To(Equal("5m"))
-			})
-
-			It("should query using the PIT", func() {
-				Expect(esTransport.receivedHttpRequests[1].URL.Path).To(Equal("/_search"))
-				Expect(esTransport.receivedHttpRequests[1].Method).To(Equal(http.MethodGet))
-				request := readEsSearchResponse(esTransport.receivedHttpRequests[1])
-				Expect(request.Pit.Id).To(Equal(expectedPitId))
-				Expect(request.Pit.KeepAlive).To(Equal("5m"))
-			})
-
-			It("should not return an error", func() {
-				Expect(actualError).To(BeNil())
-			})
-
-			It("should return the next page token", func() {
-				nextPitId, nextFrom, err := esutil.ParsePageToken(listResponse.NextPageToken)
-
-				Expect(err).ToNot(HaveOccurred())
-				Expect(nextPitId).To(Equal(expectedPitId))
-				Expect(nextFrom).To(BeEquivalentTo(expectedPageSize))
-			})
-		})
-
-		When("a valid token is specified", func() {
-			BeforeEach(func() {
-				expectedPageToken = esutil.CreatePageToken(expectedPitId, expectedFrom)
-
-				listRequest.PageToken = expectedPageToken
-			})
-
-			It("should query Elasticsearch using the PIT", func() {
-				Expect(esTransport.receivedHttpRequests[0].URL.Path).To(Equal("/_search"))
-				Expect(esTransport.receivedHttpRequests[0].Method).To(Equal(http.MethodGet))
-				request := readEsSearchResponse(esTransport.receivedHttpRequests[0])
-				Expect(request.Pit.Id).To(Equal(expectedPitId))
-				Expect(request.Pit.KeepAlive).To(Equal("5m"))
-			})
-
-			It("should return the next page token", func() {
-				nextPitId, nextFrom, err := esutil.ParsePageToken(listResponse.NextPageToken)
-
-				Expect(err).ToNot(HaveOccurred())
-				Expect(nextPitId).To(Equal(expectedPitId))
-				Expect(nextFrom).To(BeEquivalentTo(int(expectedPageSize) + expectedFrom))
-			})
-
-			When("the user reaches the last page of results", func() {
-				BeforeEach(func() {
-					esTransport.preparedHttpResponses[0].Body = createPaginatedEsSearchResponseForPolicy([]*pb.Policy{
-						{
-							Id:     gofakeit.UUID(),
-							Policy: createRandomPolicyEntity(goodPolicy),
-						},
-					}, gofakeit.Number(1, int(expectedPageSize)+expectedFrom-1))
-				})
-
-				It("should return an empty next page token", func() {
-					Expect(listResponse.NextPageToken).To(Equal(""))
-				})
-			})
-		})
-
-		When("an invalid token is passed (bad format)", func() {
-			BeforeEach(func() {
-				listRequest.PageToken = gofakeit.LetterN(10)
-			})
-
-			It("should not make any further Elasticsearch queries", func() {
-				Expect(esTransport.receivedHttpRequests).To(HaveLen(0))
-			})
-
-			It("should return an error", func() {
-				Expect(actualError).To(HaveOccurred())
-				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
-				Expect(listResponse).To(BeNil())
-			})
-		})
-
-		When("an invalid token is passed (bad from)", func() {
-			BeforeEach(func() {
-				listRequest.PageToken = esutil.CreatePageToken(expectedPitId, expectedFrom) + gofakeit.LetterN(5)
-			})
-
-			It("should not make any further Elasticsearch queries", func() {
-				Expect(esTransport.receivedHttpRequests).To(HaveLen(0))
-			})
-
-			It("should return an error", func() {
-				Expect(actualError).To(HaveOccurred())
-				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
-				Expect(listResponse).To(BeNil())
-			})
-		})
-	})
-
-	When("attempting to list an empty policy index", func() {
-		var (
-			listRequest          *pb.ListPoliciesRequest
-			policiesList         []*pb.Policy
-			listPoliciesResponse *pb.ListPoliciesResponse
-			err                  error
-		)
-		BeforeEach(func() {
-			listRequest = &pb.ListPoliciesRequest{}
-			esTransport.preparedHttpResponses = []*http.Response{
-				{
-					StatusCode: http.StatusOK,
-					Body:       createEsSearchResponseForPolicy(policiesList),
-				},
-			}
-			listPoliciesResponse, err = server.ListPolicies(context.Background(), listRequest)
-		})
-		It("should return an error", func() {
-			Expect(err).To(Not(HaveOccurred()))
-		})
-		It("should return an empty list", func() {
-			Expect(len(listPoliciesResponse.Policies)).To(Equal(0))
-		})
-
-	})
-
-	When("attempting to list policies and elasticsearch is unreachable", func() {
-		var (
-			listRequest  *pb.ListPoliciesRequest
-			policiesList []*pb.Policy
-			err          error
-		)
-		BeforeEach(func() {
-			listRequest = &pb.ListPoliciesRequest{}
-			esTransport.preparedHttpResponses = []*http.Response{
-				{
-					StatusCode: http.StatusInternalServerError,
-					Body:       createEsSearchResponseForPolicy(policiesList),
-				},
-			}
-			_, err = server.ListPolicies(context.Background(), listRequest)
-		})
-		It("should return an error", func() {
-			Expect(err).To(HaveOccurred())
-		})
-
-	})
-
-	When("creating an unparseable policy", func() {
-		var (
-			policyEntity   *pb.PolicyEntity
-			policyResponse *pb.Policy
-			err            error
-		)
-
-		BeforeEach(func() {
-			policyEntity = createRandomPolicyEntity(unparseablePolicy)
-			policyResponse, err = server.CreatePolicy(context.Background(), policyEntity)
-		})
-
-		It("should throw a compilation error", func() {
-			Expect(policyResponse).To(BeNil())
-			Expect(err).To(HaveOccurred())
-		})
-	})
-
-	When("creating an compilable policy with missing Rode Requirements", func() {
-		var (
-			policyEntity   *pb.PolicyEntity
-			policyResponse *pb.Policy
-			err            error
-		)
-
-		BeforeEach(func() {
-			policyEntity = createRandomPolicyEntity(compilablePolicyMissingRodeFields)
-			policyResponse, err = server.CreatePolicy(context.Background(), policyEntity)
-		})
-
-		It("should throw a compilation error", func() {
-			Expect(policyResponse).To(BeNil())
-			Expect(err).To(HaveOccurred())
-		})
-	})
-
-	When("creating an compilable policy with missing results return", func() {
-		var (
-			policyEntity   *pb.PolicyEntity
-			policyResponse *pb.Policy
-			err            error
-		)
-
-		BeforeEach(func() {
-			policyEntity = createRandomPolicyEntity(compilablePolicyMissingResultsReturn)
-			policyResponse, err = server.CreatePolicy(context.Background(), policyEntity)
-		})
-
-		It("should throw a compilation error", func() {
-			Expect(policyResponse).To(BeNil())
-			Expect(err).To(HaveOccurred())
-		})
-	})
-
-	When("creating an compilable policy with missing required fields in the result object", func() {
-		var (
-			policyEntity   *pb.PolicyEntity
-			policyResponse *pb.Policy
-			err            error
-		)
-
-		BeforeEach(func() {
-			policyEntity = createRandomPolicyEntity(compilablePolicyMissingResultsFields)
-			policyResponse, err = server.CreatePolicy(context.Background(), policyEntity)
-		})
-
-		It("should throw a compilation error", func() {
-			Expect(policyResponse).To(BeNil())
-			Expect(err).To(HaveOccurred())
-		})
-	})
-
-	When("validating a good policy", func() {
-		var (
-			validatePolicyRequest  *pb.ValidatePolicyRequest
-			validatePolicyResponse *pb.ValidatePolicyResponse
-			err                    error
-		)
-
-		BeforeEach(func() {
-			validatePolicyRequest = &pb.ValidatePolicyRequest{Policy: goodPolicy}
-			validatePolicyResponse, err = server.ValidatePolicy(context.Background(), validatePolicyRequest)
-		})
-
-		It("should not throw an error", func() {
-			Expect(err).To(Not(HaveOccurred()))
-		})
-		It("should return a successful compilation", func() {
-			Expect(validatePolicyResponse.Compile).To(BeTrue())
-		})
-		It("should return an empty error array", func() {
-			Expect(validatePolicyResponse.Errors).To(BeEmpty())
-		})
-	})
-
-	When("validating an empty policy", func() {
-		var (
-			validatePolicyRequest *pb.ValidatePolicyRequest
-			err                   error
-		)
-
-		BeforeEach(func() {
-			validatePolicyRequest = &pb.ValidatePolicyRequest{Policy: ""}
-			_, err = server.ValidatePolicy(context.Background(), validatePolicyRequest)
-		})
-
-		It("should throw an error", func() {
-			Expect(err).To(HaveOccurred())
-		})
-	})
-
-	When("validating an uncompilable policy", func() {
-		var (
-			validatePolicyRequest  *pb.ValidatePolicyRequest
-			validatePolicyResponse *pb.ValidatePolicyResponse
-			err                    error
-		)
-
-		BeforeEach(func() {
-			validatePolicyRequest = &pb.ValidatePolicyRequest{Policy: uncompilablePolicy}
-			validatePolicyResponse, err = server.ValidatePolicy(context.Background(), validatePolicyRequest)
-		})
-
-		It("should throw an error", func() {
-			Expect(err).To(HaveOccurred())
-		})
-		It("should return an unsuccessful compilation", func() {
-			Expect(validatePolicyResponse.Compile).To(BeFalse())
-		})
-		It("should not return an empty error array", func() {
-			Expect(len(validatePolicyResponse.Errors)).To(Not(Equal(0)))
-		})
-	})
-
-	When("updating the name of a policy", func() {
-		var (
-			createPolicyRequest  *pb.PolicyEntity
-			createPolicyResponse *pb.Policy
-			updatePolicyRequest  *pb.UpdatePolicyRequest
-			updatePolicyResponse *pb.Policy
-			err                  error
-			initialPolicyName    string
-		)
-
-		BeforeEach(func() {
-			esTransport.preparedHttpResponses = []*http.Response{
-				{
-					StatusCode: http.StatusOK,
-				},
-			}
-
-			createPolicyRequest = createRandomPolicyEntity(goodPolicy)
-			createPolicyResponse, _ = server.CreatePolicy(context.Background(), createPolicyRequest)
-			esTransport.preparedHttpResponses = []*http.Response{
-				{
-					StatusCode: http.StatusOK,
-					Body:       createEsSearchResponseForPolicy([]*pb.Policy{createPolicyResponse}),
-				},
-				{
-					StatusCode: http.StatusOK,
-				},
-			}
-
-			initialPolicyName = createPolicyResponse.Policy.Name
-			updatePolicyRequest = &pb.UpdatePolicyRequest{
-				Id: createPolicyResponse.Id,
-				Policy: &pb.PolicyEntity{
-					Name: "random name",
-				},
-				UpdateMask: &fieldmaskpb.FieldMask{
-					Paths: []string{"name"},
-				},
-			}
-			updatePolicyResponse, err = server.UpdatePolicy(context.Background(), updatePolicyRequest)
-		})
-
-		It("should not throw an error", func() {
-			Expect(err).To(Not(HaveOccurred()))
-		})
-		It("should now have a new policy name", func() {
-			Expect(initialPolicyName).To(Not(Equal(updatePolicyResponse.Policy.Name)))
-		})
-		When("the original policy does not exist", func() {
-			BeforeEach(func() {
-				esTransport.preparedHttpResponses = []*http.Response{
-					{
-						StatusCode: http.StatusOK,
-						Body:       createEsSearchResponseForPolicy([]*pb.Policy{}),
-					},
-					{
-						StatusCode: http.StatusOK,
-					},
-				}
-				updatePolicyRequest = &pb.UpdatePolicyRequest{
-					Id: gofakeit.LetterN(10),
-					Policy: &pb.PolicyEntity{
-						Name: "random name",
-					},
-					UpdateMask: &fieldmaskpb.FieldMask{
-						Paths: []string{"name"},
-					},
-				}
-				updatePolicyResponse, err = server.UpdatePolicy(context.Background(), updatePolicyRequest)
-			})
-			It("should throw an error", func() {
-				Expect(err).To(HaveOccurred())
-			})
-		})
-	})
-
-	When("updating the rego content of a policy", func() {
-		var (
-			createPolicyRequest  *pb.PolicyEntity
-			createPolicyResponse *pb.Policy
-			updatePolicyRequest  *pb.UpdatePolicyRequest
-			updatePolicyResponse *pb.Policy
-			err                  error
-		)
-
-		BeforeEach(func() {
-			esTransport.preparedHttpResponses = []*http.Response{
-				{
-					StatusCode: http.StatusOK,
-				},
-			}
-
-			createPolicyRequest = createRandomPolicyEntity(goodPolicy)
-			createPolicyResponse, _ = server.CreatePolicy(context.Background(), createPolicyRequest)
-			esTransport.preparedHttpResponses = []*http.Response{
-				{
-					StatusCode: http.StatusOK,
-					Body:       createEsSearchResponseForPolicy([]*pb.Policy{createPolicyResponse}),
-				},
-				{
-					StatusCode: http.StatusOK,
-				},
-			}
-
-		})
-		When("the policy does not compile", func() {
-			BeforeEach(func() {
-				updatePolicyRequest = &pb.UpdatePolicyRequest{
-					Id: createPolicyResponse.Id,
-					Policy: &pb.PolicyEntity{
-						RegoContent: uncompilablePolicy,
-					},
-					UpdateMask: &fieldmaskpb.FieldMask{
-						Paths: []string{"rego_content"},
-					},
-				}
-				updatePolicyResponse, err = server.UpdatePolicy(context.Background(), updatePolicyRequest)
-			})
-			It("should throw an error ", func() {
-				Expect(err).To(HaveOccurred())
-				Expect(updatePolicyResponse).To(BeNil())
-			})
-		})
-
-	})
+	//When("creating multiple policies sequentially", func() {
+	//	var (
+	//		policyEntityOne   *pb.PolicyEntity
+	//		policyEntityTwo   *pb.PolicyEntity
+	//		policyResponseOne *pb.Policy
+	//		policyResponseTwo *pb.Policy
+	//		err               error
+	//	)
+	//
+	//	BeforeEach(func() {
+	//		policyEntityOne = createRandomPolicyEntity(goodPolicy)
+	//		policyEntityTwo = createRandomPolicyEntity(goodPolicy)
+	//		esTransport.preparedHttpResponses = []*http.Response{
+	//			{
+	//				StatusCode: http.StatusOK,
+	//			},
+	//			{
+	//				StatusCode: http.StatusOK,
+	//			},
+	//		}
+	//		policyResponseOne, err = server.CreatePolicy(context.Background(), policyEntityOne)
+	//		policyResponseTwo, err = server.CreatePolicy(context.Background(), policyEntityTwo)
+	//	})
+	//
+	//	When("attempting to list the policies", func() {
+	//		var (
+	//			listRequest   *pb.ListPoliciesRequest
+	//			listResponse  *pb.ListPoliciesResponse
+	//			policiesList  []*pb.Policy
+	//			err           error
+	//			filter        string
+	//			expectedQuery *filtering.Query
+	//		)
+	//
+	//		BeforeEach(func() {
+	//			policiesList = append(policiesList, policyResponseOne)
+	//			policiesList = append(policiesList, policyResponseOne)
+	//
+	//			filter = `name=="abc"`
+	//			expectedQuery := &filtering.Query{
+	//				Term: &filtering.Term{
+	//					"name": "abc",
+	//				},
+	//			}
+	//
+	//			listRequest = &pb.ListPoliciesRequest{Filter: filter}
+	//			esTransport.preparedHttpResponses = []*http.Response{
+	//				{
+	//					StatusCode: http.StatusOK,
+	//					Body:       createEsSearchResponseForPolicy(policiesList),
+	//				},
+	//				{
+	//					StatusCode: http.StatusOK,
+	//					Body:       createEsSearchResponseForPolicy(policiesList),
+	//				},
+	//			}
+	//
+	//			mockFilterer.EXPECT().ParseExpression(gomock.Any()).Return(expectedQuery, nil)
+	//			listResponse, err = server.ListPolicies(context.Background(), listRequest)
+	//		})
+	//
+	//		It("should not return an error", func() {
+	//			Expect(err).To(Not(HaveOccurred()))
+	//		})
+	//
+	//		It("should have listed 4 different policies", func() {
+	//			Expect(listResponse.Policies).To(HaveLen(4))
+	//		})
+	//
+	//		It("should have generated a filter query", func() {
+	//			actualRequest := esTransport.receivedHttpRequests[0]
+	//			search := readEsSearchResponse(actualRequest)
+	//
+	//			Expect(search.Query).To(Equal(expectedQuery))
+	//		})
+	//
+	//		It("should have generated a filter query", func() {
+	//			actualRequest := esTransport.receivedHttpRequests[0]
+	//			search := readEsSearchResponse(actualRequest)
+	//
+	//			Expect(search.Query).To(Equal(expectedQuery))
+	//		})
+	//	})
+	//})
+
+	//When("listing policies with pagination", func() {
+	//	var (
+	//		listRequest  *pb.ListPoliciesRequest
+	//		listResponse *pb.ListPoliciesResponse
+	//		actualError  error
+	//
+	//		expectedPageToken string
+	//		expectedPageSize  int32
+	//		expectedPitId     string
+	//		expectedFrom      int
+	//	)
+	//
+	//	BeforeEach(func() {
+	//		expectedPageSize = int32(gofakeit.Number(5, 20))
+	//		expectedPitId = gofakeit.LetterN(20)
+	//		expectedFrom = gofakeit.Number(int(expectedPageSize), 100)
+	//
+	//		listRequest = &pb.ListPoliciesRequest{
+	//			PageSize: expectedPageSize,
+	//		}
+	//
+	//		esTransport.preparedHttpResponses = []*http.Response{
+	//			{
+	//				StatusCode: http.StatusOK,
+	//				Body: createPaginatedEsSearchResponseForPolicy([]*pb.Policy{
+	//					{
+	//						Id:     gofakeit.UUID(),
+	//						Policy: createRandomPolicyEntity(goodPolicy),
+	//					},
+	//				}, gofakeit.Number(1000, 10000)),
+	//			},
+	//		}
+	//	})
+	//
+	//	JustBeforeEach(func() {
+	//		listResponse, actualError = server.ListPolicies(context.Background(), listRequest)
+	//	})
+	//
+	//	When("a page token is not specified", func() {
+	//		BeforeEach(func() {
+	//			esTransport.preparedHttpResponses = append([]*http.Response{
+	//				{
+	//					StatusCode: http.StatusOK,
+	//					Body: structToJsonBody(&esutil.ESPitResponse{
+	//						Id: expectedPitId,
+	//					}),
+	//				},
+	//			}, esTransport.preparedHttpResponses...)
+	//		})
+	//
+	//		It("should create a PIT in Elasticsearch", func() {
+	//			Expect(esTransport.receivedHttpRequests[0].URL.Path).To(Equal(fmt.Sprintf("/%s/_pit", expectedPoliciesAlias)))
+	//			Expect(esTransport.receivedHttpRequests[0].Method).To(Equal(http.MethodPost))
+	//			Expect(esTransport.receivedHttpRequests[0].URL.Query().Get("keep_alive")).To(Equal("5m"))
+	//		})
+	//
+	//		It("should query using the PIT", func() {
+	//			Expect(esTransport.receivedHttpRequests[1].URL.Path).To(Equal("/_search"))
+	//			Expect(esTransport.receivedHttpRequests[1].Method).To(Equal(http.MethodGet))
+	//			request := readEsSearchResponse(esTransport.receivedHttpRequests[1])
+	//			Expect(request.Pit.Id).To(Equal(expectedPitId))
+	//			Expect(request.Pit.KeepAlive).To(Equal("5m"))
+	//		})
+	//
+	//		It("should not return an error", func() {
+	//			Expect(actualError).To(BeNil())
+	//		})
+	//
+	//		It("should return the next page token", func() {
+	//			nextPitId, nextFrom, err := esutil.ParsePageToken(listResponse.NextPageToken)
+	//
+	//			Expect(err).ToNot(HaveOccurred())
+	//			Expect(nextPitId).To(Equal(expectedPitId))
+	//			Expect(nextFrom).To(BeEquivalentTo(expectedPageSize))
+	//		})
+	//	})
+	//
+	//	When("a valid token is specified", func() {
+	//		BeforeEach(func() {
+	//			expectedPageToken = esutil.CreatePageToken(expectedPitId, expectedFrom)
+	//
+	//			listRequest.PageToken = expectedPageToken
+	//		})
+	//
+	//		It("should query Elasticsearch using the PIT", func() {
+	//			Expect(esTransport.receivedHttpRequests[0].URL.Path).To(Equal("/_search"))
+	//			Expect(esTransport.receivedHttpRequests[0].Method).To(Equal(http.MethodGet))
+	//			request := readEsSearchResponse(esTransport.receivedHttpRequests[0])
+	//			Expect(request.Pit.Id).To(Equal(expectedPitId))
+	//			Expect(request.Pit.KeepAlive).To(Equal("5m"))
+	//		})
+	//
+	//		It("should return the next page token", func() {
+	//			nextPitId, nextFrom, err := esutil.ParsePageToken(listResponse.NextPageToken)
+	//
+	//			Expect(err).ToNot(HaveOccurred())
+	//			Expect(nextPitId).To(Equal(expectedPitId))
+	//			Expect(nextFrom).To(BeEquivalentTo(int(expectedPageSize) + expectedFrom))
+	//		})
+	//
+	//		When("the user reaches the last page of results", func() {
+	//			BeforeEach(func() {
+	//				esTransport.preparedHttpResponses[0].Body = createPaginatedEsSearchResponseForPolicy([]*pb.Policy{
+	//					{
+	//						Id:     gofakeit.UUID(),
+	//						Policy: createRandomPolicyEntity(goodPolicy),
+	//					},
+	//				}, gofakeit.Number(1, int(expectedPageSize)+expectedFrom-1))
+	//			})
+	//
+	//			It("should return an empty next page token", func() {
+	//				Expect(listResponse.NextPageToken).To(Equal(""))
+	//			})
+	//		})
+	//	})
+	//
+	//	When("an invalid token is passed (bad format)", func() {
+	//		BeforeEach(func() {
+	//			listRequest.PageToken = gofakeit.LetterN(10)
+	//		})
+	//
+	//		It("should not make any further Elasticsearch queries", func() {
+	//			Expect(esTransport.receivedHttpRequests).To(HaveLen(0))
+	//		})
+	//
+	//		It("should return an error", func() {
+	//			Expect(actualError).To(HaveOccurred())
+	//			Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+	//			Expect(listResponse).To(BeNil())
+	//		})
+	//	})
+	//
+	//	When("an invalid token is passed (bad from)", func() {
+	//		BeforeEach(func() {
+	//			listRequest.PageToken = esutil.CreatePageToken(expectedPitId, expectedFrom) + gofakeit.LetterN(5)
+	//		})
+	//
+	//		It("should not make any further Elasticsearch queries", func() {
+	//			Expect(esTransport.receivedHttpRequests).To(HaveLen(0))
+	//		})
+	//
+	//		It("should return an error", func() {
+	//			Expect(actualError).To(HaveOccurred())
+	//			Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+	//			Expect(listResponse).To(BeNil())
+	//		})
+	//	})
+	//})
+
+	//When("attempting to list an empty policy index", func() {
+	//	var (
+	//		listRequest          *pb.ListPoliciesRequest
+	//		policiesList         []*pb.Policy
+	//		listPoliciesResponse *pb.ListPoliciesResponse
+	//		err                  error
+	//	)
+	//	BeforeEach(func() {
+	//		listRequest = &pb.ListPoliciesRequest{}
+	//		esTransport.preparedHttpResponses = []*http.Response{
+	//			{
+	//				StatusCode: http.StatusOK,
+	//				Body:       createEsSearchResponseForPolicy(policiesList),
+	//			},
+	//		}
+	//		listPoliciesResponse, err = server.ListPolicies(context.Background(), listRequest)
+	//	})
+	//	It("should return an error", func() {
+	//		Expect(err).To(Not(HaveOccurred()))
+	//	})
+	//	It("should return an empty list", func() {
+	//		Expect(len(listPoliciesResponse.Policies)).To(Equal(0))
+	//	})
+	//
+	//})
+
+	//When("attempting to list policies and elasticsearch is unreachable", func() {
+	//	var (
+	//		listRequest  *pb.ListPoliciesRequest
+	//		policiesList []*pb.Policy
+	//		err          error
+	//	)
+	//	BeforeEach(func() {
+	//		listRequest = &pb.ListPoliciesRequest{}
+	//		esTransport.preparedHttpResponses = []*http.Response{
+	//			{
+	//				StatusCode: http.StatusInternalServerError,
+	//				Body:       createEsSearchResponseForPolicy(policiesList),
+	//			},
+	//		}
+	//		_, err = server.ListPolicies(context.Background(), listRequest)
+	//	})
+	//	It("should return an error", func() {
+	//		Expect(err).To(HaveOccurred())
+	//	})
+	//
+	//})
+
+	//When("creating an unparseable policy", func() {
+	//	var (
+	//		policyEntity   *pb.PolicyEntity
+	//		policyResponse *pb.Policy
+	//		err            error
+	//	)
+	//
+	//	BeforeEach(func() {
+	//		policyEntity = createRandomPolicyEntity(unparseablePolicy)
+	//		policyResponse, err = server.CreatePolicy(context.Background(), policyEntity)
+	//	})
+	//
+	//	It("should throw a compilation error", func() {
+	//		Expect(policyResponse).To(BeNil())
+	//		Expect(err).To(HaveOccurred())
+	//	})
+	//})
+
+	//When("creating an compilable policy with missing Rode Requirements", func() {
+	//	var (
+	//		policyEntity   *pb.PolicyEntity
+	//		policyResponse *pb.Policy
+	//		err            error
+	//	)
+	//
+	//	BeforeEach(func() {
+	//		policyEntity = createRandomPolicyEntity(compilablePolicyMissingRodeFields)
+	//		policyResponse, err = server.CreatePolicy(context.Background(), policyEntity)
+	//	})
+	//
+	//	It("should throw a compilation error", func() {
+	//		Expect(policyResponse).To(BeNil())
+	//		Expect(err).To(HaveOccurred())
+	//	})
+	//})
+
+	//When("creating an compilable policy with missing results return", func() {
+	//	var (
+	//		policyEntity   *pb.PolicyEntity
+	//		policyResponse *pb.Policy
+	//		err            error
+	//	)
+	//
+	//	BeforeEach(func() {
+	//		policyEntity = createRandomPolicyEntity(compilablePolicyMissingResultsReturn)
+	//		policyResponse, err = server.CreatePolicy(context.Background(), policyEntity)
+	//	})
+	//
+	//	It("should throw a compilation error", func() {
+	//		Expect(policyResponse).To(BeNil())
+	//		Expect(err).To(HaveOccurred())
+	//	})
+	//})
+
+	//When("creating an compilable policy with missing required fields in the result object", func() {
+	//	var (
+	//		policyEntity   *pb.PolicyEntity
+	//		policyResponse *pb.Policy
+	//		err            error
+	//	)
+	//
+	//	BeforeEach(func() {
+	//		policyEntity = createRandomPolicyEntity(compilablePolicyMissingResultsFields)
+	//		policyResponse, err = server.CreatePolicy(context.Background(), policyEntity)
+	//	})
+	//
+	//	It("should throw a compilation error", func() {
+	//		Expect(policyResponse).To(BeNil())
+	//		Expect(err).To(HaveOccurred())
+	//	})
+	//})
+	//
+	//When("validating a good policy", func() {
+	//	var (
+	//		validatePolicyRequest  *pb.ValidatePolicyRequest
+	//		validatePolicyResponse *pb.ValidatePolicyResponse
+	//		err                    error
+	//	)
+	//
+	//	BeforeEach(func() {
+	//		validatePolicyRequest = &pb.ValidatePolicyRequest{Policy: goodPolicy}
+	//		validatePolicyResponse, err = server.ValidatePolicy(context.Background(), validatePolicyRequest)
+	//	})
+	//
+	//	It("should not throw an error", func() {
+	//		Expect(err).To(Not(HaveOccurred()))
+	//	})
+	//	It("should return a successful compilation", func() {
+	//		Expect(validatePolicyResponse.Compile).To(BeTrue())
+	//	})
+	//	It("should return an empty error array", func() {
+	//		Expect(validatePolicyResponse.Errors).To(BeEmpty())
+	//	})
+	//})
+	//
+	//When("validating an empty policy", func() {
+	//	var (
+	//		validatePolicyRequest *pb.ValidatePolicyRequest
+	//		err                   error
+	//	)
+	//
+	//	BeforeEach(func() {
+	//		validatePolicyRequest = &pb.ValidatePolicyRequest{Policy: ""}
+	//		_, err = server.ValidatePolicy(context.Background(), validatePolicyRequest)
+	//	})
+	//
+	//	It("should throw an error", func() {
+	//		Expect(err).To(HaveOccurred())
+	//	})
+	//})
+	//
+	//When("validating an uncompilable policy", func() {
+	//	var (
+	//		validatePolicyRequest  *pb.ValidatePolicyRequest
+	//		validatePolicyResponse *pb.ValidatePolicyResponse
+	//		err                    error
+	//	)
+	//
+	//	BeforeEach(func() {
+	//		validatePolicyRequest = &pb.ValidatePolicyRequest{Policy: uncompilablePolicy}
+	//		validatePolicyResponse, err = server.ValidatePolicy(context.Background(), validatePolicyRequest)
+	//	})
+	//
+	//	It("should throw an error", func() {
+	//		Expect(err).To(HaveOccurred())
+	//	})
+	//	It("should return an unsuccessful compilation", func() {
+	//		Expect(validatePolicyResponse.Compile).To(BeFalse())
+	//	})
+	//	It("should not return an empty error array", func() {
+	//		Expect(len(validatePolicyResponse.Errors)).To(Not(Equal(0)))
+	//	})
+	//})
+
+	//When("updating the name of a policy", func() {
+	//	var (
+	//		createPolicyRequest  *pb.PolicyEntity
+	//		createPolicyResponse *pb.Policy
+	//		updatePolicyRequest  *pb.UpdatePolicyRequest
+	//		updatePolicyResponse *pb.Policy
+	//		err                  error
+	//		initialPolicyName    string
+	//	)
+	//
+	//	BeforeEach(func() {
+	//		esTransport.preparedHttpResponses = []*http.Response{
+	//			{
+	//				StatusCode: http.StatusOK,
+	//			},
+	//		}
+	//
+	//		createPolicyRequest = createRandomPolicyEntity(goodPolicy)
+	//		createPolicyResponse, _ = server.CreatePolicy(context.Background(), createPolicyRequest)
+	//		esTransport.preparedHttpResponses = []*http.Response{
+	//			{
+	//				StatusCode: http.StatusOK,
+	//				Body:       createEsSearchResponseForPolicy([]*pb.Policy{createPolicyResponse}),
+	//			},
+	//			{
+	//				StatusCode: http.StatusOK,
+	//			},
+	//		}
+	//
+	//		initialPolicyName = createPolicyResponse.Policy.Name
+	//		updatePolicyRequest = &pb.UpdatePolicyRequest{
+	//			Id: createPolicyResponse.Id,
+	//			Policy: &pb.PolicyEntity{
+	//				Name: "random name",
+	//			},
+	//			UpdateMask: &fieldmaskpb.FieldMask{
+	//				Paths: []string{"name"},
+	//			},
+	//		}
+	//		updatePolicyResponse, err = server.UpdatePolicy(context.Background(), updatePolicyRequest)
+	//	})
+	//
+	//	It("should not throw an error", func() {
+	//		Expect(err).To(Not(HaveOccurred()))
+	//	})
+	//	It("should now have a new policy name", func() {
+	//		Expect(initialPolicyName).To(Not(Equal(updatePolicyResponse.Policy.Name)))
+	//	})
+	//	When("the original policy does not exist", func() {
+	//		BeforeEach(func() {
+	//			esTransport.preparedHttpResponses = []*http.Response{
+	//				{
+	//					StatusCode: http.StatusOK,
+	//					Body:       createEsSearchResponseForPolicy([]*pb.Policy{}),
+	//				},
+	//				{
+	//					StatusCode: http.StatusOK,
+	//				},
+	//			}
+	//			updatePolicyRequest = &pb.UpdatePolicyRequest{
+	//				Id: gofakeit.LetterN(10),
+	//				Policy: &pb.PolicyEntity{
+	//					Name: "random name",
+	//				},
+	//				UpdateMask: &fieldmaskpb.FieldMask{
+	//					Paths: []string{"name"},
+	//				},
+	//			}
+	//			updatePolicyResponse, err = server.UpdatePolicy(context.Background(), updatePolicyRequest)
+	//		})
+	//		It("should throw an error", func() {
+	//			Expect(err).To(HaveOccurred())
+	//		})
+	//	})
+	//})
+
+	//When("updating the rego content of a policy", func() {
+	//	var (
+	//		createPolicyRequest  *pb.PolicyEntity
+	//		createPolicyResponse *pb.Policy
+	//		updatePolicyRequest  *pb.UpdatePolicyRequest
+	//		updatePolicyResponse *pb.Policy
+	//		err                  error
+	//	)
+	//
+	//	BeforeEach(func() {
+	//		esTransport.preparedHttpResponses = []*http.Response{
+	//			{
+	//				StatusCode: http.StatusOK,
+	//			},
+	//		}
+	//
+	//		createPolicyRequest = createRandomPolicyEntity(goodPolicy)
+	//		createPolicyResponse, _ = server.CreatePolicy(context.Background(), createPolicyRequest)
+	//		esTransport.preparedHttpResponses = []*http.Response{
+	//			{
+	//				StatusCode: http.StatusOK,
+	//				Body:       createEsSearchResponseForPolicy([]*pb.Policy{createPolicyResponse}),
+	//			},
+	//			{
+	//				StatusCode: http.StatusOK,
+	//			},
+	//		}
+	//
+	//	})
+	//	When("the policy does not compile", func() {
+	//		BeforeEach(func() {
+	//			updatePolicyRequest = &pb.UpdatePolicyRequest{
+	//				Id: createPolicyResponse.Id,
+	//				Policy: &pb.PolicyEntity{
+	//					RegoContent: uncompilablePolicy,
+	//				},
+	//				UpdateMask: &fieldmaskpb.FieldMask{
+	//					Paths: []string{"rego_content"},
+	//				},
+	//			}
+	//			updatePolicyResponse, err = server.UpdatePolicy(context.Background(), updatePolicyRequest)
+	//		})
+	//		It("should throw an error ", func() {
+	//			Expect(err).To(HaveOccurred())
+	//			Expect(updatePolicyResponse).To(BeNil())
+	//		})
+	//	})
+	//
+	//})
 })
 
 func createRandomOccurrence(kind grafeas_common_proto.NoteKind) *grafeas_proto.Occurrence {
@@ -2219,22 +1881,6 @@ func createRandomOccurrence(kind grafeas_common_proto.NoteKind) *grafeas_proto.O
 		CreateTime:  timestamppb.New(gofakeit.Date()),
 		UpdateTime:  timestamppb.New(gofakeit.Date()),
 		Details:     nil,
-	}
-}
-
-func createEsDeleteDocResponse() *esutil.EsDeleteResponse {
-	return &esutil.EsDeleteResponse{
-		Took:                 int(gofakeit.Int16()),
-		TimedOut:             false,
-		Total:                int(gofakeit.Int16()),
-		Deleted:              int(gofakeit.Int16()),
-		Batches:              int(gofakeit.Int16()),
-		VersionConflicts:     int(gofakeit.Int16()),
-		Noops:                int(gofakeit.Int16()),
-		ThrottledMillis:      int(gofakeit.Int16()),
-		RequestsPerSecond:    gofakeit.Float64(),
-		ThrottledUntilMillis: int(gofakeit.Int16()),
-		Failures:             nil,
 	}
 }
 
@@ -2278,45 +1924,6 @@ func createPaginatedEsSearchResponse(occurrences []*grafeas_proto.Occurrence, to
 	Expect(err).To(BeNil())
 
 	return io.NopCloser(bytes.NewReader(responseBody))
-}
-
-func createEsSearchResponseForGenericResource(resources []*pb.GenericResource) io.ReadCloser {
-	return createPaginatedEsSearchResponseForGenericResource(resources, len(resources))
-}
-
-func createPaginatedEsSearchResponseForGenericResource(resources []*pb.GenericResource, totalValue int) io.ReadCloser {
-	var hits []*esutil.EsSearchResponseHit
-
-	for _, resource := range resources {
-		source, err := protojson.Marshal(proto.MessageV2(resource))
-		Expect(err).To(BeNil())
-
-		response := &esutil.EsSearchResponseHit{
-			ID:     resource.Name,
-			Source: source,
-		}
-
-		hits = append(hits, response)
-	}
-
-	response := &esutil.EsSearchResponse{
-		Hits: &esutil.EsSearchResponseHits{
-			Hits: hits,
-			Total: &esutil.EsSearchResponseTotal{
-				Value: totalValue,
-			},
-		},
-		Took: gofakeit.Number(1, 10),
-	}
-
-	responseBody, err := json.Marshal(response)
-	Expect(err).To(BeNil())
-
-	return io.NopCloser(bytes.NewReader(responseBody))
-}
-
-func createEsSearchResponseForPolicy(policies []*pb.Policy) io.ReadCloser {
-	return createPaginatedEsSearchResponseForPolicy(policies, len(policies))
 }
 
 func createPaginatedEsSearchResponseForPolicy(policies []*pb.Policy, totalValue int) io.ReadCloser {
@@ -2365,24 +1972,11 @@ func readResponseBody(request *http.Request, v interface{}) {
 	Expect(err).To(BeNil())
 }
 
-func createInvalidResponseBody() io.ReadCloser {
-	return io.NopCloser(strings.NewReader("{"))
-}
-
 func getGRPCStatusFromError(err error) *status.Status {
 	s, ok := status.FromError(err)
 	Expect(ok).To(BeTrue(), "Expected error to be a gRPC status")
 
 	return s
-}
-
-func createRandomPolicyEntity(policy string) *pb.PolicyEntity {
-	return &pb.PolicyEntity{
-		Name:        gofakeit.LetterN(10),
-		Description: gofakeit.LetterN(50),
-		RegoContent: policy,
-		SourcePath:  gofakeit.URL(),
-	}
 }
 
 func deepCopyNote(note *grafeas_proto.Note) *grafeas_proto.Note {
