@@ -186,11 +186,7 @@ func (m *manager) GetPolicy(ctx context.Context, request *pb.GetPolicyRequest) (
 	}
 
 	response, err = m.esClient.Get(ctx, &esutil.GetRequest{
-		Join: &esutil.EsJoin{
-			Field:  policyDocumentJoinField,
-			Name:   policyVersionRelationName,
-			Parent: request.Id,
-		},
+		Routing:    request.Id,
 		Index:      m.policiesAlias(),
 		DocumentId: policyVersionId(policy.Id, policy.CurrentVersion),
 	})
@@ -253,9 +249,7 @@ func (m *manager) DeletePolicy(ctx context.Context, request *pb.DeletePolicyRequ
 				},
 			},
 		},
-		Join: &esutil.EsJoin{
-			Parent: request.Id,
-		},
+		Routing: request.Id,
 		Refresh: m.esConfig.Refresh.String(),
 	})
 

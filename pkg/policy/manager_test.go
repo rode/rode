@@ -385,9 +385,7 @@ var _ = Describe("PolicyManager", func() {
 
 				Expect(actualRequest.Index).To(Equal(expectedPoliciesAlias))
 				Expect(actualRequest.DocumentId).To(Equal(policyVersionId))
-				Expect(actualRequest.Join.Parent).To(Equal(policyId))
-				Expect(actualRequest.Join.Field).To(Equal("join"))
-				Expect(actualRequest.Join.Name).To(Equal("version"))
+				Expect(actualRequest.Routing).To(Equal(policyId))
 			})
 
 			It("should return the policy at its current version", func() {
@@ -520,8 +518,7 @@ var _ = Describe("PolicyManager", func() {
 
 				Expect(actualRequest.Index).To(Equal(expectedPoliciesAlias))
 				Expect(actualRequest.Refresh).To(Equal(esConfig.Refresh.String()))
-				Expect(actualRequest.Join).NotTo(BeNil())
-				Expect(actualRequest.Join.Parent).To(Equal(policyId))
+				Expect(actualRequest.Routing).To(Equal(policyId))
 				Expect(*actualRequest.Search.Query.Bool.Should).To(HaveLen(2))
 
 				deleteVersionsQuery := (*actualRequest.Search.Query.Bool.Should)[0].(*filtering.Query)
