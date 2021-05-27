@@ -75,14 +75,19 @@ func NewManager(
 	}
 }
 
+var newUuid = uuid.New
+
 func (m *manager) CreatePolicy(ctx context.Context, policy *pb.Policy) (*pb.Policy, error) {
 	log := m.logger.Named("CreatePolicy")
-	// Name field is a requirement
+	log.Debug("received request", zap.Any("request", policy))
+
 	if len(policy.Name) == 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "policy name not provided")
 	}
 
-	policyId := uuid.New().String()
+	policyId := newUuid().String()
+	log = log.With(zap.String("id", policyId))
+
 	version := int32(1)
 	policyVersionId := policyVersionId(policyId, version)
 	currentTime := timestamppb.Now()
@@ -95,10 +100,10 @@ func (m *manager) CreatePolicy(ctx context.Context, policy *pb.Policy) (*pb.Poli
 	policyVersion := policy.Policy
 	policy.Policy = nil // remove current policy
 	policyVersion.Version = version
-	policyVersion.Message = "Initial creation"
+	policyVersion.Message = "Initial policy creation"
 	policyVersion.Created = currentTime
 
-	// CheckPolicy before writing to elastic
+	log.Debug("validating policy")
 	result, err := m.ValidatePolicy(ctx, &pb.ValidatePolicyRequest{Policy: policyVersion.RegoContent})
 	if (err != nil) || !result.Compile {
 		message := &pb.ValidatePolicyResponse{
@@ -110,6 +115,7 @@ func (m *manager) CreatePolicy(ctx context.Context, policy *pb.Policy) (*pb.Poli
 		return nil, s.Err()
 	}
 
+	log.Debug("performing bulk request")
 	response, err := m.esClient.Bulk(ctx, &esutil.BulkRequest{
 		Index:   m.policiesAlias(),
 		Refresh: m.esConfig.Refresh.String(),
@@ -151,32 +157,9 @@ func (m *manager) CreatePolicy(ctx context.Context, policy *pb.Policy) (*pb.Poli
 		return nil, createError(log, "failed to create policy", fmt.Errorf("bulk creation errors: %v", bulkErrors))
 	}
 
-	//policy := &pb.Policy{
-	//	Id:      uuid.New().String(),
-	//	Policy:  policyEntity,
-	//	Created: currentTime,
-	//	Updated: currentTime,
-	//}
-	//str, err := protojson.MarshalOptions{EmitUnpopulated: true}.Marshal(proto.MessageV2(policy))
-	//if err != nil {
-	//	return nil, createError(log, fmt.Sprintf("error marshalling %T to json", policy), err)
-	//}
-	//
-	//res, err := m.esClient.Index(
-	//	m.indexManager.AliasName(policiesDocumentKind, ""),
-	//	bytes.NewReader(str),
-	//	m.esClient.Index.WithContext(ctx),
-	//	m.esClient.Index.WithRefresh(m.esConfig.Refresh.String()),
-	//)
-	//if err != nil {
-	//	return nil, createError(log, "error sending request to elasticsearch", err)
-	//}
-	//if res.IsError() {
-	//	return nil, createError(log, "error indexing document in elasticsearch", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
-	//}
-	//
 	policy.Policy = policyVersion
 
+	log.Debug("successfully created policy")
 	return policy, nil
 }
 
