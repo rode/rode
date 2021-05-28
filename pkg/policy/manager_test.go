@@ -766,6 +766,35 @@ var _ = Describe("PolicyManager", func() {
 		})
 	})
 
+	Context("UpdatePolicy", func() {
+		var (
+			policyId string
+			request  *pb.UpdatePolicyRequest
+
+			actualResponse *pb.Policy
+			actualError    error
+		)
+
+		BeforeEach(func() {
+			policyId = fake.UUID()
+			request = &pb.UpdatePolicyRequest{
+				Id: policyId,
+			}
+		})
+
+		JustBeforeEach(func() {
+			actualResponse, actualError = manager.UpdatePolicy(ctx, request)
+		})
+
+		It("should not return an error", func() {
+			Expect(actualError).NotTo(HaveOccurred())
+		})
+
+		It("should return an empty policy", func() {
+			Expect(actualResponse).To(Equal(&pb.Policy{}))
+		})
+	})
+
 	Context("DeletePolicy", func() {
 		var (
 			policyId    string

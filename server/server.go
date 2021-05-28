@@ -333,11 +333,6 @@ func (r *rodeServer) UpdateOccurrence(ctx context.Context, occurrenceRequest *pb
 	return updatedOccurrence, nil
 }
 
-// UpdatePolicy will update only the fields provided by the user
-//func (r *rodeServer) UpdatePolicy(ctx context.Context, updatePolicyRequest *pb.UpdatePolicyRequest) (*pb.Policy, error) {
-
-//}
-
 func (r *rodeServer) RegisterCollector(ctx context.Context, registerCollectorRequest *pb.RegisterCollectorRequest) (*pb.RegisterCollectorResponse, error) {
 	log := r.logger.Named("RegisterCollector")
 

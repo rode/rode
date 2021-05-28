@@ -357,65 +357,10 @@ func (m *manager) ListPolicies(ctx context.Context, request *pb.ListPoliciesRequ
 
 }
 
-func (m *manager) UpdatePolicy(ctx context.Context, updatePolicyRequest *pb.UpdatePolicyRequest) (*pb.Policy, error) {
-	//log := m.logger.Named("Update Policy")
-	//
-	//// check if the policy exists
-	//search := &esutil.EsSearch{
-	//	Query: &filtering.Query{
-	//		Term: &filtering.Term{
-	//			"id": updatePolicyRequest.Id,
-	//		},
-	//	},
-	//}
-	//
-	//policy := &pb.Policy{}
-	//targetDocumentID, err := m.genericGet(ctx, log, search, m.indexManager.IndexName(policiesDocumentKind, ""), policy)
-	//if err != nil {
-	//	return nil, createError(log, "error fetching policy", err)
-	//}
-	//
-	//log.Debug("field masks", zap.Any("response", updatePolicyRequest.UpdateMask.Paths))
-	//// if one of the fields being updated is the rego policy, revalidate the policy
-	//if contains(updatePolicyRequest.UpdateMask.Paths, "rego_content") {
-	//	_, err = m.ValidatePolicy(ctx, &pb.ValidatePolicyRequest{Policy: updatePolicyRequest.Policy.RegoContent})
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//}
-	//
-	//mask, err := fieldmask_utils.MaskFromPaths(updatePolicyRequest.UpdateMask.Paths, generator.CamelCase)
-	//if err != nil {
-	//	return nil, createError(log, "error mapping field masks", err)
-	//}
-	//
-	//err = fieldmask_utils.StructToStruct(mask, updatePolicyRequest.Policy, policy.Policy)
-	//if err != nil {
-	//	return nil, createError(log, "error copying struct via field masks", err)
-	//}
-	//
-	//policy.Updated = timestamppb.Now()
-	//str, err := protojson.MarshalOptions{EmitUnpopulated: true}.Marshal(proto.MessageV2(policy))
-	//if err != nil {
-	//	return nil, createError(log, fmt.Sprintf("error marshalling %T to json", policy), err)
-	//}
-	//
-	//res, err := m.esClient.Index(
-	//	m.indexManager.IndexName(policiesDocumentKind, ""),
-	//	bytes.NewReader(str),
-	//	m.esClient.Index.WithDocumentID(targetDocumentID),
-	//	m.esClient.Index.WithContext(ctx),
-	//	m.esClient.Index.WithRefresh(m.esConfig.Refresh.String()),
-	//)
-	//if err != nil {
-	//	return nil, createError(log, "error sending request to elasticsearch", err)
-	//}
-	//if res.IsError() {
-	//	return nil, createError(log, "unexpected response from elasticsearch", err, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
-	//}
-	//
-	//return policy, nil
-	return nil, nil
+func (m *manager) UpdatePolicy(ctx context.Context, request *pb.UpdatePolicyRequest) (*pb.Policy, error) {
+	// TODO: Unimplemented after versioning changes
+	// Previous implementation: https://github.com/rode/rode/blob/8c1f35f7ce2b7196088e06985cc165cce93d804e/server/server.go#L636-L694
+	return &pb.Policy{}, nil
 }
 
 func (m *manager) ValidatePolicy(_ context.Context, policy *pb.ValidatePolicyRequest) (*pb.ValidatePolicyResponse, error) {
