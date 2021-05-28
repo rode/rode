@@ -166,6 +166,7 @@ func (m *manager) CreatePolicy(ctx context.Context, policy *pb.Policy) (*pb.Poli
 
 func (m *manager) GetPolicy(ctx context.Context, request *pb.GetPolicyRequest) (*pb.Policy, error) {
 	log := m.logger.Named("GetPolicy").With(zap.String("id", request.Id))
+	log.Debug("Received request")
 
 	response, err := m.esClient.Get(ctx, &esutil.GetRequest{
 		Index:      m.policiesAlias(),
@@ -186,6 +187,8 @@ func (m *manager) GetPolicy(ctx context.Context, request *pb.GetPolicyRequest) (
 		return nil, createError(log, "error unmarshalling policy", err)
 	}
 
+	log = log.With(zap.Int32("version", policy.CurrentVersion))
+
 	response, err = m.esClient.Get(ctx, &esutil.GetRequest{
 		Routing:    request.Id,
 		Index:      m.policiesAlias(),
@@ -199,8 +202,6 @@ func (m *manager) GetPolicy(ctx context.Context, request *pb.GetPolicyRequest) (
 	if !response.Found {
 		return nil, createError(log, "policy entity not found", nil)
 	}
-
-	log = log.With(zap.Int32("version", policy.CurrentVersion))
 
 	var policyEntity pb.PolicyEntity
 	err = protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(response.Source, &policyEntity)
