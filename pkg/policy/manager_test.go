@@ -15,6 +15,7 @@ import (
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil/esutilfakes"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
+	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering/filteringfakes"
 	"github.com/rode/rode/config"
 	"github.com/rode/rode/mocks"
 	"github.com/rode/rode/opa"
@@ -59,6 +60,7 @@ var _ = Describe("PolicyManager", func() {
 		grafeasClient *mocks.FakeGrafeasV1Beta1Client
 		opaClient     *opafakes.FakeClient
 		indexManager  *immocks.FakeIndexManager
+		filterer      *filteringfakes.FakeFilterer
 
 		manager Manager
 	)
@@ -68,6 +70,7 @@ var _ = Describe("PolicyManager", func() {
 		grafeasClient = &mocks.FakeGrafeasV1Beta1Client{}
 		indexManager = &immocks.FakeIndexManager{}
 		opaClient = &opafakes.FakeClient{}
+		filterer = &filteringfakes.FakeFilterer{}
 		esConfig = &config.ElasticsearchConfig{
 			Refresh: config.RefreshOption(fake.RandomString([]string{config.RefreshTrue, config.RefreshFalse, config.RefreshWaitFor})),
 		}
@@ -75,7 +78,7 @@ var _ = Describe("PolicyManager", func() {
 		expectedPoliciesAlias = fake.LetterN(10)
 		indexManager.AliasNameReturns(expectedPoliciesAlias)
 
-		manager = NewManager(logger, esClient, esConfig, indexManager, nil, opaClient, grafeasClient)
+		manager = NewManager(logger, esClient, esConfig, indexManager, filterer, opaClient, grafeasClient)
 	})
 
 	Context("CreatePolicy", func() {
@@ -480,6 +483,283 @@ var _ = Describe("PolicyManager", func() {
 
 			It("should return an error", func() {
 				Expect(actualPolicy).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+		})
+	})
+
+	Context("ListPolicies", func() {
+		var (
+			request *pb.ListPoliciesRequest
+
+			expectedFilterQuery *filtering.Query
+			expectedFilterError error
+
+			searchResponse *esutil.SearchResponse
+			searchError    error
+
+			multiGetResponse *esutil.EsMultiGetResponse
+			multiGetError    error
+
+			policyCount    int
+			policies       []*pb.Policy
+			policyVersions []*pb.PolicyEntity
+
+			actualResponse *pb.ListPoliciesResponse
+			actualError    error
+		)
+
+		BeforeEach(func() {
+			request = &pb.ListPoliciesRequest{}
+
+			policies = []*pb.Policy{}
+			policyVersions = []*pb.PolicyEntity{}
+			policyCount = fake.Number(2, 5)
+
+			searchResponse = &esutil.SearchResponse{
+				Hits: &esutil.EsSearchResponseHits{},
+			}
+			searchError = nil
+
+			multiGetResponse = &esutil.EsMultiGetResponse{}
+			multiGetError = nil
+
+			for i := 0; i < policyCount; i++ {
+				policy := createRandomPolicy(fake.UUID(), fake.Int32())
+				policyVersion := createRandomPolicyEntity(goodPolicy, policy.CurrentVersion)
+
+				policies = append(policies, policy)
+				policyVersions = append(policyVersions, policyVersion)
+
+				policyJson, _ := protojson.Marshal(policy)
+				searchResponse.Hits.Hits = append(searchResponse.Hits.Hits, &esutil.EsSearchResponseHit{
+					ID:     policy.Id,
+					Source: policyJson,
+				})
+
+				versionJson, _ := protojson.Marshal(policyVersion)
+				multiGetResponse.Docs = append(multiGetResponse.Docs, &esutil.EsGetResponse{
+					Found:  true,
+					Source: versionJson,
+				})
+			}
+		})
+
+		JustBeforeEach(func() {
+			filterer.ParseExpressionReturns(expectedFilterQuery, expectedFilterError)
+			esClient.SearchReturns(searchResponse, searchError)
+			esClient.MultiGetReturns(multiGetResponse, multiGetError)
+
+			actualResponse, actualError = manager.ListPolicies(ctx, request)
+		})
+
+		It("query for all policies", func() {
+			Expect(indexManager.AliasNameCallCount()).To(Equal(2))
+			Expect(esClient.SearchCallCount()).To(Equal(1))
+			Expect(filterer.ParseExpressionCallCount()).To(Equal(0))
+
+			_, actualRequest := esClient.SearchArgsForCall(0)
+
+			Expect(actualRequest.Index).To(Equal(expectedPoliciesAlias))
+			Expect(actualRequest.Pagination).To(BeNil())
+			Expect(*actualRequest.Search.Query.Bool.Must).To(HaveLen(1))
+
+			actualQuery := (*actualRequest.Search.Query.Bool.Must)[0].(*filtering.Query)
+			Expect((*actualQuery.Term)["join"]).To(Equal("policy"))
+		})
+
+		It("should perform a multi-get to fetch current policy versions", func() {
+			Expect(esClient.MultiGetCallCount()).To(Equal(1))
+			_, actualRequest := esClient.MultiGetArgsForCall(0)
+
+			Expect(actualRequest.Index).To(Equal(expectedPoliciesAlias))
+			Expect(actualRequest.DocumentIds).To(BeNil())
+
+			var expectedMultiGetItems []*esutil.EsMultiGetItem
+			for i := 0; i < policyCount; i++ {
+				policy := policies[i]
+
+				expectedMultiGetItems = append(expectedMultiGetItems, &esutil.EsMultiGetItem{
+					Id:      fmt.Sprintf("%s.%d", policy.Id, policy.CurrentVersion),
+					Routing: policy.Id,
+				})
+			}
+			Expect(actualRequest.Items).To(ConsistOf(expectedMultiGetItems))
+		})
+
+		It("should not return an error", func() {
+			Expect(actualError).To(BeNil())
+		})
+
+		It("should return the list of policies", func() {
+			for i, policy := range policies {
+				policy.Policy = policyVersions[i]
+			}
+
+			Expect(actualResponse).NotTo(BeNil())
+			Expect(actualResponse.Policies).To(ConsistOf(policies))
+		})
+
+		When("a filter is applied", func() {
+			var (
+				expectedFilter string
+			)
+
+			BeforeEach(func() {
+				expectedFilter = fake.LetterN(10)
+				request.Filter = expectedFilter
+
+				expectedFilterQuery = &filtering.Query{
+					Term: &filtering.Term{
+						fake.Word(): fake.Word(),
+					},
+				}
+				expectedFilterError = nil
+			})
+
+			It("should parse the filter into a query expression", func() {
+				Expect(filterer.ParseExpressionCallCount()).To(Equal(1))
+
+				actualFilter := filterer.ParseExpressionArgsForCall(0)
+				Expect(actualFilter).To(Equal(expectedFilter))
+			})
+
+			It("should include the filter query", func() {
+				Expect(esClient.SearchCallCount()).To(Equal(1))
+				_, actualRequest := esClient.SearchArgsForCall(0)
+
+				Expect(*actualRequest.Search.Query.Bool.Must).To(HaveLen(2))
+				actualFilterQuery := (*actualRequest.Search.Query.Bool.Must)[1].(*filtering.Query)
+				Expect(actualFilterQuery).To(Equal(expectedFilterQuery))
+			})
+
+			When("an error occurs parsing the filter", func() {
+				BeforeEach(func() {
+					expectedFilterError = errors.New("parse error")
+				})
+
+				It("should return an error", func() {
+					Expect(actualResponse).To(BeNil())
+					Expect(actualError).To(HaveOccurred())
+					Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+				})
+
+				It("should not try to search for policies or policy versions", func() {
+					Expect(esClient.SearchCallCount()).To(Equal(0))
+					Expect(esClient.MultiGetCallCount()).To(Equal(0))
+				})
+			})
+		})
+
+		When("a pagination options are specified", func() {
+			var nextPageToken string
+
+			BeforeEach(func() {
+				nextPageToken = fake.Word()
+				request.PageSize = int32(fake.Number(10, 100))
+				request.PageToken = fake.Word()
+
+				searchResponse.NextPageToken = nextPageToken
+			})
+
+			It("should include the page size and page token in the search request", func() {
+				Expect(esClient.SearchCallCount()).To(Equal(1))
+				_, actualRequest := esClient.SearchArgsForCall(0)
+
+				Expect(actualRequest.Pagination).NotTo(BeNil())
+				Expect(actualRequest.Pagination.Size).To(BeEquivalentTo(request.PageSize))
+				Expect(actualRequest.Pagination.Token).To(Equal(request.PageToken))
+			})
+
+			It("should return the next page token", func() {
+				Expect(actualResponse.NextPageToken).To(Equal(nextPageToken))
+			})
+		})
+
+		When("there are no policies", func() {
+			BeforeEach(func() {
+				searchResponse.Hits.Hits = nil
+			})
+
+			It("should not return any policies", func() {
+				Expect(actualResponse.Policies).To(BeEmpty())
+			})
+
+			It("should not try to fetch versions", func() {
+				Expect(esClient.MultiGetCallCount()).To(Equal(0))
+			})
+		})
+
+		When("an error occurs searching for policies", func() {
+			BeforeEach(func() {
+				searchError = errors.New("search error")
+			})
+
+			It("should return an error", func() {
+				Expect(actualResponse).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+
+			It("should not try to fetch policy versions", func() {
+				Expect(esClient.MultiGetCallCount()).To(Equal(0))
+			})
+		})
+
+		When("a policy document is malformed", func() {
+			BeforeEach(func() {
+				randomIndex := fake.Number(0, policyCount-1)
+
+				searchResponse.Hits.Hits[randomIndex].Source = []byte{'}'}
+			})
+
+			It("should return an error", func() {
+				Expect(actualResponse).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+
+			It("should not try to fetch policy versions", func() {
+				Expect(esClient.MultiGetCallCount()).To(Equal(0))
+			})
+		})
+
+		When("an error occurs search for policy versions", func() {
+			BeforeEach(func() {
+				multiGetError = errors.New("multiget error")
+			})
+
+			It("should return an error", func() {
+				Expect(actualResponse).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+		})
+
+		When("a policy version document is missing", func() {
+			BeforeEach(func() {
+				randomIndex := fake.Number(0, policyCount-1)
+
+				multiGetResponse.Docs[randomIndex].Found = false
+			})
+
+			It("should return an error", func() {
+				Expect(actualResponse).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+		})
+
+		When("a policy version document is malformed", func() {
+			BeforeEach(func() {
+				randomIndex := fake.Number(0, policyCount-1)
+
+				multiGetResponse.Docs[randomIndex].Source = []byte{'}'}
+			})
+
+			It("should return an error", func() {
+				Expect(actualResponse).To(BeNil())
 				Expect(actualError).To(HaveOccurred())
 				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
 			})

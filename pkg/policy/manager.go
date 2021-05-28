@@ -27,13 +27,14 @@ import (
 const (
 	rodeProjectSlug           = "projects/rode"
 	policiesDocumentKind      = "policies"
-	maxPageSize               = 1000
-	pitKeepAlive              = "5m"
 	policyDocumentJoinField   = "join"
 	policyRelationName        = "policy"
 	policyVersionRelationName = "version"
 )
 
+//go:generate counterfeiter -generate
+
+//counterfeiter:generate . Manager
 type Manager interface {
 	CreatePolicy(context.Context, *pb.Policy) (*pb.Policy, error)
 	GetPolicy(context.Context, *pb.GetPolicyRequest) (*pb.Policy, error)
@@ -260,41 +261,100 @@ func (m *manager) DeletePolicy(ctx context.Context, request *pb.DeletePolicyRequ
 	return &emptypb.Empty{}, nil
 }
 
-func (m *manager) ListPolicies(ctx context.Context, listPoliciesRequest *pb.ListPoliciesRequest) (*pb.ListPoliciesResponse, error) {
-	//log := m.logger.Named("List Policies")
-	//hits, nextPageToken, err := m.genericList(ctx, log, &genericListOptions{
-	//	index:         m.indexManager.AliasName(policiesDocumentKind, ""),
-	//	filter:        listPoliciesRequest.Filter,
-	//	pageSize:      listPoliciesRequest.PageSize,
-	//	pageToken:     listPoliciesRequest.PageToken,
-	//	sortDirection: esutil.EsSortOrderDescending,
-	//	sortField:     "created",
-	//})
-	//
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//var policies []*pb.Policy
-	//for _, hit := range hits.Hits {
-	//	hitLogger := log.With(zap.String("policy raw", string(hit.Source)))
-	//
-	//	policy := &pb.Policy{}
-	//	err := protojson.Unmarshal(hit.Source, proto.MessageV2(policy))
-	//	if err != nil {
-	//		return nil, createError(hitLogger, "error converting _doc to policy", err)
-	//	}
-	//
-	//	hitLogger.Debug("policy hit", zap.Any("policy", policy))
-	//
-	//	policies = append(policies, policy)
-	//}
-	//
-	//return &pb.ListPoliciesResponse{
-	//	Policies:      policies,
-	//	NextPageToken: nextPageToken,
-	//}, nil
-	return nil, nil
+func (m *manager) ListPolicies(ctx context.Context, request *pb.ListPoliciesRequest) (*pb.ListPoliciesResponse, error) {
+	log := m.logger.Named("ListPolicies")
+	log.Debug("received request", zap.Any("request", request))
+
+	queries := filtering.Must{
+		&filtering.Query{
+			Term: &filtering.Term{
+				policyDocumentJoinField: policyRelationName,
+			},
+		},
+	}
+
+	if request.Filter != "" {
+		filterQuery, err := m.filterer.ParseExpression(request.Filter)
+		if err != nil {
+			return nil, createError(log, "error creating filter query", err)
+		}
+
+		queries = append(queries, filterQuery)
+	}
+
+	searchRequest := &esutil.SearchRequest{
+		Index: m.policiesAlias(),
+		Search: &esutil.EsSearch{
+			Query: &filtering.Query{
+				Bool: &filtering.Bool{
+					Must: &queries,
+				},
+			},
+		},
+	}
+
+	if request.PageSize != 0 {
+		searchRequest.Pagination = &esutil.SearchPaginationOptions{
+			Size:  int(request.PageSize),
+			Token: request.PageToken,
+		}
+	}
+
+	response, err := m.esClient.Search(ctx, searchRequest)
+	if err != nil {
+		return nil, createError(log, "error searching for policies", err)
+	}
+
+	if len(response.Hits.Hits) == 0 {
+		return &pb.ListPoliciesResponse{}, nil
+	}
+
+	policies := make([]*pb.Policy, 0)
+	versionItems := make([]*esutil.EsMultiGetItem, 0)
+	for _, hit := range response.Hits.Hits {
+		var policy pb.Policy
+		err = protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(hit.Source, &policy)
+		if err != nil {
+			return nil, createError(log, "error unmarshalling policy", err)
+		}
+
+		policy.Id = hit.ID
+		policies = append(policies, &policy)
+
+		versionItems = append(versionItems, &esutil.EsMultiGetItem{
+			Id:      policyVersionId(policy.Id, policy.CurrentVersion),
+			Routing: policy.Id,
+		})
+	}
+
+	versionsResponse, err := m.esClient.MultiGet(ctx, &esutil.MultiGetRequest{
+		Index: m.policiesAlias(),
+		Items: versionItems,
+	})
+
+	if err != nil {
+		return nil, createError(log, "error fetching policy versions", err)
+	}
+
+	for i, document := range versionsResponse.Docs {
+		if !document.Found {
+			return nil, createError(log, fmt.Sprintf("missing policy version with id %s", document.Id), nil)
+		}
+
+		var entity pb.PolicyEntity
+		err = protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(document.Source, &entity)
+		if err != nil {
+			return nil, createError(log, "error unmarshalling policy entity", err)
+		}
+
+		policies[i].Policy = &entity
+	}
+
+	return &pb.ListPoliciesResponse{
+		Policies:      policies,
+		NextPageToken: response.NextPageToken,
+	}, nil
+
 }
 
 func (m *manager) UpdatePolicy(ctx context.Context, updatePolicyRequest *pb.UpdatePolicyRequest) (*pb.Policy, error) {
@@ -450,7 +510,7 @@ func (m *manager) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePolicy
 	listOccurrencesResponse, err := m.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{
 		Parent:   rodeProjectSlug,
 		Filter:   fmt.Sprintf(`resource.uri == "%s"`, request.ResourceUri),
-		PageSize: maxPageSize,
+		PageSize: 1000,
 	})
 	if err != nil {
 		return nil, createError(log, "error listing occurrences", err)
@@ -508,7 +568,6 @@ func (m *manager) policiesAlias() string {
 	return m.indexManager.AliasName(policiesDocumentKind, "")
 }
 
-// TODO: move this and createError to a common util package
 func createErrorWithCode(log *zap.Logger, message string, err error, code codes.Code, fields ...zap.Field) error {
 	if err == nil {
 		log.Error(message, fields...)
@@ -602,150 +661,6 @@ func validateResultTermsInBody(body ast.Body) bool {
 		}
 	}
 	return true
-}
-
-//
-//type genericListOptions struct {
-//	index         string
-//	filter        string
-//	query         *esutil.EsSearch
-//	pageSize      int32
-//	pageToken     string
-//	sortDirection esutil.EsSortOrder
-//	sortField     string
-//}
-//
-//func (m *manager) genericList(ctx context.Context, log *zap.Logger, options *genericListOptions) (*esutil.EsSearchResponseHits, string, error) {
-//	body := &esutil.EsSearch{}
-//	if options.query != nil {
-//		body = options.query
-//	}
-//
-//	if options.filter != "" {
-//		log = log.With(zap.String("filter", options.filter))
-//		filterQuery, err := m.filterer.ParseExpression(options.filter)
-//		if err != nil {
-//			return nil, "", createError(log, "error while parsing filter expression", err)
-//		}
-//
-//		body.Query = filterQuery
-//	}
-//
-//	if options.sortField != "" {
-//		body.Sort = map[string]esutil.EsSortOrder{
-//			options.sortField: options.sortDirection,
-//		}
-//	}
-//
-//	searchOptions := []func(*esapi.SearchRequest){
-//		m.esClient.Search.WithContext(ctx),
-//	}
-//
-//	var nextPageToken string
-//	if options.pageToken != "" || options.pageSize != 0 { // handle pagination
-//		next, extraSearchOptions, err := m.handlePagination(ctx, log, body, options.index, options.pageToken, options.pageSize)
-//		if err != nil {
-//			return nil, "", createError(log, "error while handling pagination", err)
-//		}
-//
-//		nextPageToken = next
-//		searchOptions = append(searchOptions, extraSearchOptions...)
-//	} else {
-//		searchOptions = append(searchOptions,
-//			m.esClient.Search.WithIndex(options.index),
-//			m.esClient.Search.WithSize(maxPageSize),
-//		)
-//	}
-//
-//	encodedBody, requestJson := esutil.EncodeRequest(body)
-//	log = log.With(zap.String("request", requestJson))
-//	log.Debug("performing search")
-//
-//	res, err := m.esClient.Search(
-//		append(searchOptions, m.esClient.Search.WithBody(encodedBody))...,
-//	)
-//	if err != nil {
-//		return nil, "", createError(log, "error sending request to elasticsearch", err)
-//	}
-//	if res.IsError() {
-//		return nil, "", createError(log, "unexpected response from elasticsearch", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
-//	}
-//
-//	var searchResults esutil.EsSearchResponse
-//	if err := esutil.DecodeResponse(res.Body, &searchResults); err != nil {
-//		return nil, "", createError(log, "error decoding elasticsearch response", err)
-//	}
-//
-//	if options.pageToken != "" || options.pageSize != 0 { // if request is paginated, check for last page
-//		_, from, err := esutil.ParsePageToken(nextPageToken)
-//		if err != nil {
-//			return nil, "", createError(log, "error parsing page token", err)
-//		}
-//
-//		if from >= searchResults.Hits.Total.Value {
-//			nextPageToken = ""
-//		}
-//	}
-//	return searchResults.Hits, nextPageToken, nil
-//}
-//
-//func (m *manager) handlePagination(ctx context.Context, log *zap.Logger, body *esutil.EsSearch, index, pageToken string, pageSize int32) (string, []func(*esapi.SearchRequest), error) {
-//	log = log.With(zap.String("pageToken", pageToken), zap.Int32("pageSize", pageSize))
-//
-//	var (
-//		pit  string
-//		from int
-//		err  error
-//	)
-//
-//	// if no pageToken is specified, we need to create a new PIT
-//	if pageToken == "" {
-//		res, err := m.esClient.OpenPointInTime(
-//			m.esClient.OpenPointInTime.WithContext(ctx),
-//			m.esClient.OpenPointInTime.WithIndex(index),
-//			m.esClient.OpenPointInTime.WithKeepAlive(pitKeepAlive),
-//		)
-//		if err != nil {
-//			return "", nil, createError(log, "error sending request to elasticsearch", err)
-//		}
-//		if res.IsError() {
-//			return "", nil, createError(log, "unexpected response from elasticsearch", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
-//		}
-//
-//		var pitResponse esutil.ESPitResponse
-//		if err = esutil.DecodeResponse(res.Body, &pitResponse); err != nil {
-//			return "", nil, createError(log, "error decoding elasticsearch response", err)
-//		}
-//
-//		pit = pitResponse.Id
-//		from = 0
-//	} else {
-//		// get the PIT from the provided pageToken
-//		pit, from, err = esutil.ParsePageToken(pageToken)
-//		if err != nil {
-//			return "", nil, createError(log, "error parsing page token", err)
-//		}
-//	}
-//
-//	body.Pit = &esutil.EsSearchPit{
-//		Id:        pit,
-//		KeepAlive: pitKeepAlive,
-//	}
-//
-//	return esutil.CreatePageToken(pit, from+int(pageSize)), []func(*esapi.SearchRequest){
-//		m.esClient.Search.WithSize(int(pageSize)),
-//		m.esClient.Search.WithFrom(from),
-//	}, err
-//}
-
-// contains returns a boolean describing whether or not a string slice contains a particular string
-func contains(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
 }
 
 func policyVersionId(policyId string, version int32) string {
