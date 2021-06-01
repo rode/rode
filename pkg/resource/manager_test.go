@@ -148,6 +148,7 @@ var _ = Describe("resource manager", func() {
 
 			Expect(genericResource.Name).To(Equal(expectedResourceName))
 			Expect(genericResource.Type).To(Equal(pb.ResourceType_DOCKER))
+			Expect(genericResource.Created).To(Equal(expectedOccurrence.CreateTime))
 		})
 
 		It("should not return an error", func() {

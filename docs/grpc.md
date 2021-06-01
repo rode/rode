@@ -343,9 +343,10 @@ Response for creating occurrences in batch.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| id | [string](#string) |  |  |
-| name | [string](#string) |  |  |
-| type | [ResourceType](#rode.v1alpha1.ResourceType) |  |  |
+| id | [string](#string) |  | Id represents the unique id of the generic resource. This is usually the resource prefix plus the name, except in the case of Docker images. The id is used as a parameter for the ListGenericResourceVersions RPC. |
+| name | [string](#string) |  | Name represents the name of this generic resource as seen on the UI. |
+| type | [ResourceType](#rode.v1alpha1.ResourceType) |  | Type represents the resource type for this generic resource, such as &#34;DOCKER&#34; or &#34;GIT&#34; |
+| created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
 
 
 
