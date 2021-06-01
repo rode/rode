@@ -147,9 +147,17 @@ enum ResourceType {
 }
 
 message GenericResource {
+  // Id represents the unique id of the generic resource. This is usually the resource prefix plus the name, except in the
+  // case of Docker images. The id is used as a parameter for the ListGenericResourceVersions RPC.
   string id = 1;
+
+  // Name represents the name of this generic resource as seen on the UI.
   string name = 2;
+
+  // Type represents the resource type for this generic resource, such as "DOCKER" or "GIT"
   ResourceType type = 3;
+
+  google.protobuf.Timestamp created = 4;
 }
 
 message GenericResourceVersion {
