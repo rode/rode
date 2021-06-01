@@ -788,6 +788,9 @@ var _ = Describe("resource manager", func() {
 			// no pagination options were specified
 			Expect(searchRequest.Pagination).To(BeNil())
 
+			// should sort by timestamp
+			Expect(searchRequest.Search.Sort["created"]).To(Equal(esutil.EsSortOrderDescending))
+
 			// no filter was specified, so we should only have one query
 			Expect(*searchRequest.Search.Query.Bool.Must).To(HaveLen(1))
 

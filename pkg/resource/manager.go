@@ -354,6 +354,9 @@ func (m *manager) ListGenericResourceVersions(ctx context.Context, request *pb.L
 					Must: &queries,
 				},
 			},
+			Sort: map[string]esutil.EsSortOrder{
+				"created": esutil.EsSortOrderDescending,
+			},
 		},
 	}
 
