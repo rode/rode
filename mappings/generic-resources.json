@@ -1,12 +1,24 @@
 {
-  "version": "v1alpha4",
+  "version": "v1alpha5",
+  "settings": {
+    "analysis": {
+      "normalizer": {
+        "lowercase_normalizer": {
+          "type": "custom",
+          "char_filter": [],
+          "filter": ["lowercase", "asciifolding"]
+        }
+      }
+    }
+  },
   "mappings": {
     "_meta": {
       "type": "rode"
     },
     "properties": {
       "name": {
-        "type": "keyword"
+        "type": "keyword",
+        "normalizer": "lowercase_normalizer"
       },
       "type": {
         "type": "keyword"
