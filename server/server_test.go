@@ -694,6 +694,12 @@ var _ = Describe("rode server", func() {
 			listAllOccurrencesResponse *grafeas_proto.ListOccurrencesResponse
 			listAllOccurrencesError    error
 
+			expectedBuildNoteName string
+			expectedNoteName      string
+
+			listNotesResponse *grafeas_proto.ListNotesResponse
+			listNotesError    error
+
 			gitResourceUri string
 
 			nextPageToken    string
@@ -707,11 +713,12 @@ var _ = Describe("rode server", func() {
 		)
 
 		BeforeEach(func() {
-			ctx = context.Background()
 			resourceUri = gofakeit.URL()
 			nextPageToken = gofakeit.Word()
 			currentPageToken = gofakeit.Word()
 			pageSize = gofakeit.Int32()
+			expectedBuildNoteName = gofakeit.LetterN(10)
+			expectedNoteName = gofakeit.LetterN(10)
 
 			request = &pb.ListVersionedResourceOccurrencesRequest{
 				ResourceUri: resourceUri,
@@ -744,19 +751,36 @@ var _ = Describe("rode server", func() {
 			}
 			listBuildOccurrencesError = nil
 
+			occurrences := []*grafeas_proto.Occurrence{
+				createRandomOccurrence(grafeas_common_proto.NoteKind_VULNERABILITY),
+				createRandomOccurrence(grafeas_common_proto.NoteKind_BUILD),
+			}
+			occurrences[0].NoteName = expectedNoteName
+			occurrences[1].NoteName = expectedBuildNoteName
+
 			listAllOccurrencesResponse = &grafeas_proto.ListOccurrencesResponse{
-				Occurrences: []*grafeas_proto.Occurrence{
-					createRandomOccurrence(grafeas_common_proto.NoteKind_VULNERABILITY),
-					createRandomOccurrence(grafeas_common_proto.NoteKind_BUILD),
-				},
+				Occurrences:   occurrences,
 				NextPageToken: nextPageToken,
 			}
 			listAllOccurrencesError = nil
+
+			listNotesResponse = &grafeas_proto.ListNotesResponse{
+				Notes: []*grafeas_proto.Note{
+					{
+						Name: expectedBuildNoteName,
+					},
+					{
+						Name: expectedNoteName,
+					},
+				},
+			}
+			listNotesError = nil
 		})
 
 		JustBeforeEach(func() {
 			grafeasClient.ListOccurrencesReturnsOnCall(0, listBuildOccurrencesResponse, listBuildOccurrencesError)
 			grafeasClient.ListOccurrencesReturnsOnCall(1, listAllOccurrencesResponse, listAllOccurrencesError)
+			grafeasClient.ListNotesReturns(listNotesResponse, listNotesError)
 
 			actualResponse, actualError = server.ListVersionedResourceOccurrences(ctx, request)
 		})
@@ -792,6 +816,11 @@ var _ = Describe("rode server", func() {
 			Expect(actualResponse.Occurrences).To(BeEquivalentTo(listAllOccurrencesResponse.Occurrences))
 			Expect(actualResponse.NextPageToken).To(BeEquivalentTo(listAllOccurrencesResponse.NextPageToken))
 			Expect(actualError).ToNot(HaveOccurred())
+		})
+
+		It("should not fetch related notes", func() {
+			Expect(grafeasClient.ListNotesCallCount()).To(Equal(0))
+			Expect(actualResponse.RelatedNotes).To(HaveLen(0))
 		})
 
 		When("there are no build occurrences", func() {
@@ -839,6 +868,78 @@ var _ = Describe("rode server", func() {
 				Expect(actualResponse).To(BeNil())
 				Expect(actualError).To(HaveOccurred())
 				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+		})
+
+		When("the client wants to fetch related notes", func() {
+			BeforeEach(func() {
+				request.FetchRelatedNotes = true
+			})
+
+			It("should list notes with a filter expression matching all note names", func() {
+				_, listNotesRequest, _ := grafeasClient.ListNotesArgsForCall(0)
+
+				filters := strings.Split(listNotesRequest.Filter, " || ")
+				Expect(filters).To(HaveLen(2))
+				Expect(filters).To(ConsistOf(fmt.Sprintf(`"name" == "%s"`, expectedBuildNoteName), fmt.Sprintf(`"name" == "%s"`, expectedNoteName)))
+
+				Expect(listNotesRequest.Parent).To(Equal(rodeProjectSlug))
+				Expect(listNotesRequest.PageSize).To(BeEquivalentTo(maxPageSize))
+			})
+
+			It("should respond with the related notes", func() {
+				Expect(actualResponse.RelatedNotes).To(HaveLen(2))
+				Expect(actualResponse.RelatedNotes[expectedBuildNoteName].Name).To(Equal(expectedBuildNoteName))
+				Expect(actualResponse.RelatedNotes[expectedNoteName].Name).To(Equal(expectedNoteName))
+			})
+
+			When("listing notes fails", func() {
+				BeforeEach(func() {
+					listNotesError = errors.New("error listing notes")
+				})
+
+				It("should return an error", func() {
+					Expect(actualResponse).To(BeNil())
+					Expect(actualError).To(HaveOccurred())
+					Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+				})
+			})
+
+			When("no occurrences are returned", func() {
+				BeforeEach(func() {
+					listAllOccurrencesResponse.Occurrences = []*grafeas_proto.Occurrence{}
+				})
+
+				It("should not fetch related notes", func() {
+					Expect(grafeasClient.ListNotesCallCount()).To(Equal(0))
+					Expect(actualResponse.RelatedNotes).To(HaveLen(0))
+				})
+			})
+
+			When("several occurrences have the same note references", func() {
+				BeforeEach(func() {
+					otherBuildOccurrence := createRandomOccurrence(grafeas_common_proto.NoteKind_BUILD)
+					otherBuildOccurrence.NoteName = expectedBuildNoteName
+
+					otherOccurrence := createRandomOccurrence(grafeas_common_proto.NoteKind_DISCOVERY)
+					otherOccurrence.NoteName = expectedNoteName
+
+					listAllOccurrencesResponse.Occurrences = append(listAllOccurrencesResponse.Occurrences, otherBuildOccurrence, otherOccurrence)
+				})
+
+				It("should only list unique notes", func() {
+					_, listNotesRequest, _ := grafeasClient.ListNotesArgsForCall(0)
+
+					filters := strings.Split(listNotesRequest.Filter, " || ")
+					Expect(filters).To(HaveLen(2))
+					Expect(filters).To(ConsistOf(fmt.Sprintf(`"name" == "%s"`, expectedBuildNoteName), fmt.Sprintf(`"name" == "%s"`, expectedNoteName)))
+				})
+
+				It("should only return unique notes", func() {
+					Expect(actualResponse.RelatedNotes).To(HaveLen(2))
+					Expect(actualResponse.RelatedNotes[expectedBuildNoteName].Name).To(Equal(expectedBuildNoteName))
+					Expect(actualResponse.RelatedNotes[expectedNoteName].Name).To(Equal(expectedNoteName))
+				})
 			})
 		})
 	})

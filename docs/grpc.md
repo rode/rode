@@ -34,6 +34,7 @@
     - [ListResourcesResponse](#rode.v1alpha1.ListResourcesResponse)
     - [ListVersionedResourceOccurrencesRequest](#rode.v1alpha1.ListVersionedResourceOccurrencesRequest)
     - [ListVersionedResourceOccurrencesResponse](#rode.v1alpha1.ListVersionedResourceOccurrencesResponse)
+    - [ListVersionedResourceOccurrencesResponse.RelatedNotesEntry](#rode.v1alpha1.ListVersionedResourceOccurrencesResponse.RelatedNotesEntry)
     - [RegisterCollectorRequest](#rode.v1alpha1.RegisterCollectorRequest)
     - [RegisterCollectorResponse](#rode.v1alpha1.RegisterCollectorResponse)
     - [RegisterCollectorResponse.NotesEntry](#rode.v1alpha1.RegisterCollectorResponse.NotesEntry)
@@ -515,6 +516,7 @@ https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576
 | resource_uri | [string](#string) |  |  |
 | page_size | [int32](#int32) |  |  |
 | page_token | [string](#string) |  |  |
+| fetch_related_notes | [bool](#bool) |  | FetchRelatedNotes represents whether or not the notes attached to each occurrence should also be returned in the response. |
 
 
 
@@ -531,6 +533,23 @@ https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576
 | ----- | ---- | ----- | ----------- |
 | occurrences | [grafeas.v1beta1.Occurrence](#grafeas.v1beta1.Occurrence) | repeated |  |
 | next_page_token | [string](#string) |  |  |
+| related_notes | [ListVersionedResourceOccurrencesResponse.RelatedNotesEntry](#rode.v1alpha1.ListVersionedResourceOccurrencesResponse.RelatedNotesEntry) | repeated | RelatedNotes are returned when FetchRelatedNotes on the request is set to true. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ListVersionedResourceOccurrencesResponse.RelatedNotesEntry"></a>
+
+### ListVersionedResourceOccurrencesResponse.RelatedNotesEntry
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| key | [string](#string) |  |  |
+| value | [grafeas.v1beta1.Note](#grafeas.v1beta1.Note) |  |  |
 
 
 
