@@ -147,9 +147,17 @@ enum ResourceType {
 }
 
 message GenericResource {
+  // Id represents the unique id of the generic resource. This is usually the resource prefix plus the name, except in the
+  // case of Docker images. The id is used as a parameter for the ListGenericResourceVersions RPC.
   string id = 1;
+
+  // Name represents the name of this generic resource as seen on the UI.
   string name = 2;
+
+  // Type represents the resource type for this generic resource, such as "DOCKER" or "GIT"
   ResourceType type = 3;
+
+  google.protobuf.Timestamp created = 4;
 }
 
 message GenericResourceVersion {
@@ -205,11 +213,17 @@ message ListVersionedResourceOccurrencesRequest {
   string resource_uri = 1;
   int32 page_size = 2;
   string page_token = 3;
+
+  // FetchRelatedNotes represents whether or not the notes attached to each occurrence should also be returned in the response.
+  bool fetch_related_notes = 4;
 }
 
 message ListVersionedResourceOccurrencesResponse {
   repeated grafeas.v1beta1.Occurrence occurrences = 1;
   string next_page_token = 2;
+
+  // RelatedNotes are returned when FetchRelatedNotes on the request is set to true.
+  map<string, grafeas.v1beta1.Note> related_notes = 3;
 }
 
 message ListOccurrencesRequest {

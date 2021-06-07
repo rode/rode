@@ -23,7 +23,7 @@ require (
 	github.com/open-policy-agent/opa v0.27.1
 	github.com/pquerna/cachecontrol v0.1.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
-	github.com/rode/es-index-manager v0.1.1
+	github.com/rode/es-index-manager v0.1.2
 	github.com/rode/grafeas-elasticsearch v0.8.2
 	github.com/soheilhy/cmux v0.1.4
 	github.com/stretchr/testify v1.7.0 // indirect

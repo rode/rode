@@ -1,5 +1,19 @@
 {
-  "version": "v1alpha2",
+  "version": "v1alpha3",
+  "settings": {
+    "analysis": {
+      "normalizer": {
+        "lowercase_normalizer": {
+          "type": "custom",
+          "char_filter": [],
+          "filter": [
+            "lowercase",
+            "asciifolding"
+          ]
+        }
+      }
+    }
+  },
   "mappings": {
     "_meta": {
       "type": "rode"
@@ -7,6 +21,10 @@
     "properties": {
       "created": {
         "type": "date"
+      },
+      "name": {
+        "type": "keyword",
+        "normalizer": "lowercase_normalizer"
       },
       "join": {
         "type": "join",

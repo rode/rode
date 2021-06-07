@@ -249,7 +249,6 @@ func (r *rodeServer) ListVersionedResourceOccurrences(ctx context.Context, reque
 		PageSize: maxPageSize,
 		Filter:   fmt.Sprintf(`kind == "BUILD" && (resource.uri == "%[1]s" || build.provenance.builtArtifacts.nestedFilter(id == "%[1]s"))`, resourceUri),
 	})
-
 	if err != nil {
 		return nil, createError(log, "error fetching build occurrences", err)
 	}
@@ -277,15 +276,62 @@ func (r *rodeServer) ListVersionedResourceOccurrences(ctx context.Context, reque
 		PageSize:  request.PageSize,
 		PageToken: request.PageToken,
 	})
-
 	if err != nil {
 		return nil, createError(log, "error listing occurrences", err)
 	}
 
-	return &pb.ListVersionedResourceOccurrencesResponse{
+	response := &pb.ListVersionedResourceOccurrencesResponse{
 		Occurrences:   allOccurrences.Occurrences,
 		NextPageToken: allOccurrences.NextPageToken,
-	}, nil
+	}
+
+	if request.FetchRelatedNotes {
+		relatedNotes, err := r.fetchRelatedNotes(ctx, log, allOccurrences.Occurrences)
+		if err != nil {
+			return nil, createError(log, "error fetching related notes", err)
+		}
+
+		response.RelatedNotes = relatedNotes
+	}
+
+	return response, nil
+}
+
+func (r *rodeServer) fetchRelatedNotes(ctx context.Context, logger *zap.Logger, occurrences []*grafeas_proto.Occurrence) (map[string]*grafeas_proto.Note, error) {
+	log := logger.Named("fetchRelatedNotes")
+
+	if len(occurrences) == 0 {
+		return nil, nil
+	}
+
+	noteFiltersMap := make(map[string]string)
+	for _, occurrence := range occurrences {
+		if _, ok := noteFiltersMap[occurrence.NoteName]; !ok {
+			noteFiltersMap[occurrence.NoteName] = fmt.Sprintf(`"name" == "%s"`, occurrence.NoteName)
+		}
+	}
+
+	var noteFilters []string
+	for _, filter := range noteFiltersMap {
+		noteFilters = append(noteFilters, filter)
+	}
+
+	log.Debug("fetching related notes")
+	listNotesResponse, err := r.grafeasCommon.ListNotes(ctx, &grafeas_proto.ListNotesRequest{
+		Parent:   rodeProjectSlug,
+		Filter:   strings.Join(noteFilters, " || "),
+		PageSize: maxPageSize,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]*grafeas_proto.Note)
+	for _, note := range listNotesResponse.Notes {
+		result[note.Name] = note
+	}
+
+	return result, nil
 }
 
 func (r *rodeServer) ListOccurrences(ctx context.Context, occurrenceRequest *pb.ListOccurrencesRequest) (*pb.ListOccurrencesResponse, error) {

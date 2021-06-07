@@ -80,8 +80,9 @@ func (m *manager) BatchCreateGenericResources(ctx context.Context, occurrences [
 		}
 
 		genericResource := &pb.GenericResource{
-			Name: uriParts.name,
-			Type: uriParts.resourceType,
+			Name:    uriParts.name,
+			Type:    uriParts.resourceType,
+			Created: occurrence.CreateTime,
 		}
 		resourceId := uriParts.prefixedName
 
@@ -353,6 +354,9 @@ func (m *manager) ListGenericResourceVersions(ctx context.Context, request *pb.L
 				Bool: &filtering.Bool{
 					Must: &queries,
 				},
+			},
+			Sort: map[string]esutil.EsSortOrder{
+				"created": esutil.EsSortOrderDescending,
 			},
 		},
 	}

@@ -148,6 +148,7 @@ var _ = Describe("resource manager", func() {
 
 			Expect(genericResource.Name).To(Equal(expectedResourceName))
 			Expect(genericResource.Type).To(Equal(pb.ResourceType_DOCKER))
+			Expect(genericResource.Created).To(Equal(expectedOccurrence.CreateTime))
 		})
 
 		It("should not return an error", func() {
@@ -787,6 +788,9 @@ var _ = Describe("resource manager", func() {
 
 			// no pagination options were specified
 			Expect(searchRequest.Pagination).To(BeNil())
+
+			// should sort by timestamp
+			Expect(searchRequest.Search.Sort["created"]).To(Equal(esutil.EsSortOrderDescending))
 
 			// no filter was specified, so we should only have one query
 			Expect(*searchRequest.Search.Query.Bool.Must).To(HaveLen(1))
