@@ -103,6 +103,8 @@ message Policy {
   // A timestamp indicating when either an edit occurred on the policy itself
   // or a new policy version was created
   google.protobuf.Timestamp updated = 7;
+  // Indicates whether the policy has been soft-deleted
+  bool deleted = 8;
 }
 
 message PolicyEntity {

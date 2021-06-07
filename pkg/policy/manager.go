@@ -182,28 +182,14 @@ func (m *manager) GetPolicy(ctx context.Context, request *pb.GetPolicyRequest) (
 	log := m.logger.Named("GetPolicy").With(zap.String("id", request.Id))
 	log.Debug("Received request")
 
-	response, err := m.esClient.Get(ctx, &esutil.GetRequest{
-		Index:      m.policiesAlias(),
-		DocumentId: request.Id,
-	})
-
+	policy, err := m.getPolicy(ctx, log, request.Id)
 	if err != nil {
-		return nil, createError(log, "error", err)
-	}
-
-	if !response.Found {
-		return nil, createErrorWithCode(log, "policy not found", err, codes.NotFound)
-	}
-
-	var policy pb.Policy
-	err = protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(response.Source, &policy)
-	if err != nil {
-		return nil, createError(log, "error unmarshalling policy", err)
+		return nil, err
 	}
 
 	log = log.With(zap.Int32("version", policy.CurrentVersion))
 
-	response, err = m.esClient.Get(ctx, &esutil.GetRequest{
+	response, err := m.esClient.Get(ctx, &esutil.GetRequest{
 		Routing:    request.Id,
 		Index:      m.policiesAlias(),
 		DocumentId: policyVersionId(policy.Id, policy.CurrentVersion),
@@ -225,51 +211,26 @@ func (m *manager) GetPolicy(ctx context.Context, request *pb.GetPolicyRequest) (
 
 	policy.Policy = &policyEntity
 
-	return &policy, nil
+	return policy, nil
 }
 
 func (m *manager) DeletePolicy(ctx context.Context, request *pb.DeletePolicyRequest) (*emptypb.Empty, error) {
 	log := m.logger.Named("DeletePolicy").With(zap.String("id", request.Id))
 	log.Debug("received request")
 
-	if request.Id == "" {
-		return nil, createErrorWithCode(log, "must specify policy id", nil, codes.InvalidArgument)
-	}
-
-	deletePolicyVersionsQuery := &filtering.Query{
-		HasParent: &filtering.HasParent{
-			ParentType: policyRelationName,
-			Query: &filtering.Query{
-				Term: &filtering.Term{
-					"_id": request.Id,
-				},
-			},
-		},
-	}
-
-	deletePolicyQuery := &filtering.Query{
-		Term: &filtering.Term{
-			"_id": request.Id,
-		},
-	}
-
-	err := m.esClient.Delete(ctx, &esutil.DeleteRequest{
-		Index: m.policiesAlias(),
-		Search: &esutil.EsSearch{
-			Query: &filtering.Query{
-				Bool: &filtering.Bool{
-					Should: &filtering.Should{
-						deletePolicyVersionsQuery,
-						deletePolicyQuery,
-					},
-				},
-			},
-		},
-		Routing: request.Id,
-		Refresh: m.esConfig.Refresh.String(),
-	})
-
+	policy, err := m.getPolicy(ctx, log, request.Id)
 	if err != nil {
+		return nil, err
+	}
+
+	policy.Deleted = true
+
+	if err := m.esClient.Update(ctx, &esutil.UpdateRequest{
+		Index:      m.policiesAlias(),
+		DocumentId: request.Id,
+		Refresh:    m.esConfig.Refresh.String(),
+		Message:    policy,
+	}); err != nil {
 		return nil, createError(log, "error deleting policy and its versions", err)
 	}
 
@@ -284,6 +245,12 @@ func (m *manager) ListPolicies(ctx context.Context, request *pb.ListPoliciesRequ
 		&filtering.Query{
 			Term: &filtering.Term{
 				policyDocumentJoinField: policyRelationName,
+			},
+		},
+		// exclude policies that were soft-deleted
+		&filtering.Query{
+			Term: &filtering.Term{
+				"deleted": "false",
 			},
 		},
 	}
@@ -522,6 +489,33 @@ func (m *manager) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePolicy
 		},
 		Explanation: *evaluatePolicyResponse.Explanation,
 	}, nil
+}
+
+func (m *manager) getPolicy(ctx context.Context, log *zap.Logger, id string) (*pb.Policy, error) {
+	if id == "" {
+		return nil, createErrorWithCode(log, "must specify policy id", nil, codes.InvalidArgument)
+	}
+
+	response, err := m.esClient.Get(ctx, &esutil.GetRequest{
+		Index:      m.policiesAlias(),
+		DocumentId: id,
+	})
+
+	if err != nil {
+		return nil, createError(log, "error fetching policy", err)
+	}
+
+	if !response.Found {
+		return nil, createErrorWithCode(log, "policy not found", err, codes.NotFound)
+	}
+
+	var policy pb.Policy
+	err = protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(response.Source, &policy)
+	if err != nil {
+		return nil, createError(log, "error unmarshalling policy", err)
+	}
+
+	return &policy, nil
 }
 
 func (m *manager) policiesAlias() string {

@@ -577,10 +577,13 @@ var _ = Describe("PolicyManager", func() {
 
 			Expect(actualRequest.Index).To(Equal(expectedPoliciesAlias))
 			Expect(actualRequest.Pagination).To(BeNil())
-			Expect(*actualRequest.Search.Query.Bool.Must).To(HaveLen(1))
+			Expect(*actualRequest.Search.Query.Bool.Must).To(HaveLen(2))
 
-			actualQuery := (*actualRequest.Search.Query.Bool.Must)[0].(*filtering.Query)
-			Expect((*actualQuery.Term)["join"]).To(Equal("policy"))
+			actualJoinQuery := (*actualRequest.Search.Query.Bool.Must)[0].(*filtering.Query)
+			Expect((*actualJoinQuery.Term)["join"]).To(Equal("policy"))
+
+			actualSoftDeleteQuery := (*actualRequest.Search.Query.Bool.Must)[1].(*filtering.Query)
+			Expect((*actualSoftDeleteQuery.Term)["deleted"]).To(Equal("false"))
 		})
 
 		It("should perform a multi-get to fetch current policy versions", func() {
@@ -643,8 +646,8 @@ var _ = Describe("PolicyManager", func() {
 				Expect(esClient.SearchCallCount()).To(Equal(1))
 				_, actualRequest := esClient.SearchArgsForCall(0)
 
-				Expect(*actualRequest.Search.Query.Bool.Must).To(HaveLen(2))
-				actualFilterQuery := (*actualRequest.Search.Query.Bool.Must)[1].(*filtering.Query)
+				Expect(*actualRequest.Search.Query.Bool.Must).To(HaveLen(3))
+				actualFilterQuery := (*actualRequest.Search.Query.Bool.Must)[2].(*filtering.Query)
 				Expect(actualFilterQuery).To(Equal(expectedFilterQuery))
 			})
 
@@ -811,20 +814,34 @@ var _ = Describe("PolicyManager", func() {
 
 	Context("DeletePolicy", func() {
 		var (
-			policyId    string
-			request     *pb.DeletePolicyRequest
-			deleteError error
+			policyId string
+			request  *pb.DeletePolicyRequest
+
+			getPolicyResponse *esutil.EsGetResponse
+			getPolicyError    error
+
+			updateError error
 			actualError error
 		)
 
 		BeforeEach(func() {
-			deleteError = nil
 			policyId = fake.UUID()
+			policy := createRandomPolicy(policyId, fake.Int32())
+			policyJson, _ := protojson.Marshal(policy)
+			getPolicyResponse = &esutil.EsGetResponse{
+				Id:     policyId,
+				Found:  true,
+				Source: policyJson,
+			}
+			getPolicyError = nil
+
+			updateError = nil
 			request = &pb.DeletePolicyRequest{Id: policyId}
 		})
 
 		JustBeforeEach(func() {
-			esClient.DeleteReturns(deleteError)
+			esClient.GetReturns(getPolicyResponse, getPolicyError)
+			esClient.UpdateReturns(updateError)
 			_, actualError = manager.DeletePolicy(ctx, request)
 		})
 
@@ -833,23 +850,23 @@ var _ = Describe("PolicyManager", func() {
 				Expect(actualError).NotTo(HaveOccurred())
 			})
 
-			It("should delete the policy and all of its versions", func() {
-				Expect(indexManager.AliasNameCallCount()).To(Equal(1))
-
-				Expect(esClient.DeleteCallCount()).To(Equal(1))
-				_, actualRequest := esClient.DeleteArgsForCall(0)
+			It("should fetch the policy", func() {
+				Expect(esClient.GetCallCount()).To(Equal(1))
+				_, actualRequest := esClient.GetArgsForCall(0)
 
 				Expect(actualRequest.Index).To(Equal(expectedPoliciesAlias))
+				Expect(actualRequest.DocumentId).To(Equal(policyId))
+			})
+
+			It("should set the deleted flag on the policy", func() {
+				Expect(esClient.UpdateCallCount()).To(Equal(1))
+				_, actualRequest := esClient.UpdateArgsForCall(0)
+
+				Expect(actualRequest.Index).To(Equal(expectedPoliciesAlias))
+				Expect(actualRequest.DocumentId).To(Equal(policyId))
 				Expect(actualRequest.Refresh).To(Equal(esConfig.Refresh.String()))
-				Expect(actualRequest.Routing).To(Equal(policyId))
-				Expect(*actualRequest.Search.Query.Bool.Should).To(HaveLen(2))
-
-				deleteVersionsQuery := (*actualRequest.Search.Query.Bool.Should)[0].(*filtering.Query)
-				deletePolicyQuery := (*actualRequest.Search.Query.Bool.Should)[1].(*filtering.Query)
-
-				Expect(deleteVersionsQuery.HasParent.ParentType).To(Equal("policy"))
-				Expect((*deleteVersionsQuery.HasParent.Query.Term)["_id"]).To(Equal(policyId))
-				Expect((*deletePolicyQuery.Term)["_id"]).Should(Equal(policyId))
+				actualPolicy := actualRequest.Message.(*pb.Policy)
+				Expect(actualPolicy.Deleted).To(BeTrue())
 			})
 		})
 
@@ -864,9 +881,31 @@ var _ = Describe("PolicyManager", func() {
 			})
 		})
 
-		When("an error occurs deleting policy", func() {
+		When("the policy isn't found", func() {
 			BeforeEach(func() {
-				deleteError = errors.New("delete error")
+				getPolicyResponse.Found = false
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.NotFound))
+			})
+		})
+
+		When("an error occurs retrieving the policy", func() {
+			BeforeEach(func() {
+				getPolicyError = errors.New("get error")
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+		})
+
+		When("an error occurs setting the delete flag on the policy", func() {
+			BeforeEach(func() {
+				updateError = errors.New("update error")
 			})
 
 			It("should return an error", func() {

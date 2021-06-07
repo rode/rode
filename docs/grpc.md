@@ -595,6 +595,7 @@ https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576
 | policy | [PolicyEntity](#rode.v1alpha1.PolicyEntity) |  | Current policy code or source. The policy.version matches current_version This is set by Rode, and isn&#39;t meant to be populated by users |
 | created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  | When the policy was created |
 | updated | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  | A timestamp indicating when either an edit occurred on the policy itself or a new policy version was created |
+| deleted | [bool](#bool) |  | Indicates whether the policy has been soft-deleted |
 
 
 
