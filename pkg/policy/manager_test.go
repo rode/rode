@@ -418,6 +418,54 @@ var _ = Describe("PolicyManager", func() {
 			})
 		})
 
+		When("a policy version id is passed", func() {
+			BeforeEach(func() {
+				request.Id = policyVersionId
+				expectedPolicy.CurrentVersion = fake.Int32()
+				policyJson, _ := protojson.Marshal(expectedPolicy)
+
+				getPolicyResponse.Source = policyJson
+			})
+
+			It("should fetch the policy", func() {
+				Expect(esClient.GetCallCount()).To(Equal(2))
+
+				_, actualRequest := esClient.GetArgsForCall(0)
+
+				Expect(actualRequest.DocumentId).To(Equal(policyId))
+			})
+
+			It("should fetch the policy at the specified version", func() {
+				_, actualRequest := esClient.GetArgsForCall(1)
+
+				Expect(actualRequest.DocumentId).To(Equal(policyVersionId))
+			})
+		})
+
+		When("a policy version id is not a number", func() {
+			BeforeEach(func() {
+				request.Id = fmt.Sprintf("%s.%s", fake.UUID(), fake.Word())
+			})
+
+			It("should return an error", func() {
+				Expect(actualPolicy).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.InvalidArgument))
+			})
+		})
+
+		When("a policy version id does not have the expected number of components", func() {
+			BeforeEach(func() {
+				request.Id = fmt.Sprintf("%s..", fake.UUID())
+			})
+
+			It("should return an error", func() {
+				Expect(actualPolicy).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.InvalidArgument))
+			})
+		})
+
 		When("an error occurs fetching policy", func() {
 			BeforeEach(func() {
 				getPolicyError = errors.New("get policy error")

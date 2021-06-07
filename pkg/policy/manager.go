@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/google/uuid"
@@ -179,20 +180,32 @@ func (m *manager) CreatePolicy(ctx context.Context, policy *pb.Policy) (*pb.Poli
 }
 
 func (m *manager) GetPolicy(ctx context.Context, request *pb.GetPolicyRequest) (*pb.Policy, error) {
-	log := m.logger.Named("GetPolicy").With(zap.String("id", request.Id))
+	log := m.logger.Named("GetPolicy")
+	log.Debug("received request")
+	policyId, version, err := parsePolicyVersionId(request.Id)
+
+	if err != nil {
+		return nil, createErrorWithCode(log, "invalid policy id", err, codes.InvalidArgument)
+	}
+
+	log = log.With(zap.String("id", policyId))
 	log.Debug("Received request")
 
-	policy, err := m.getPolicy(ctx, log, request.Id)
+	policy, err := m.getPolicy(ctx, log, policyId)
 	if err != nil {
 		return nil, err
 	}
 
-	log = log.With(zap.Int32("version", policy.CurrentVersion))
+	if version == 0 {
+		version = policy.CurrentVersion
+	}
+
+	log = log.With(zap.Int32("version", version))
 
 	response, err := m.esClient.Get(ctx, &esutil.GetRequest{
 		Routing:    request.Id,
 		Index:      m.policiesAlias(),
-		DocumentId: policyVersionId(policy.Id, policy.CurrentVersion),
+		DocumentId: policyVersionId(policy.Id, version),
 	})
 
 	if err != nil {
@@ -619,4 +632,24 @@ func validateResultTermsInBody(body ast.Body) bool {
 
 func policyVersionId(policyId string, version int32) string {
 	return fmt.Sprintf("%s.%d", policyId, version)
+}
+
+// Parses a policy or policy version id
+// If the separator is present, treat the id as containing the policy id and the version
+func parsePolicyVersionId(id string) (string, int32, error) {
+	if !strings.ContainsRune(id, '.') {
+		return id, 0, nil
+	}
+
+	pieces := strings.Split(id, ".")
+	if len(pieces) != 2 {
+		return "", 0, errors.New("invalid policy version id")
+	}
+
+	version, err := strconv.Atoi(pieces[1])
+	if err != nil {
+		return "", 0, err
+	}
+
+	return pieces[0], int32(version), nil
 }
