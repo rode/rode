@@ -104,7 +104,7 @@ func (m *manager) CreatePolicy(ctx context.Context, policy *pb.Policy) (*pb.Poli
 	policyId := newUuid().String()
 	log = log.With(zap.String("id", policyId))
 
-	version := int32(1)
+	version := uint32(1)
 	policyVersionId := policyVersionId(policyId, version)
 	currentTime := timestamppb.Now()
 
@@ -132,10 +132,16 @@ func (m *manager) CreatePolicy(ctx context.Context, policy *pb.Policy) (*pb.Poli
 	}
 
 	log.Debug("performing bulk request")
+
 	response, err := m.esClient.Bulk(ctx, &esutil.BulkRequest{
 		Index:   m.policiesAlias(),
 		Refresh: m.esConfig.Refresh.String(),
 		Items: []*esutil.BulkRequestItem{
+			{
+				Operation: esutil.BULK_CREATE,
+				DocumentId: policyCounterId(policyId),
+				Message: &emptypb.Empty{}, // counter document is empty, the Elasticsearch _version is used as the number
+			},
 			{
 				Operation:  esutil.BULK_CREATE,
 				Message:    policy,
@@ -200,7 +206,7 @@ func (m *manager) GetPolicy(ctx context.Context, request *pb.GetPolicyRequest) (
 		version = policy.CurrentVersion
 	}
 
-	log = log.With(zap.Int32("version", version))
+	log = log.With(zap.Uint32("version", version))
 
 	response, err := m.esClient.Get(ctx, &esutil.GetRequest{
 		Routing:    policyId,
@@ -238,7 +244,7 @@ func (m *manager) DeletePolicy(ctx context.Context, request *pb.DeletePolicyRequ
 
 	policy.Deleted = true
 
-	if err := m.esClient.Update(ctx, &esutil.UpdateRequest{
+	if _, err := m.esClient.Update(ctx, &esutil.UpdateRequest{
 		Index:      m.policiesAlias(),
 		DocumentId: request.Id,
 		Refresh:    m.esConfig.Refresh.String(),
@@ -353,9 +359,128 @@ func (m *manager) ListPolicies(ctx context.Context, request *pb.ListPoliciesRequ
 }
 
 func (m *manager) UpdatePolicy(ctx context.Context, request *pb.UpdatePolicyRequest) (*pb.Policy, error) {
-	// TODO: Unimplemented after versioning changes
-	// Previous implementation: https://github.com/rode/rode/blob/8c1f35f7ce2b7196088e06985cc165cce93d804e/server/server.go#L636-L694
-	return &pb.Policy{}, nil
+	// questions:
+	// is name immutable? what about description?
+	// do we care about update mask at all? No good implementations for Go
+	//
+
+	// approaches
+	// 1 ~(2 requests)~ 3 requests
+	// script -> send all fields as parameters?
+	// do a GET with correct
+	// do policy version insert
+	// 2 (3 requests)
+	// script to update version
+	// bump policy version
+	// bulk API request to update other fields + insert policy version
+	// 3 (3 requests)
+	// ~fetch counter doc~ -> if the id can be precomputed, there's no need to fetch it
+	// update counter doc
+	// fetch it after update to see new version
+	// bulk api request to update + insert
+
+	// can't use policy document version # as counter -> it may not always
+
+	// steps:
+	// get the policy
+	// get the current policy version
+	// if the policy content has changed, update the policy parent and create a new policy version
+	// if the policy content hasn't changed, only update the policy parent fields
+	log := m.logger.Named("UpdatePolicy")
+	log.Debug("Received request")
+
+	if request.Id != request.Policy.Id {
+		return nil, createErrorWithCode(log, "request id must match policy id", nil, codes.InvalidArgument)
+	}
+
+	currentPolicy, err := m.getPolicy(ctx, log, request.Id)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if currentPolicy.Deleted {
+		return nil, createErrorWithCode(log, "cannot update a deleted policy", nil, codes.FailedPrecondition)
+	}
+
+	updatedPolicy := request.Policy
+	if updatedPolicy.Name != currentPolicy.Name {
+		return nil, createErrorWithCode(log, "policy name is immutable", nil, codes.InvalidArgument)
+	}
+
+	updateResponse, err := m.esClient.Update(ctx, &esutil.UpdateRequest{
+		Index:      m.policiesAlias(),
+		DocumentId: policyCounterId(request.Id),
+		Refresh:    m.esConfig.Refresh.String(),
+		Message:    &emptypb.Empty{},
+	})
+
+	if err != nil {
+		return nil, createError(log, "error updating policy version counter", err)
+	}
+
+	newVersion := uint32(updateResponse.Version)
+	currentTime := timestamppb.Now()
+
+	// Update the existing policy to prevent clients from overwriting immutable fields like name or created
+	currentPolicy.Description = updatedPolicy.Description
+	currentPolicy.CurrentVersion = newVersion
+	currentPolicy.Updated = currentTime
+
+	newPolicyVersion := updatedPolicy.Policy
+	newPolicyVersion.Created = currentTime
+	newPolicyVersion.Version = newVersion
+
+	if newPolicyVersion.Message == "" { // TODO: or if it's the same as the previous message?
+		newPolicyVersion.Message = fmt.Sprintf("Updated policy")
+	}
+
+	response, err := m.esClient.Bulk(ctx, &esutil.BulkRequest{
+		Index:   m.policiesAlias(),
+		Refresh: m.esConfig.Refresh.String(),
+		Items:   []*esutil.BulkRequestItem{
+			{
+				Operation:  esutil.BULK_INDEX,
+				Message:    currentPolicy,
+				DocumentId: request.Id,
+				Join: &esutil.EsJoin{
+					Field: policyDocumentJoinField,
+					Name:  policyRelationName,
+				},
+			},
+			{
+				Operation:  esutil.BULK_CREATE,
+				Message:    newPolicyVersion,
+				DocumentId: policyVersionId(request.Id, newVersion),
+				Join: &esutil.EsJoin{
+					Parent: request.Id,
+					Field:  policyDocumentJoinField,
+					Name:   policyVersionRelationName,
+				},
+			},
+		},
+	})
+
+	if err != nil {
+		return nil, createError(log, "error updating policy", err)
+	}
+
+	var bulkErrors []error
+	for _, item := range response.Items {
+		if item.Create != nil && item.Create.Error != nil {
+			bulkErrors = append(bulkErrors, fmt.Errorf("error creating new policy version [%d] %s: %s", item.Create.Status, item.Create.Error.Type, item.Create.Error.Reason))
+		} else if item.Index != nil && item.Index.Error != nil {
+			bulkErrors = append(bulkErrors, fmt.Errorf("error updating policy [%d] %s: %s", item.Index.Status, item.Index.Error.Type, item.Index.Error.Reason))
+		}
+	}
+
+	if len(bulkErrors) > 0 {
+		return nil, createError(log, "failed to update policy", fmt.Errorf("errors: %v", bulkErrors))
+	}
+
+	currentPolicy.Policy = newPolicyVersion
+
+	return currentPolicy, nil
 }
 
 func (m *manager) ValidatePolicy(_ context.Context, policy *pb.ValidatePolicyRequest) (*pb.ValidatePolicyResponse, error) {
@@ -630,13 +755,17 @@ func validateResultTermsInBody(body ast.Body) bool {
 	return true
 }
 
-func policyVersionId(policyId string, version int32) string {
+func policyVersionId(policyId string, version uint32) string {
 	return fmt.Sprintf("%s.%d", policyId, version)
+}
+
+func policyCounterId(policyId string) string {
+	return fmt.Sprintf("%s.counter", policyId)
 }
 
 // Parses a policy or policy version id
 // If the separator is present, treat the id as containing the policy id and the version
-func parsePolicyVersionId(id string) (string, int32, error) {
+func parsePolicyVersionId(id string) (string, uint32, error) {
 	if !strings.ContainsRune(id, '.') {
 		return id, 0, nil
 	}
@@ -651,5 +780,5 @@ func parsePolicyVersionId(id string) (string, int32, error) {
 		return "", 0, err
 	}
 
-	return pieces[0], int32(version), nil
+	return pieces[0], uint32(version), nil
 }

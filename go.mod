@@ -39,3 +39,7 @@ require (
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
 )
+
+replace (
+	github.com/rode/grafeas-elasticsearch => /Users/alex/Developer/liatrio/rode/grafeas-elasticsearch
+)

@@ -125,7 +125,7 @@ message Policy {
   string description = 3;
   // CurrentVersion is the default policy version that's used when a policy is retrieved or evaluated. It's not necessarily
   // the latest, as it may be overwritten if an older policy version should be used instead.
-  int32 current_version = 4;
+  uint32 current_version = 4;
   // Policy contains the Rego policy code or a source location. The PolicyEntity.Version matches CurrentVersion unless
   // it was otherwise specified.
   PolicyEntity policy = 5;
@@ -141,7 +141,7 @@ message Policy {
 message PolicyEntity {
   // Version is a number that represents revisions of a policy. Policy contents are immutable, so changes to the source
   // are represented as new versions.
-  int32 version = 1;
+  uint32 version = 1;
   // Message should contain a brief summary of the changes to the policy code between the current version
   // and the previous version.
   string message = 2;
