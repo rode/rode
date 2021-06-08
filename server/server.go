@@ -25,21 +25,17 @@ import (
 	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/common_go_proto"
 
 	"github.com/elastic/go-elasticsearch/v7"
-	"github.com/elastic/go-elasticsearch/v7/esapi"
 	"github.com/rode/es-index-manager/indexmanager"
 
-	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	grafeas_project_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/project_go_proto"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/rode/rode/config"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 const (
@@ -116,45 +112,6 @@ func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceReque
 
 	return &pb.BatchCreateOccurrencesResponse{
 		Occurrences: occurrenceResponse.GetOccurrences(),
-	}, nil
-}
-
-func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResourcesRequest) (*pb.ListResourcesResponse, error) {
-	log := r.logger.Named("ListResources")
-	log.Debug("received request", zap.Any("ListResourcesRequest", request))
-
-	hits, nextPageToken, err := r.genericList(ctx, log, &genericListOptions{
-		index:     rodeElasticsearchOccurrencesAlias,
-		filter:    request.Filter,
-		pageSize:  request.PageSize,
-		pageToken: request.PageToken,
-		query: &esutil.EsSearch{
-			Collapse: &esutil.EsSearchCollapse{
-				Field: "resource.uri",
-			},
-		},
-		sortDirection: esutil.EsSortOrderAscending,
-		sortField:     "resource.uri",
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	var resources []*grafeas_proto.Resource
-	for _, hit := range hits.Hits {
-		occurrence := &grafeas_proto.Occurrence{}
-		err := protojson.Unmarshal(hit.Source, proto.MessageV2(occurrence))
-		if err != nil {
-			return nil, createError(log, "error unmarshalling search result", err)
-		}
-
-		resources = append(resources, occurrence.Resource)
-	}
-
-	return &pb.ListResourcesResponse{
-		Resources:     resources,
-		NextPageToken: nextPageToken,
 	}, nil
 }
 
@@ -460,139 +417,6 @@ func (r *rodeServer) CreateNote(ctx context.Context, request *pb.CreateNoteReque
 		NoteId: request.NoteId,
 		Note:   request.Note,
 	})
-}
-
-type genericListOptions struct {
-	index         string
-	filter        string
-	query         *esutil.EsSearch
-	pageSize      int32
-	pageToken     string
-	sortDirection esutil.EsSortOrder
-	sortField     string
-}
-
-func (r *rodeServer) genericList(ctx context.Context, log *zap.Logger, options *genericListOptions) (*esutil.EsSearchResponseHits, string, error) {
-	body := &esutil.EsSearch{}
-	if options.query != nil {
-		body = options.query
-	}
-
-	if options.filter != "" {
-		log = log.With(zap.String("filter", options.filter))
-		filterQuery, err := r.filterer.ParseExpression(options.filter)
-		if err != nil {
-			return nil, "", createError(log, "error while parsing filter expression", err)
-		}
-
-		body.Query = filterQuery
-	}
-
-	if options.sortField != "" {
-		body.Sort = map[string]esutil.EsSortOrder{
-			options.sortField: options.sortDirection,
-		}
-	}
-
-	searchOptions := []func(*esapi.SearchRequest){
-		r.esClient.Search.WithContext(ctx),
-	}
-
-	var nextPageToken string
-	if options.pageToken != "" || options.pageSize != 0 { // handle pagination
-		next, extraSearchOptions, err := r.handlePagination(ctx, log, body, options.index, options.pageToken, options.pageSize)
-		if err != nil {
-			return nil, "", createError(log, "error while handling pagination", err)
-		}
-
-		nextPageToken = next
-		searchOptions = append(searchOptions, extraSearchOptions...)
-	} else {
-		searchOptions = append(searchOptions,
-			r.esClient.Search.WithIndex(options.index),
-			r.esClient.Search.WithSize(maxPageSize),
-		)
-	}
-
-	encodedBody, requestJson := esutil.EncodeRequest(body)
-	log = log.With(zap.String("request", requestJson))
-	log.Debug("performing search")
-
-	res, err := r.esClient.Search(
-		append(searchOptions, r.esClient.Search.WithBody(encodedBody))...,
-	)
-	if err != nil {
-		return nil, "", createError(log, "error sending request to elasticsearch", err)
-	}
-	if res.IsError() {
-		return nil, "", createError(log, "unexpected response from elasticsearch", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
-	}
-
-	var searchResults esutil.EsSearchResponse
-	if err := esutil.DecodeResponse(res.Body, &searchResults); err != nil {
-		return nil, "", createError(log, "error decoding elasticsearch response", err)
-	}
-
-	if options.pageToken != "" || options.pageSize != 0 { // if request is paginated, check for last page
-		_, from, err := esutil.ParsePageToken(nextPageToken)
-		if err != nil {
-			return nil, "", createError(log, "error parsing page token", err)
-		}
-
-		if from >= searchResults.Hits.Total.Value {
-			nextPageToken = ""
-		}
-	}
-	return searchResults.Hits, nextPageToken, nil
-}
-
-func (r *rodeServer) handlePagination(ctx context.Context, log *zap.Logger, body *esutil.EsSearch, index, pageToken string, pageSize int32) (string, []func(*esapi.SearchRequest), error) {
-	log = log.With(zap.String("pageToken", pageToken), zap.Int32("pageSize", pageSize))
-
-	var (
-		pit  string
-		from int
-		err  error
-	)
-
-	// if no pageToken is specified, we need to create a new PIT
-	if pageToken == "" {
-		res, err := r.esClient.OpenPointInTime(
-			r.esClient.OpenPointInTime.WithContext(ctx),
-			r.esClient.OpenPointInTime.WithIndex(index),
-			r.esClient.OpenPointInTime.WithKeepAlive(pitKeepAlive),
-		)
-		if err != nil {
-			return "", nil, createError(log, "error sending request to elasticsearch", err)
-		}
-		if res.IsError() {
-			return "", nil, createError(log, "unexpected response from elasticsearch", nil, zap.String("response", res.String()), zap.Int("status", res.StatusCode))
-		}
-
-		var pitResponse esutil.ESPitResponse
-		if err = esutil.DecodeResponse(res.Body, &pitResponse); err != nil {
-			return "", nil, createError(log, "error decoding elasticsearch response", err)
-		}
-
-		pit = pitResponse.Id
-		from = 0
-	} else {
-		// get the PIT from the provided pageToken
-		pit, from, err = esutil.ParsePageToken(pageToken)
-		if err != nil {
-			return "", nil, createError(log, "error parsing page token", err)
-		}
-	}
-
-	body.Pit = &esutil.EsSearchPit{
-		Id:        pit,
-		KeepAlive: pitKeepAlive,
-	}
-
-	return esutil.CreatePageToken(pit, from+int(pageSize)), []func(*esapi.SearchRequest){
-		r.esClient.Search.WithSize(int(pageSize)),
-		r.esClient.Search.WithFrom(from),
-	}, err
 }
 
 // createError is a helper function that allows you to easily log an error and return a gRPC formatted error.
