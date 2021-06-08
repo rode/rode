@@ -24,15 +24,12 @@ import (
 	"github.com/rode/rode/pkg/resource"
 	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/common_go_proto"
 
-	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/rode/es-index-manager/indexmanager"
 
-	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	grafeas_project_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/project_go_proto"
 
-	"github.com/rode/rode/config"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -52,20 +49,14 @@ func NewRodeServer(
 	logger *zap.Logger,
 	grafeasCommon grafeas_proto.GrafeasV1Beta1Client,
 	grafeasProjects grafeas_project_proto.ProjectsClient,
-	esClient *elasticsearch.Client,
-	filterer filtering.Filterer,
-	elasticsearchConfig *config.ElasticsearchConfig,
 	resourceManager resource.Manager,
 	indexManager indexmanager.IndexManager,
 	policyManager policy.Manager,
 ) (pb.RodeServer, error) {
 	rodeServer := &rodeServer{
 		logger,
-		esClient,
-		filterer,
 		grafeasCommon,
 		grafeasProjects,
-		elasticsearchConfig,
 		resourceManager,
 		indexManager,
 		policyManager,
@@ -79,14 +70,11 @@ func NewRodeServer(
 }
 
 type rodeServer struct {
-	logger              *zap.Logger
-	esClient            *elasticsearch.Client
-	filterer            filtering.Filterer
-	grafeasCommon       grafeas_proto.GrafeasV1Beta1Client
-	grafeasProjects     grafeas_project_proto.ProjectsClient
-	elasticsearchConfig *config.ElasticsearchConfig
-	resourceManager     resource.Manager
-	indexManager        indexmanager.IndexManager
+	logger          *zap.Logger
+	grafeasCommon   grafeas_proto.GrafeasV1Beta1Client
+	grafeasProjects grafeas_project_proto.ProjectsClient
+	resourceManager resource.Manager
+	indexManager    indexmanager.IndexManager
 	policy.Manager
 }
 

@@ -24,19 +24,15 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering/filteringfakes"
 	"github.com/rode/rode/pkg/policy/policyfakes"
 	"github.com/rode/rode/pkg/resource/resourcefakes"
 
 	"github.com/brianvoe/gofakeit/v5"
-	"github.com/elastic/go-elasticsearch/v7"
-	"github.com/elastic/go-elasticsearch/v7/esapi"
 	"github.com/golang/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	immocks "github.com/rode/es-index-manager/mocks"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
-	"github.com/rode/rode/config"
 	"github.com/rode/rode/mocks"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/build_go_proto"
@@ -57,10 +53,7 @@ var _ = Describe("rode server", func() {
 		server                pb.RodeServer
 		grafeasClient         *mocks.FakeGrafeasV1Beta1Client
 		grafeasProjectsClient *mocks.FakeProjectsClient
-		esClient              *elasticsearch.Client
 		esTransport           *mockEsTransport
-		filterer              *filteringfakes.FakeFilterer
-		elasticsearchConfig   *config.ElasticsearchConfig
 		resourceManager       *resourcefakes.FakeManager
 		policyManager         *policyfakes.FakeManager
 		indexManager          *immocks.FakeIndexManager
@@ -76,16 +69,8 @@ var _ = Describe("rode server", func() {
 		grafeasClient = &mocks.FakeGrafeasV1Beta1Client{}
 		grafeasProjectsClient = &mocks.FakeProjectsClient{}
 		resourceManager = &resourcefakes.FakeManager{}
-		elasticsearchConfig = &config.ElasticsearchConfig{
-			Refresh: "true",
-		}
-		filterer = &filteringfakes.FakeFilterer{}
 
 		esTransport = &mockEsTransport{}
-		esClient = &elasticsearch.Client{
-			Transport: esTransport,
-			API:       esapi.New(esTransport),
-		}
 
 		expectedPoliciesIndex = gofakeit.LetterN(10)
 		expectedPoliciesAlias = gofakeit.LetterN(10)
@@ -111,14 +96,11 @@ var _ = Describe("rode server", func() {
 
 		// not using the constructor as it has side effects. side effects are tested under the "initialize" context
 		server = &rodeServer{
-			logger:              logger,
-			grafeasCommon:       grafeasClient,
-			grafeasProjects:     grafeasProjectsClient,
-			esClient:            esClient,
-			filterer:            filterer,
-			elasticsearchConfig: elasticsearchConfig,
-			resourceManager:     resourceManager,
-			indexManager:        indexManager,
+			logger:          logger,
+			grafeasCommon:   grafeasClient,
+			grafeasProjects: grafeasProjectsClient,
+			resourceManager: resourceManager,
+			indexManager:    indexManager,
 		}
 	})
 
@@ -146,7 +128,7 @@ var _ = Describe("rode server", func() {
 			grafeasProjectsClient.GetProjectReturns(expectedProject, expectedGetProjectError)
 			grafeasProjectsClient.CreateProjectReturns(expectedProject, expectedCreateProjectError)
 
-			actualRodeServer, actualError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, esClient, filterer, elasticsearchConfig, resourceManager, indexManager, policyManager)
+			actualRodeServer, actualError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, resourceManager, indexManager, policyManager)
 		})
 
 		It("should check if the rode project exists", func() {
