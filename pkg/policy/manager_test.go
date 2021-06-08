@@ -776,7 +776,7 @@ var _ = Describe("PolicyManager", func() {
 			BeforeEach(func() {
 				randomIndex := fake.Number(0, policyCount-1)
 
-				searchResponse.Hits.Hits[randomIndex].Source = []byte{'}'}
+				searchResponse.Hits.Hits[randomIndex].Source = invalidJson
 			})
 
 			It("should return an error", func() {
@@ -820,7 +820,7 @@ var _ = Describe("PolicyManager", func() {
 			BeforeEach(func() {
 				randomIndex := fake.Number(0, policyCount-1)
 
-				multiGetResponse.Docs[randomIndex].Source = []byte{'}'}
+				multiGetResponse.Docs[randomIndex].Source = invalidJson
 			})
 
 			It("should return an error", func() {

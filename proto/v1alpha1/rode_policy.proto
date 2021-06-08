@@ -78,7 +78,7 @@ message ListPoliciesResponse {
 }
 
 message UpdatePolicyRequest {
-  // the auto-generated id of the policy
+  // Id is the auto-generated id of the policy
   string id = 1;
   Policy policy = 2;
 
