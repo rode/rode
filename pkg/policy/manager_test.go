@@ -439,6 +439,7 @@ var _ = Describe("PolicyManager", func() {
 				_, actualRequest := esClient.GetArgsForCall(1)
 
 				Expect(actualRequest.DocumentId).To(Equal(policyVersionId))
+				Expect(actualRequest.Routing).To(Equal(policyId))
 			})
 		})
 

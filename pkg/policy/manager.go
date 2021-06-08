@@ -203,7 +203,7 @@ func (m *manager) GetPolicy(ctx context.Context, request *pb.GetPolicyRequest) (
 	log = log.With(zap.Int32("version", version))
 
 	response, err := m.esClient.Get(ctx, &esutil.GetRequest{
-		Routing:    request.Id,
+		Routing:    policyId,
 		Index:      m.policiesAlias(),
 		DocumentId: policyVersionId(policy.Id, version),
 	})
