@@ -24,8 +24,6 @@ type RodeClient interface {
 	BatchCreateOccurrences(ctx context.Context, in *BatchCreateOccurrencesRequest, opts ...grpc.CallOption) (*BatchCreateOccurrencesResponse, error)
 	// Verify that an artifact satisfies a policy
 	EvaluatePolicy(ctx context.Context, in *EvaluatePolicyRequest, opts ...grpc.CallOption) (*EvaluatePolicyResponse, error)
-	// List resource URI
-	ListResources(ctx context.Context, in *ListResourcesRequest, opts ...grpc.CallOption) (*ListResourcesResponse, error)
 	ListGenericResources(ctx context.Context, in *ListGenericResourcesRequest, opts ...grpc.CallOption) (*ListGenericResourcesResponse, error)
 	// ListGenericResourceVersions can be used to list all known versions of a generic resource. Versions will always include
 	// the unique identifier (in the case of Docker images, the sha256) and will optionally include any related names (in the
@@ -69,15 +67,6 @@ func (c *rodeClient) BatchCreateOccurrences(ctx context.Context, in *BatchCreate
 func (c *rodeClient) EvaluatePolicy(ctx context.Context, in *EvaluatePolicyRequest, opts ...grpc.CallOption) (*EvaluatePolicyResponse, error) {
 	out := new(EvaluatePolicyResponse)
 	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/EvaluatePolicy", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *rodeClient) ListResources(ctx context.Context, in *ListResourcesRequest, opts ...grpc.CallOption) (*ListResourcesResponse, error) {
-	out := new(ListResourcesResponse)
-	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/ListResources", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -209,8 +198,6 @@ type RodeServer interface {
 	BatchCreateOccurrences(context.Context, *BatchCreateOccurrencesRequest) (*BatchCreateOccurrencesResponse, error)
 	// Verify that an artifact satisfies a policy
 	EvaluatePolicy(context.Context, *EvaluatePolicyRequest) (*EvaluatePolicyResponse, error)
-	// List resource URI
-	ListResources(context.Context, *ListResourcesRequest) (*ListResourcesResponse, error)
 	ListGenericResources(context.Context, *ListGenericResourcesRequest) (*ListGenericResourcesResponse, error)
 	// ListGenericResourceVersions can be used to list all known versions of a generic resource. Versions will always include
 	// the unique identifier (in the case of Docker images, the sha256) and will optionally include any related names (in the
@@ -243,9 +230,6 @@ func (UnimplementedRodeServer) BatchCreateOccurrences(context.Context, *BatchCre
 }
 func (UnimplementedRodeServer) EvaluatePolicy(context.Context, *EvaluatePolicyRequest) (*EvaluatePolicyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method EvaluatePolicy not implemented")
-}
-func (UnimplementedRodeServer) ListResources(context.Context, *ListResourcesRequest) (*ListResourcesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListResources not implemented")
 }
 func (UnimplementedRodeServer) ListGenericResources(context.Context, *ListGenericResourcesRequest) (*ListGenericResourcesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListGenericResources not implemented")
@@ -330,24 +314,6 @@ func _Rode_EvaluatePolicy_Handler(srv interface{}, ctx context.Context, dec func
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(RodeServer).EvaluatePolicy(ctx, req.(*EvaluatePolicyRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Rode_ListResources_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListResourcesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(RodeServer).ListResources(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/rode.v1alpha1.Rode/ListResources",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RodeServer).ListResources(ctx, req.(*ListResourcesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -600,10 +566,6 @@ var Rode_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "EvaluatePolicy",
 			Handler:    _Rode_EvaluatePolicy_Handler,
-		},
-		{
-			MethodName: "ListResources",
-			Handler:    _Rode_ListResources_Handler,
 		},
 		{
 			MethodName: "ListGenericResources",
