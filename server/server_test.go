@@ -53,7 +53,6 @@ var _ = Describe("rode server", func() {
 		server                pb.RodeServer
 		grafeasClient         *mocks.FakeGrafeasV1Beta1Client
 		grafeasProjectsClient *mocks.FakeProjectsClient
-		esTransport           *mockEsTransport
 		resourceManager       *resourcefakes.FakeManager
 		policyManager         *policyfakes.FakeManager
 		indexManager          *immocks.FakeIndexManager
@@ -69,8 +68,6 @@ var _ = Describe("rode server", func() {
 		grafeasClient = &mocks.FakeGrafeasV1Beta1Client{}
 		grafeasProjectsClient = &mocks.FakeProjectsClient{}
 		resourceManager = &resourcefakes.FakeManager{}
-
-		esTransport = &mockEsTransport{}
 
 		expectedPoliciesIndex = gofakeit.LetterN(10)
 		expectedPoliciesAlias = gofakeit.LetterN(10)
@@ -187,7 +184,7 @@ var _ = Describe("rode server", func() {
 			})
 
 			It("should not attempt to create indices", func() {
-				Expect(esTransport.receivedHttpRequests).To(HaveLen(0))
+				Expect(indexManager.CreateIndexCallCount()).To(Equal(0))
 			})
 		})
 
@@ -214,7 +211,7 @@ var _ = Describe("rode server", func() {
 				})
 
 				It("should not attempt to create indices", func() {
-					Expect(esTransport.receivedHttpRequests).To(HaveLen(0))
+					Expect(indexManager.CreateIndexCallCount()).To(Equal(0))
 				})
 			})
 		})
