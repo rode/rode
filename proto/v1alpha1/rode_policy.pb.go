@@ -16,7 +16,7 @@
 // versions:
 // 	protoc-gen-go v1.26.0
 // 	protoc        v3.13.0
-// source: proto/v1alpha1/rode-policy.proto
+// source: proto/v1alpha1/rode_policy.proto
 
 package v1alpha1
 
@@ -41,7 +41,9 @@ type EvaluatePolicyRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Policy      string `protobuf:"bytes,1,opt,name=policy,proto3" json:"policy,omitempty"`
+	// Policy is the unique identifier of a policy.
+	Policy string `protobuf:"bytes,1,opt,name=policy,proto3" json:"policy,omitempty"`
+	// ResourceUri is used to identify occurrences that should be passed to the policy evaluation in Open Policy Agent.
 	ResourceUri string `protobuf:"bytes,2,opt,name=resource_uri,json=resourceUri,proto3" json:"resource_uri,omitempty"`
 }
 
@@ -96,10 +98,15 @@ type EvaluatePolicyResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Pass        bool                    `protobuf:"varint,1,opt,name=pass,proto3" json:"pass,omitempty"`
-	Changed     bool                    `protobuf:"varint,2,opt,name=changed,proto3" json:"changed,omitempty"`
-	Result      []*EvaluatePolicyResult `protobuf:"bytes,3,rep,name=result,proto3" json:"result,omitempty"`
-	Explanation []string                `protobuf:"bytes,4,rep,name=explanation,proto3" json:"explanation,omitempty"`
+	// Pass indicates whether the entire evaluation succeeded or failed.
+	Pass bool `protobuf:"varint,1,opt,name=pass,proto3" json:"pass,omitempty"`
+	// Changed designates if the evaluation result differs from the last evaluation.
+	Changed bool `protobuf:"varint,2,opt,name=changed,proto3" json:"changed,omitempty"`
+	// Result is a list of evaluation outputs built up by the policy.
+	Result []*EvaluatePolicyResult `protobuf:"bytes,3,rep,name=result,proto3" json:"result,omitempty"`
+	// Explanation is the raw diagnostic output from Open Policy Agent when the explain parameter is included in the request. It's intended to be used
+	// when writing or debugging policy.
+	Explanation []string `protobuf:"bytes,4,rep,name=explanation,proto3" json:"explanation,omitempty"`
 }
 
 func (x *EvaluatePolicyResponse) Reset() {
@@ -167,8 +174,11 @@ type EvaluatePolicyResult struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Pass       bool                       `protobuf:"varint,1,opt,name=pass,proto3" json:"pass,omitempty"`
-	Created    *timestamp.Timestamp       `protobuf:"bytes,2,opt,name=created,proto3" json:"created,omitempty"`
+	// Pass designates if this individual result succeeded or failed.
+	Pass bool `protobuf:"varint,1,opt,name=pass,proto3" json:"pass,omitempty"`
+	// Created is a timestamp set after the call to Open Policy Agent.
+	Created *timestamp.Timestamp `protobuf:"bytes,2,opt,name=created,proto3" json:"created,omitempty"`
+	// Violations is a set of rule results. Even if a rule succeeded, its output will be included in Violations.
 	Violations []*EvaluatePolicyViolation `protobuf:"bytes,3,rep,name=violations,proto3" json:"violations,omitempty"`
 }
 
@@ -230,12 +240,17 @@ type EvaluatePolicyViolation struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id          string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name        string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// Id is a Rode-specific requirement that can be used to match up a rule output with the result.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Name is a human-friendly description of the rule.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// Description is a longer message that explains the intention of the rule.
 	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	Message     string `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
-	Link        string `protobuf:"bytes,5,opt,name=link,proto3" json:"link,omitempty"`
-	Pass        bool   `protobuf:"varint,6,opt,name=pass,proto3" json:"pass,omitempty"`
+	// Message is a computed result with more information about why the rule was violated (e.g., number of high severity vulnerabilities discovered).
+	Message string `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
+	Link    string `protobuf:"bytes,5,opt,name=link,proto3" json:"link,omitempty"`
+	// Pass indicates whether this rule succeeded or failed.
+	Pass bool `protobuf:"varint,6,opt,name=pass,proto3" json:"pass,omitempty"`
 }
 
 func (x *EvaluatePolicyViolation) Reset() {
@@ -317,6 +332,7 @@ type ValidatePolicyRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// Policy is the raw Rego code to be validated.
 	Policy string `protobuf:"bytes,1,opt,name=policy,proto3" json:"policy,omitempty"`
 }
 
@@ -364,9 +380,12 @@ type ValidatePolicyResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Policy  string   `protobuf:"bytes,1,opt,name=policy,proto3" json:"policy,omitempty"`
-	Compile bool     `protobuf:"varint,2,opt,name=compile,proto3" json:"compile,omitempty"`
-	Errors  []string `protobuf:"bytes,3,rep,name=errors,proto3" json:"errors,omitempty"`
+	// Policy is the raw Rego code.
+	Policy string `protobuf:"bytes,1,opt,name=policy,proto3" json:"policy,omitempty"`
+	// Compile is a flag that indicates whether compilation of the Rego code was successful.
+	Compile bool `protobuf:"varint,2,opt,name=compile,proto3" json:"compile,omitempty"`
+	// Errors is a list of validation errors.
+	Errors []string `protobuf:"bytes,3,rep,name=errors,proto3" json:"errors,omitempty"`
 }
 
 func (x *ValidatePolicyResponse) Reset() {
@@ -427,6 +446,7 @@ type GetPolicyRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// Id is the autogenerated id of the policy.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 }
 
@@ -474,6 +494,7 @@ type DeletePolicyRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// Id is the autogenerated id of the policy.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 }
 
@@ -521,8 +542,12 @@ type ListPoliciesRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Filter    string `protobuf:"bytes,1,opt,name=filter,proto3" json:"filter,omitempty"`
-	PageSize  int32  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Filter is a CEL (common expression language) filter that can be used to limit results. If a filter isn't specified,
+	// all policies are returned.
+	Filter string `protobuf:"bytes,1,opt,name=filter,proto3" json:"filter,omitempty"`
+	// PageSize controls the number of results.
+	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// PageToken can be used to retrieve a specific page of results. The ListPoliciesResponse will include the next page token.
 	PageToken string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 }
 
@@ -584,8 +609,11 @@ type ListPoliciesResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Policies      []*Policy `protobuf:"bytes,1,rep,name=policies,proto3" json:"policies,omitempty"`
-	NextPageToken string    `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	// Policies is the list of policies, with the number of results controlled by the ListPoliciesRequest.Filter and ListPoliciesRequest.PageSize.
+	Policies []*Policy `protobuf:"bytes,1,rep,name=policies,proto3" json:"policies,omitempty"`
+	// NextPageToken can be used to retrieve the next page of results. It will be empty if the caller has reached the end
+	// of the result set.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 }
 
 func (x *ListPoliciesResponse) Reset() {
@@ -639,11 +667,13 @@ type UpdatePolicyRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// the auto-generate id of the occurrence
-	Id     string        `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Policy *PolicyEntity `protobuf:"bytes,2,opt,name=policy,proto3" json:"policy,omitempty"`
-	// The fields to update.
-	UpdateMask *field_mask.FieldMask `protobuf:"bytes,3,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
+	// Id is the autogenerated id of the policy.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Policy is the Policy message. Only Policy.Name, Policy.Description, and Policy.CurrentVersion can be updated. Changes to Policy.Policy are
+	// represented as new versions of a policy.
+	Policy *Policy `protobuf:"bytes,2,opt,name=policy,proto3" json:"policy,omitempty"`
+	// UpdateMask controls which fields should be updated with the values from Policy.
+	UpdateMask *field_mask.FieldMask `protobuf:"bytes,4,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
 }
 
 func (x *UpdatePolicyRequest) Reset() {
@@ -685,7 +715,7 @@ func (x *UpdatePolicyRequest) GetId() string {
 	return ""
 }
 
-func (x *UpdatePolicyRequest) GetPolicy() *PolicyEntity {
+func (x *UpdatePolicyRequest) GetPolicy() *Policy {
 	if x != nil {
 		return x.Policy
 	}
@@ -699,95 +729,37 @@ func (x *UpdatePolicyRequest) GetUpdateMask() *field_mask.FieldMask {
 	return nil
 }
 
-type PolicyEntity struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Name        string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Description string `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
-	// The rego code for the policy represented as a string
-	RegoContent string `protobuf:"bytes,3,opt,name=rego_content,json=regoContent,proto3" json:"rego_content,omitempty"`
-	// The location of the policy stored in source control
-	SourcePath string `protobuf:"bytes,4,opt,name=source_path,json=sourcePath,proto3" json:"source_path,omitempty"`
-}
-
-func (x *PolicyEntity) Reset() {
-	*x = PolicyEntity{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[11]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *PolicyEntity) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PolicyEntity) ProtoMessage() {}
-
-func (x *PolicyEntity) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[11]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PolicyEntity.ProtoReflect.Descriptor instead.
-func (*PolicyEntity) Descriptor() ([]byte, []int) {
-	return file_proto_v1alpha1_rode_policy_proto_rawDescGZIP(), []int{11}
-}
-
-func (x *PolicyEntity) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *PolicyEntity) GetDescription() string {
-	if x != nil {
-		return x.Description
-	}
-	return ""
-}
-
-func (x *PolicyEntity) GetRegoContent() string {
-	if x != nil {
-		return x.RegoContent
-	}
-	return ""
-}
-
-func (x *PolicyEntity) GetSourcePath() string {
-	if x != nil {
-		return x.SourcePath
-	}
-	return ""
-}
-
 type Policy struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// Unique autogenerate id
-	Id      string               `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Policy  *PolicyEntity        `protobuf:"bytes,2,opt,name=policy,proto3" json:"policy,omitempty"`
-	Created *timestamp.Timestamp `protobuf:"bytes,3,opt,name=created,proto3" json:"created,omitempty"`
-	Updated *timestamp.Timestamp `protobuf:"bytes,4,opt,name=updated,proto3" json:"updated,omitempty"`
+	// Id is the unique autogenerated identifier of a policy.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Name of the policy
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// Description should be a brief message about the intention of the policy. Updates to a policy can be described in
+	// the PolicyEntity.Message field.
+	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// CurrentVersion is the default policy version that's used when a policy is retrieved or evaluated. It's not necessarily
+	// the latest, as it may be overwritten if an older policy version should be used instead.
+	CurrentVersion int32 `protobuf:"varint,4,opt,name=current_version,json=currentVersion,proto3" json:"current_version,omitempty"`
+	// Policy contains the Rego policy code or a source location. The PolicyEntity.Version matches CurrentVersion unless
+	// it was otherwise specified.
+	Policy *PolicyEntity `protobuf:"bytes,5,opt,name=policy,proto3" json:"policy,omitempty"`
+	// Created is when the policy was first stored.
+	Created *timestamp.Timestamp `protobuf:"bytes,6,opt,name=created,proto3" json:"created,omitempty"`
+	// Updated indicates when either an edit occurred on the policy itself or a new policy version was created.
+	Updated *timestamp.Timestamp `protobuf:"bytes,7,opt,name=updated,proto3" json:"updated,omitempty"`
+	// Deleted is a flag controlling soft deletes. Deleted policies won't be returned by the ListPolicies RPC, but can
+	// still be retrieved and evaluated.
+	Deleted bool `protobuf:"varint,8,opt,name=deleted,proto3" json:"deleted,omitempty"`
 }
 
 func (x *Policy) Reset() {
 	*x = Policy{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[12]
+		mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[11]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -800,7 +772,7 @@ func (x *Policy) String() string {
 func (*Policy) ProtoMessage() {}
 
 func (x *Policy) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[12]
+	mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[11]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -813,7 +785,7 @@ func (x *Policy) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Policy.ProtoReflect.Descriptor instead.
 func (*Policy) Descriptor() ([]byte, []int) {
-	return file_proto_v1alpha1_rode_policy_proto_rawDescGZIP(), []int{12}
+	return file_proto_v1alpha1_rode_policy_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *Policy) GetId() string {
@@ -821,6 +793,27 @@ func (x *Policy) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *Policy) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Policy) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *Policy) GetCurrentVersion() int32 {
+	if x != nil {
+		return x.CurrentVersion
+	}
+	return 0
 }
 
 func (x *Policy) GetPolicy() *PolicyEntity {
@@ -844,11 +837,104 @@ func (x *Policy) GetUpdated() *timestamp.Timestamp {
 	return nil
 }
 
+func (x *Policy) GetDeleted() bool {
+	if x != nil {
+		return x.Deleted
+	}
+	return false
+}
+
+type PolicyEntity struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// Version is a number that represents revisions of a policy. Policy contents are immutable, so changes to the source
+	// are represented as new versions.
+	Version int32 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
+	// Message should contain a brief summary of the changes to the policy code between the current version
+	// and the previous version.
+	Message string `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	// RegoContent contains the Rego code for a given policy. Only one of RegoContent and SourcePath should be specified.
+	RegoContent string `protobuf:"bytes,3,opt,name=rego_content,json=regoContent,proto3" json:"rego_content,omitempty"`
+	// SourcePath is the location of the policy stored in source control.
+	SourcePath string `protobuf:"bytes,4,opt,name=source_path,json=sourcePath,proto3" json:"source_path,omitempty"`
+	// Created represents when this policy version was stored. Policy contents are immutable, so there is no corresponding Updated field.
+	Created *timestamp.Timestamp `protobuf:"bytes,5,opt,name=created,proto3" json:"created,omitempty"`
+}
+
+func (x *PolicyEntity) Reset() {
+	*x = PolicyEntity{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[12]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *PolicyEntity) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PolicyEntity) ProtoMessage() {}
+
+func (x *PolicyEntity) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[12]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PolicyEntity.ProtoReflect.Descriptor instead.
+func (*PolicyEntity) Descriptor() ([]byte, []int) {
+	return file_proto_v1alpha1_rode_policy_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *PolicyEntity) GetVersion() int32 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *PolicyEntity) GetMessage() string {
+	if x != nil {
+		return x.Message
+	}
+	return ""
+}
+
+func (x *PolicyEntity) GetRegoContent() string {
+	if x != nil {
+		return x.RegoContent
+	}
+	return ""
+}
+
+func (x *PolicyEntity) GetSourcePath() string {
+	if x != nil {
+		return x.SourcePath
+	}
+	return ""
+}
+
+func (x *PolicyEntity) GetCreated() *timestamp.Timestamp {
+	if x != nil {
+		return x.Created
+	}
+	return nil
+}
+
 var File_proto_v1alpha1_rode_policy_proto protoreflect.FileDescriptor
 
 var file_proto_v1alpha1_rode_policy_proto_rawDesc = []byte{
 	0x0a, 0x20, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31,
-	0x2f, 0x72, 0x6f, 0x64, 0x65, 0x2d, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x2e, 0x70, 0x72, 0x6f,
+	0x2f, 0x72, 0x6f, 0x64, 0x65, 0x5f, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x2e, 0x70, 0x72, 0x6f,
 	0x74, 0x6f, 0x12, 0x0d, 0x72, 0x6f, 0x64, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61,
 	0x31, 0x1a, 0x1f, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62,
 	0x75, 0x66, 0x2f, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x2e, 0x70, 0x72, 0x6f,
@@ -918,40 +1004,51 @@ var file_proto_v1alpha1_rode_policy_proto_rawDesc = []byte{
 	0x70, 0x68, 0x61, 0x31, 0x2e, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x08, 0x70, 0x6f, 0x6c,
 	0x69, 0x63, 0x69, 0x65, 0x73, 0x12, 0x26, 0x0a, 0x0f, 0x6e, 0x65, 0x78, 0x74, 0x5f, 0x70, 0x61,
 	0x67, 0x65, 0x5f, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0d,
-	0x6e, 0x65, 0x78, 0x74, 0x50, 0x61, 0x67, 0x65, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x22, 0x97, 0x01,
+	0x6e, 0x65, 0x78, 0x74, 0x50, 0x61, 0x67, 0x65, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x22, 0x91, 0x01,
 	0x0a, 0x13, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65,
 	0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x33, 0x0a, 0x06, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x18,
-	0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1b, 0x2e, 0x72, 0x6f, 0x64, 0x65, 0x2e, 0x76, 0x31, 0x61,
-	0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x45, 0x6e, 0x74, 0x69,
-	0x74, 0x79, 0x52, 0x06, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x12, 0x3b, 0x0a, 0x0b, 0x75, 0x70,
-	0x64, 0x61, 0x74, 0x65, 0x5f, 0x6d, 0x61, 0x73, 0x6b, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0b, 0x32,
-	0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75,
-	0x66, 0x2e, 0x46, 0x69, 0x65, 0x6c, 0x64, 0x4d, 0x61, 0x73, 0x6b, 0x52, 0x0a, 0x75, 0x70, 0x64,
-	0x61, 0x74, 0x65, 0x4d, 0x61, 0x73, 0x6b, 0x22, 0x88, 0x01, 0x0a, 0x0c, 0x50, 0x6f, 0x6c, 0x69,
-	0x63, 0x79, 0x45, 0x6e, 0x74, 0x69, 0x74, 0x79, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65,
-	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x20, 0x0a, 0x0b,
-	0x64, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x0b, 0x64, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x21,
-	0x0a, 0x0c, 0x72, 0x65, 0x67, 0x6f, 0x5f, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x18, 0x03,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x72, 0x65, 0x67, 0x6f, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x6e,
-	0x74, 0x12, 0x1f, 0x0a, 0x0b, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x5f, 0x70, 0x61, 0x74, 0x68,
-	0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x50, 0x61,
-	0x74, 0x68, 0x22, 0xb9, 0x01, 0x0a, 0x06, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x12, 0x0e, 0x0a,
-	0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x33, 0x0a,
-	0x06, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1b, 0x2e,
-	0x72, 0x6f, 0x64, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x50, 0x6f,
-	0x6c, 0x69, 0x63, 0x79, 0x45, 0x6e, 0x74, 0x69, 0x74, 0x79, 0x52, 0x06, 0x70, 0x6f, 0x6c, 0x69,
-	0x63, 0x79, 0x12, 0x34, 0x0a, 0x07, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x18, 0x03, 0x20,
-	0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f,
-	0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52,
-	0x07, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x12, 0x34, 0x0a, 0x07, 0x75, 0x70, 0x64, 0x61,
-	0x74, 0x65, 0x64, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67,
-	0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d, 0x65,
-	0x73, 0x74, 0x61, 0x6d, 0x70, 0x52, 0x07, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x42, 0x25,
-	0x5a, 0x23, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x72, 0x6f, 0x64,
-	0x65, 0x2f, 0x72, 0x6f, 0x64, 0x65, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x76, 0x31, 0x61,
-	0x6c, 0x70, 0x68, 0x61, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x2d, 0x0a, 0x06, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x18,
+	0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x15, 0x2e, 0x72, 0x6f, 0x64, 0x65, 0x2e, 0x76, 0x31, 0x61,
+	0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x06, 0x70, 0x6f,
+	0x6c, 0x69, 0x63, 0x79, 0x12, 0x3b, 0x0a, 0x0b, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x5f, 0x6d,
+	0x61, 0x73, 0x6b, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67,
+	0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x46, 0x69, 0x65, 0x6c,
+	0x64, 0x4d, 0x61, 0x73, 0x6b, 0x52, 0x0a, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x4d, 0x61, 0x73,
+	0x6b, 0x22, 0xb2, 0x02, 0x0a, 0x06, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x12, 0x0e, 0x0a, 0x02,
+	0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x12, 0x0a, 0x04,
+	0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65,
+	0x12, 0x20, 0x0a, 0x0b, 0x64, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69, 0x6f, 0x6e, 0x18,
+	0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x64, 0x65, 0x73, 0x63, 0x72, 0x69, 0x70, 0x74, 0x69,
+	0x6f, 0x6e, 0x12, 0x27, 0x0a, 0x0f, 0x63, 0x75, 0x72, 0x72, 0x65, 0x6e, 0x74, 0x5f, 0x76, 0x65,
+	0x72, 0x73, 0x69, 0x6f, 0x6e, 0x18, 0x04, 0x20, 0x01, 0x28, 0x05, 0x52, 0x0e, 0x63, 0x75, 0x72,
+	0x72, 0x65, 0x6e, 0x74, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x12, 0x33, 0x0a, 0x06, 0x70,
+	0x6f, 0x6c, 0x69, 0x63, 0x79, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1b, 0x2e, 0x72, 0x6f,
+	0x64, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x50, 0x6f, 0x6c, 0x69,
+	0x63, 0x79, 0x45, 0x6e, 0x74, 0x69, 0x74, 0x79, 0x52, 0x06, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79,
+	0x12, 0x34, 0x0a, 0x07, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x18, 0x06, 0x20, 0x01, 0x28,
+	0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x62, 0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52, 0x07, 0x63,
+	0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x12, 0x34, 0x0a, 0x07, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65,
+	0x64, 0x18, 0x07, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65,
+	0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74,
+	0x61, 0x6d, 0x70, 0x52, 0x07, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x12, 0x18, 0x0a, 0x07,
+	0x64, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x64, 0x18, 0x08, 0x20, 0x01, 0x28, 0x08, 0x52, 0x07, 0x64,
+	0x65, 0x6c, 0x65, 0x74, 0x65, 0x64, 0x22, 0xbc, 0x01, 0x0a, 0x0c, 0x50, 0x6f, 0x6c, 0x69, 0x63,
+	0x79, 0x45, 0x6e, 0x74, 0x69, 0x74, 0x79, 0x12, 0x18, 0x0a, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69,
+	0x6f, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f,
+	0x6e, 0x12, 0x18, 0x0a, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x18, 0x02, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x07, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x12, 0x21, 0x0a, 0x0c, 0x72,
+	0x65, 0x67, 0x6f, 0x5f, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x18, 0x03, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x0b, 0x72, 0x65, 0x67, 0x6f, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x6e, 0x74, 0x12, 0x1f,
+	0x0a, 0x0b, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x5f, 0x70, 0x61, 0x74, 0x68, 0x18, 0x04, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x0a, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x50, 0x61, 0x74, 0x68, 0x12,
+	0x34, 0x0a, 0x07, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62,
+	0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52, 0x07, 0x63, 0x72,
+	0x65, 0x61, 0x74, 0x65, 0x64, 0x42, 0x25, 0x5a, 0x23, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e,
+	0x63, 0x6f, 0x6d, 0x2f, 0x72, 0x6f, 0x64, 0x65, 0x2f, 0x72, 0x6f, 0x64, 0x65, 0x2f, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x2f, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x62, 0x06, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -979,8 +1076,8 @@ var file_proto_v1alpha1_rode_policy_proto_goTypes = []interface{}{
 	(*ListPoliciesRequest)(nil),     // 8: rode.v1alpha1.ListPoliciesRequest
 	(*ListPoliciesResponse)(nil),    // 9: rode.v1alpha1.ListPoliciesResponse
 	(*UpdatePolicyRequest)(nil),     // 10: rode.v1alpha1.UpdatePolicyRequest
-	(*PolicyEntity)(nil),            // 11: rode.v1alpha1.PolicyEntity
-	(*Policy)(nil),                  // 12: rode.v1alpha1.Policy
+	(*Policy)(nil),                  // 11: rode.v1alpha1.Policy
+	(*PolicyEntity)(nil),            // 12: rode.v1alpha1.PolicyEntity
 	(*timestamp.Timestamp)(nil),     // 13: google.protobuf.Timestamp
 	(*field_mask.FieldMask)(nil),    // 14: google.protobuf.FieldMask
 }
@@ -988,17 +1085,18 @@ var file_proto_v1alpha1_rode_policy_proto_depIdxs = []int32{
 	2,  // 0: rode.v1alpha1.EvaluatePolicyResponse.result:type_name -> rode.v1alpha1.EvaluatePolicyResult
 	13, // 1: rode.v1alpha1.EvaluatePolicyResult.created:type_name -> google.protobuf.Timestamp
 	3,  // 2: rode.v1alpha1.EvaluatePolicyResult.violations:type_name -> rode.v1alpha1.EvaluatePolicyViolation
-	12, // 3: rode.v1alpha1.ListPoliciesResponse.policies:type_name -> rode.v1alpha1.Policy
-	11, // 4: rode.v1alpha1.UpdatePolicyRequest.policy:type_name -> rode.v1alpha1.PolicyEntity
+	11, // 3: rode.v1alpha1.ListPoliciesResponse.policies:type_name -> rode.v1alpha1.Policy
+	11, // 4: rode.v1alpha1.UpdatePolicyRequest.policy:type_name -> rode.v1alpha1.Policy
 	14, // 5: rode.v1alpha1.UpdatePolicyRequest.update_mask:type_name -> google.protobuf.FieldMask
-	11, // 6: rode.v1alpha1.Policy.policy:type_name -> rode.v1alpha1.PolicyEntity
+	12, // 6: rode.v1alpha1.Policy.policy:type_name -> rode.v1alpha1.PolicyEntity
 	13, // 7: rode.v1alpha1.Policy.created:type_name -> google.protobuf.Timestamp
 	13, // 8: rode.v1alpha1.Policy.updated:type_name -> google.protobuf.Timestamp
-	9,  // [9:9] is the sub-list for method output_type
-	9,  // [9:9] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	13, // 9: rode.v1alpha1.PolicyEntity.created:type_name -> google.protobuf.Timestamp
+	10, // [10:10] is the sub-list for method output_type
+	10, // [10:10] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_proto_v1alpha1_rode_policy_proto_init() }
@@ -1140,7 +1238,7 @@ func file_proto_v1alpha1_rode_policy_proto_init() {
 			}
 		}
 		file_proto_v1alpha1_rode_policy_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PolicyEntity); i {
+			switch v := v.(*Policy); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1152,7 +1250,7 @@ func file_proto_v1alpha1_rode_policy_proto_init() {
 			}
 		}
 		file_proto_v1alpha1_rode_policy_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Policy); i {
+			switch v := v.(*PolicyEntity); i {
 			case 0:
 				return &v.state
 			case 1:

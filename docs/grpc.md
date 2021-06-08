@@ -3,21 +3,6 @@
 
 ## Table of Contents
 
-- [proto/v1alpha1/rode-policy.proto](#proto/v1alpha1/rode-policy.proto)
-    - [DeletePolicyRequest](#rode.v1alpha1.DeletePolicyRequest)
-    - [EvaluatePolicyRequest](#rode.v1alpha1.EvaluatePolicyRequest)
-    - [EvaluatePolicyResponse](#rode.v1alpha1.EvaluatePolicyResponse)
-    - [EvaluatePolicyResult](#rode.v1alpha1.EvaluatePolicyResult)
-    - [EvaluatePolicyViolation](#rode.v1alpha1.EvaluatePolicyViolation)
-    - [GetPolicyRequest](#rode.v1alpha1.GetPolicyRequest)
-    - [ListPoliciesRequest](#rode.v1alpha1.ListPoliciesRequest)
-    - [ListPoliciesResponse](#rode.v1alpha1.ListPoliciesResponse)
-    - [Policy](#rode.v1alpha1.Policy)
-    - [PolicyEntity](#rode.v1alpha1.PolicyEntity)
-    - [UpdatePolicyRequest](#rode.v1alpha1.UpdatePolicyRequest)
-    - [ValidatePolicyRequest](#rode.v1alpha1.ValidatePolicyRequest)
-    - [ValidatePolicyResponse](#rode.v1alpha1.ValidatePolicyResponse)
-  
 - [proto/v1alpha1/rode.proto](#proto/v1alpha1/rode.proto)
     - [BatchCreateOccurrencesRequest](#rode.v1alpha1.BatchCreateOccurrencesRequest)
     - [BatchCreateOccurrencesResponse](#rode.v1alpha1.BatchCreateOccurrencesResponse)
@@ -44,242 +29,22 @@
   
     - [Rode](#rode.v1alpha1.Rode)
   
+- [proto/v1alpha1/rode_policy.proto](#proto/v1alpha1/rode_policy.proto)
+    - [DeletePolicyRequest](#rode.v1alpha1.DeletePolicyRequest)
+    - [EvaluatePolicyRequest](#rode.v1alpha1.EvaluatePolicyRequest)
+    - [EvaluatePolicyResponse](#rode.v1alpha1.EvaluatePolicyResponse)
+    - [EvaluatePolicyResult](#rode.v1alpha1.EvaluatePolicyResult)
+    - [EvaluatePolicyViolation](#rode.v1alpha1.EvaluatePolicyViolation)
+    - [GetPolicyRequest](#rode.v1alpha1.GetPolicyRequest)
+    - [ListPoliciesRequest](#rode.v1alpha1.ListPoliciesRequest)
+    - [ListPoliciesResponse](#rode.v1alpha1.ListPoliciesResponse)
+    - [Policy](#rode.v1alpha1.Policy)
+    - [PolicyEntity](#rode.v1alpha1.PolicyEntity)
+    - [UpdatePolicyRequest](#rode.v1alpha1.UpdatePolicyRequest)
+    - [ValidatePolicyRequest](#rode.v1alpha1.ValidatePolicyRequest)
+    - [ValidatePolicyResponse](#rode.v1alpha1.ValidatePolicyResponse)
+  
 - [Scalar Value Types](#scalar-value-types)
-
-
-
-<a name="proto/v1alpha1/rode-policy.proto"></a>
-<p align="right"><a href="#top">Top</a></p>
-
-## proto/v1alpha1/rode-policy.proto
-
-
-
-<a name="rode.v1alpha1.DeletePolicyRequest"></a>
-
-### DeletePolicyRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| id | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="rode.v1alpha1.EvaluatePolicyRequest"></a>
-
-### EvaluatePolicyRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| policy | [string](#string) |  |  |
-| resource_uri | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="rode.v1alpha1.EvaluatePolicyResponse"></a>
-
-### EvaluatePolicyResponse
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| pass | [bool](#bool) |  |  |
-| changed | [bool](#bool) |  |  |
-| result | [EvaluatePolicyResult](#rode.v1alpha1.EvaluatePolicyResult) | repeated |  |
-| explanation | [string](#string) | repeated |  |
-
-
-
-
-
-
-<a name="rode.v1alpha1.EvaluatePolicyResult"></a>
-
-### EvaluatePolicyResult
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| pass | [bool](#bool) |  |  |
-| created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
-| violations | [EvaluatePolicyViolation](#rode.v1alpha1.EvaluatePolicyViolation) | repeated |  |
-
-
-
-
-
-
-<a name="rode.v1alpha1.EvaluatePolicyViolation"></a>
-
-### EvaluatePolicyViolation
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| id | [string](#string) |  |  |
-| name | [string](#string) |  |  |
-| description | [string](#string) |  |  |
-| message | [string](#string) |  |  |
-| link | [string](#string) |  |  |
-| pass | [bool](#bool) |  |  |
-
-
-
-
-
-
-<a name="rode.v1alpha1.GetPolicyRequest"></a>
-
-### GetPolicyRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| id | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="rode.v1alpha1.ListPoliciesRequest"></a>
-
-### ListPoliciesRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| filter | [string](#string) |  |  |
-| page_size | [int32](#int32) |  |  |
-| page_token | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="rode.v1alpha1.ListPoliciesResponse"></a>
-
-### ListPoliciesResponse
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| policies | [Policy](#rode.v1alpha1.Policy) | repeated |  |
-| next_page_token | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="rode.v1alpha1.Policy"></a>
-
-### Policy
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| id | [string](#string) |  | Unique autogenerate id |
-| policy | [PolicyEntity](#rode.v1alpha1.PolicyEntity) |  |  |
-| created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
-| updated | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
-
-
-
-
-
-
-<a name="rode.v1alpha1.PolicyEntity"></a>
-
-### PolicyEntity
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| name | [string](#string) |  |  |
-| description | [string](#string) |  |  |
-| rego_content | [string](#string) |  | The rego code for the policy represented as a string |
-| source_path | [string](#string) |  | The location of the policy stored in source control |
-
-
-
-
-
-
-<a name="rode.v1alpha1.UpdatePolicyRequest"></a>
-
-### UpdatePolicyRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| id | [string](#string) |  | the auto-generate id of the occurrence |
-| policy | [PolicyEntity](#rode.v1alpha1.PolicyEntity) |  |  |
-| update_mask | [google.protobuf.FieldMask](#google.protobuf.FieldMask) |  | The fields to update. |
-
-
-
-
-
-
-<a name="rode.v1alpha1.ValidatePolicyRequest"></a>
-
-### ValidatePolicyRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| policy | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="rode.v1alpha1.ValidatePolicyResponse"></a>
-
-### ValidatePolicyResponse
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| policy | [string](#string) |  |  |
-| compile | [bool](#bool) |  |  |
-| errors | [string](#string) | repeated |  |
-
-
-
-
-
- 
-
- 
-
- 
-
- 
 
 
 
@@ -661,7 +426,7 @@ https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576
 | ListVersionedResourceOccurrences | [ListVersionedResourceOccurrencesRequest](#rode.v1alpha1.ListVersionedResourceOccurrencesRequest) | [ListVersionedResourceOccurrencesResponse](#rode.v1alpha1.ListVersionedResourceOccurrencesResponse) |  |
 | ListOccurrences | [ListOccurrencesRequest](#rode.v1alpha1.ListOccurrencesRequest) | [ListOccurrencesResponse](#rode.v1alpha1.ListOccurrencesResponse) |  |
 | UpdateOccurrence | [UpdateOccurrenceRequest](#rode.v1alpha1.UpdateOccurrenceRequest) | [.grafeas.v1beta1.Occurrence](#grafeas.v1beta1.Occurrence) |  |
-| CreatePolicy | [PolicyEntity](#rode.v1alpha1.PolicyEntity) | [Policy](#rode.v1alpha1.Policy) |  |
+| CreatePolicy | [Policy](#rode.v1alpha1.Policy) | [Policy](#rode.v1alpha1.Policy) |  |
 | GetPolicy | [GetPolicyRequest](#rode.v1alpha1.GetPolicyRequest) | [Policy](#rode.v1alpha1.Policy) |  |
 | DeletePolicy | [DeletePolicyRequest](#rode.v1alpha1.DeletePolicyRequest) | [.google.protobuf.Empty](#google.protobuf.Empty) |  |
 | ListPolicies | [ListPoliciesRequest](#rode.v1alpha1.ListPoliciesRequest) | [ListPoliciesResponse](#rode.v1alpha1.ListPoliciesResponse) |  |
@@ -669,6 +434,246 @@ https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576
 | UpdatePolicy | [UpdatePolicyRequest](#rode.v1alpha1.UpdatePolicyRequest) | [Policy](#rode.v1alpha1.Policy) |  |
 | RegisterCollector | [RegisterCollectorRequest](#rode.v1alpha1.RegisterCollectorRequest) | [RegisterCollectorResponse](#rode.v1alpha1.RegisterCollectorResponse) | RegisterCollector accepts a collector ID and a list of notes that this collector will reference when creating occurrences. The response will contain the notes with the fully qualified note name. This operation is idempotent, so any notes that already exist will not be re-created. Collectors are expected to invoke this RPC each time they start. |
 | CreateNote | [CreateNoteRequest](#rode.v1alpha1.CreateNoteRequest) | [.grafeas.v1beta1.Note](#grafeas.v1beta1.Note) | CreateNote acts as a simple proxy to the grafeas CreateNote rpc |
+
+ 
+
+
+
+<a name="proto/v1alpha1/rode_policy.proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## proto/v1alpha1/rode_policy.proto
+
+
+
+<a name="rode.v1alpha1.DeletePolicyRequest"></a>
+
+### DeletePolicyRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  | Id is the autogenerated id of the policy. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.EvaluatePolicyRequest"></a>
+
+### EvaluatePolicyRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| policy | [string](#string) |  | Policy is the unique identifier of a policy. |
+| resource_uri | [string](#string) |  | ResourceUri is used to identify occurrences that should be passed to the policy evaluation in Open Policy Agent. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.EvaluatePolicyResponse"></a>
+
+### EvaluatePolicyResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| pass | [bool](#bool) |  | Pass indicates whether the entire evaluation succeeded or failed. |
+| changed | [bool](#bool) |  | Changed designates if the evaluation result differs from the last evaluation. |
+| result | [EvaluatePolicyResult](#rode.v1alpha1.EvaluatePolicyResult) | repeated | Result is a list of evaluation outputs built up by the policy. |
+| explanation | [string](#string) | repeated | Explanation is the raw diagnostic output from Open Policy Agent when the explain parameter is included in the request. It&#39;s intended to be used when writing or debugging policy. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.EvaluatePolicyResult"></a>
+
+### EvaluatePolicyResult
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| pass | [bool](#bool) |  | Pass designates if this individual result succeeded or failed. |
+| created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  | Created is a timestamp set after the call to Open Policy Agent. |
+| violations | [EvaluatePolicyViolation](#rode.v1alpha1.EvaluatePolicyViolation) | repeated | Violations is a set of rule results. Even if a rule succeeded, its output will be included in Violations. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.EvaluatePolicyViolation"></a>
+
+### EvaluatePolicyViolation
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  | Id is a Rode-specific requirement that can be used to match up a rule output with the result. |
+| name | [string](#string) |  | Name is a human-friendly description of the rule. |
+| description | [string](#string) |  | Description is a longer message that explains the intention of the rule. |
+| message | [string](#string) |  | Message is a computed result with more information about why the rule was violated (e.g., number of high severity vulnerabilities discovered). |
+| link | [string](#string) |  |  |
+| pass | [bool](#bool) |  | Pass indicates whether this rule succeeded or failed. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.GetPolicyRequest"></a>
+
+### GetPolicyRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  | Id is the autogenerated id of the policy. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ListPoliciesRequest"></a>
+
+### ListPoliciesRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| filter | [string](#string) |  | Filter is a CEL (common expression language) filter that can be used to limit results. If a filter isn&#39;t specified, all policies are returned. |
+| page_size | [int32](#int32) |  | PageSize controls the number of results. |
+| page_token | [string](#string) |  | PageToken can be used to retrieve a specific page of results. The ListPoliciesResponse will include the next page token. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ListPoliciesResponse"></a>
+
+### ListPoliciesResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| policies | [Policy](#rode.v1alpha1.Policy) | repeated | Policies is the list of policies, with the number of results controlled by the ListPoliciesRequest.Filter and ListPoliciesRequest.PageSize. |
+| next_page_token | [string](#string) |  | NextPageToken can be used to retrieve the next page of results. It will be empty if the caller has reached the end of the result set. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.Policy"></a>
+
+### Policy
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  | Id is the unique autogenerated identifier of a policy. |
+| name | [string](#string) |  | Name of the policy |
+| description | [string](#string) |  | Description should be a brief message about the intention of the policy. Updates to a policy can be described in the PolicyEntity.Message field. |
+| current_version | [int32](#int32) |  | CurrentVersion is the default policy version that&#39;s used when a policy is retrieved or evaluated. It&#39;s not necessarily the latest, as it may be overwritten if an older policy version should be used instead. |
+| policy | [PolicyEntity](#rode.v1alpha1.PolicyEntity) |  | Policy contains the Rego policy code or a source location. The PolicyEntity.Version matches CurrentVersion unless it was otherwise specified. |
+| created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  | Created is when the policy was first stored. |
+| updated | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  | Updated indicates when either an edit occurred on the policy itself or a new policy version was created. |
+| deleted | [bool](#bool) |  | Deleted is a flag controlling soft deletes. Deleted policies won&#39;t be returned by the ListPolicies RPC, but can still be retrieved and evaluated. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.PolicyEntity"></a>
+
+### PolicyEntity
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| version | [int32](#int32) |  | Version is a number that represents revisions of a policy. Policy contents are immutable, so changes to the source are represented as new versions. |
+| message | [string](#string) |  | Message should contain a brief summary of the changes to the policy code between the current version and the previous version. |
+| rego_content | [string](#string) |  | RegoContent contains the Rego code for a given policy. Only one of RegoContent and SourcePath should be specified. |
+| source_path | [string](#string) |  | SourcePath is the location of the policy stored in source control. |
+| created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  | Created represents when this policy version was stored. Policy contents are immutable, so there is no corresponding Updated field. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.UpdatePolicyRequest"></a>
+
+### UpdatePolicyRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  | Id is the autogenerated id of the policy. |
+| policy | [Policy](#rode.v1alpha1.Policy) |  | Policy is the Policy message. Only Policy.Name, Policy.Description, and Policy.CurrentVersion can be updated. Changes to Policy.Policy are represented as new versions of a policy. |
+| update_mask | [google.protobuf.FieldMask](#google.protobuf.FieldMask) |  | UpdateMask controls which fields should be updated with the values from Policy. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ValidatePolicyRequest"></a>
+
+### ValidatePolicyRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| policy | [string](#string) |  | Policy is the raw Rego code to be validated. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ValidatePolicyResponse"></a>
+
+### ValidatePolicyResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| policy | [string](#string) |  | Policy is the raw Rego code. |
+| compile | [bool](#bool) |  | Compile is a flag that indicates whether compilation of the Rego code was successful. |
+| errors | [string](#string) | repeated | Errors is a list of validation errors. |
+
+
+
+
+
+ 
+
+ 
+
+ 
 
  
 

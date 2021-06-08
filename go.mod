@@ -9,8 +9,6 @@ require (
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/elastic/go-elasticsearch/v7 v7.12.0
-	github.com/gogo/protobuf v1.3.2
-	github.com/golang/mock v1.4.4
 	github.com/golang/protobuf v1.5.2
 	github.com/google/cel-go v0.7.3 // indirect
 	github.com/google/uuid v1.2.0
@@ -20,14 +18,13 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/jarcoal/httpmock v1.0.6
 	github.com/kr/pretty v0.2.0 // indirect
-	github.com/mennanov/fieldmask-utils v0.3.3
 	github.com/onsi/ginkgo v1.16.2
 	github.com/onsi/gomega v1.12.0
 	github.com/open-policy-agent/opa v0.27.1
 	github.com/pquerna/cachecontrol v0.1.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/rode/es-index-manager v0.1.2
-	github.com/rode/grafeas-elasticsearch v0.8.1
+	github.com/rode/grafeas-elasticsearch v0.8.2
 	github.com/soheilhy/cmux v0.1.4
 	github.com/stretchr/testify v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect

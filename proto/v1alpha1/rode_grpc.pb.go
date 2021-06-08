@@ -34,7 +34,7 @@ type RodeClient interface {
 	ListVersionedResourceOccurrences(ctx context.Context, in *ListVersionedResourceOccurrencesRequest, opts ...grpc.CallOption) (*ListVersionedResourceOccurrencesResponse, error)
 	ListOccurrences(ctx context.Context, in *ListOccurrencesRequest, opts ...grpc.CallOption) (*ListOccurrencesResponse, error)
 	UpdateOccurrence(ctx context.Context, in *UpdateOccurrenceRequest, opts ...grpc.CallOption) (*grafeas_go_proto.Occurrence, error)
-	CreatePolicy(ctx context.Context, in *PolicyEntity, opts ...grpc.CallOption) (*Policy, error)
+	CreatePolicy(ctx context.Context, in *Policy, opts ...grpc.CallOption) (*Policy, error)
 	GetPolicy(ctx context.Context, in *GetPolicyRequest, opts ...grpc.CallOption) (*Policy, error)
 	DeletePolicy(ctx context.Context, in *DeletePolicyRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	ListPolicies(ctx context.Context, in *ListPoliciesRequest, opts ...grpc.CallOption) (*ListPoliciesResponse, error)
@@ -129,7 +129,7 @@ func (c *rodeClient) UpdateOccurrence(ctx context.Context, in *UpdateOccurrenceR
 	return out, nil
 }
 
-func (c *rodeClient) CreatePolicy(ctx context.Context, in *PolicyEntity, opts ...grpc.CallOption) (*Policy, error) {
+func (c *rodeClient) CreatePolicy(ctx context.Context, in *Policy, opts ...grpc.CallOption) (*Policy, error) {
 	out := new(Policy)
 	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/CreatePolicy", in, out, opts...)
 	if err != nil {
@@ -202,7 +202,7 @@ func (c *rodeClient) CreateNote(ctx context.Context, in *CreateNoteRequest, opts
 }
 
 // RodeServer is the server API for Rode service.
-// All implementations must embed UnimplementedRodeServer
+// All implementations should embed UnimplementedRodeServer
 // for forward compatibility
 type RodeServer interface {
 	// Create occurrences
@@ -219,7 +219,7 @@ type RodeServer interface {
 	ListVersionedResourceOccurrences(context.Context, *ListVersionedResourceOccurrencesRequest) (*ListVersionedResourceOccurrencesResponse, error)
 	ListOccurrences(context.Context, *ListOccurrencesRequest) (*ListOccurrencesResponse, error)
 	UpdateOccurrence(context.Context, *UpdateOccurrenceRequest) (*grafeas_go_proto.Occurrence, error)
-	CreatePolicy(context.Context, *PolicyEntity) (*Policy, error)
+	CreatePolicy(context.Context, *Policy) (*Policy, error)
 	GetPolicy(context.Context, *GetPolicyRequest) (*Policy, error)
 	DeletePolicy(context.Context, *DeletePolicyRequest) (*empty.Empty, error)
 	ListPolicies(context.Context, *ListPoliciesRequest) (*ListPoliciesResponse, error)
@@ -232,10 +232,9 @@ type RodeServer interface {
 	RegisterCollector(context.Context, *RegisterCollectorRequest) (*RegisterCollectorResponse, error)
 	// CreateNote acts as a simple proxy to the grafeas CreateNote rpc
 	CreateNote(context.Context, *CreateNoteRequest) (*grafeas_go_proto.Note, error)
-	mustEmbedUnimplementedRodeServer()
 }
 
-// UnimplementedRodeServer must be embedded to have forward compatible implementations.
+// UnimplementedRodeServer should be embedded to have forward compatible implementations.
 type UnimplementedRodeServer struct {
 }
 
@@ -263,7 +262,7 @@ func (UnimplementedRodeServer) ListOccurrences(context.Context, *ListOccurrences
 func (UnimplementedRodeServer) UpdateOccurrence(context.Context, *UpdateOccurrenceRequest) (*grafeas_go_proto.Occurrence, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateOccurrence not implemented")
 }
-func (UnimplementedRodeServer) CreatePolicy(context.Context, *PolicyEntity) (*Policy, error) {
+func (UnimplementedRodeServer) CreatePolicy(context.Context, *Policy) (*Policy, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreatePolicy not implemented")
 }
 func (UnimplementedRodeServer) GetPolicy(context.Context, *GetPolicyRequest) (*Policy, error) {
@@ -287,7 +286,6 @@ func (UnimplementedRodeServer) RegisterCollector(context.Context, *RegisterColle
 func (UnimplementedRodeServer) CreateNote(context.Context, *CreateNoteRequest) (*grafeas_go_proto.Note, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateNote not implemented")
 }
-func (UnimplementedRodeServer) mustEmbedUnimplementedRodeServer() {}
 
 // UnsafeRodeServer may be embedded to opt out of forward compatibility for this service.
 // Use of this interface is not recommended, as added methods to RodeServer will
@@ -445,7 +443,7 @@ func _Rode_UpdateOccurrence_Handler(srv interface{}, ctx context.Context, dec fu
 }
 
 func _Rode_CreatePolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PolicyEntity)
+	in := new(Policy)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -457,7 +455,7 @@ func _Rode_CreatePolicy_Handler(srv interface{}, ctx context.Context, dec func(i
 		FullMethod: "/rode.v1alpha1.Rode/CreatePolicy",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RodeServer).CreatePolicy(ctx, req.(*PolicyEntity))
+		return srv.(RodeServer).CreatePolicy(ctx, req.(*Policy))
 	}
 	return interceptor(ctx, in, info, handler)
 }
