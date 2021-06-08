@@ -41,7 +41,9 @@ type EvaluatePolicyRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Policy      string `protobuf:"bytes,1,opt,name=policy,proto3" json:"policy,omitempty"`
+	// Policy is the unique identifier of a policy.
+	Policy string `protobuf:"bytes,1,opt,name=policy,proto3" json:"policy,omitempty"`
+	// ResourceUri is used to identify occurrences that should be passed to the policy evaluation in Open Policy Agent.
 	ResourceUri string `protobuf:"bytes,2,opt,name=resource_uri,json=resourceUri,proto3" json:"resource_uri,omitempty"`
 }
 
@@ -96,10 +98,15 @@ type EvaluatePolicyResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Pass        bool                    `protobuf:"varint,1,opt,name=pass,proto3" json:"pass,omitempty"`
-	Changed     bool                    `protobuf:"varint,2,opt,name=changed,proto3" json:"changed,omitempty"`
-	Result      []*EvaluatePolicyResult `protobuf:"bytes,3,rep,name=result,proto3" json:"result,omitempty"`
-	Explanation []string                `protobuf:"bytes,4,rep,name=explanation,proto3" json:"explanation,omitempty"`
+	// Pass indicates whether the entire evaluation succeeded or failed.
+	Pass bool `protobuf:"varint,1,opt,name=pass,proto3" json:"pass,omitempty"`
+	// Changed designates if the evaluation result differs from the last evaluation.
+	Changed bool `protobuf:"varint,2,opt,name=changed,proto3" json:"changed,omitempty"`
+	// Result is a list of evaluation outputs built up by the policy.
+	Result []*EvaluatePolicyResult `protobuf:"bytes,3,rep,name=result,proto3" json:"result,omitempty"`
+	// Explanation is the raw diagnostic output from Open Policy Agent when the explain parameter is included in the request. It's intended to be used
+	// when writing or debugging policy.
+	Explanation []string `protobuf:"bytes,4,rep,name=explanation,proto3" json:"explanation,omitempty"`
 }
 
 func (x *EvaluatePolicyResponse) Reset() {
@@ -167,8 +174,11 @@ type EvaluatePolicyResult struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Pass       bool                       `protobuf:"varint,1,opt,name=pass,proto3" json:"pass,omitempty"`
-	Created    *timestamp.Timestamp       `protobuf:"bytes,2,opt,name=created,proto3" json:"created,omitempty"`
+	// Pass designates if this individual result succeeded or failed.
+	Pass bool `protobuf:"varint,1,opt,name=pass,proto3" json:"pass,omitempty"`
+	// Created is a timestamp set after the call to Open Policy Agent.
+	Created *timestamp.Timestamp `protobuf:"bytes,2,opt,name=created,proto3" json:"created,omitempty"`
+	// Violations is a set of rule results. Even if a rule succeeded, its output will be included in Violations.
 	Violations []*EvaluatePolicyViolation `protobuf:"bytes,3,rep,name=violations,proto3" json:"violations,omitempty"`
 }
 
@@ -230,12 +240,17 @@ type EvaluatePolicyViolation struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id          string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name        string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// Id is a Rode-specific requirement that can be used to match up a rule output with the result.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Name is a human-friendly description of the rule.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// Description is a longer message that explains the intention of the rule.
 	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	Message     string `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
-	Link        string `protobuf:"bytes,5,opt,name=link,proto3" json:"link,omitempty"`
-	Pass        bool   `protobuf:"varint,6,opt,name=pass,proto3" json:"pass,omitempty"`
+	// Message is a computed result with more information about why the rule was violated (e.g., number of high severity vulnerabilities discovered).
+	Message string `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
+	Link    string `protobuf:"bytes,5,opt,name=link,proto3" json:"link,omitempty"`
+	// Pass indicates whether this rule succeeded or failed.
+	Pass bool `protobuf:"varint,6,opt,name=pass,proto3" json:"pass,omitempty"`
 }
 
 func (x *EvaluatePolicyViolation) Reset() {
@@ -317,6 +332,7 @@ type ValidatePolicyRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// Policy is the raw Rego code to be validated.
 	Policy string `protobuf:"bytes,1,opt,name=policy,proto3" json:"policy,omitempty"`
 }
 
@@ -364,9 +380,12 @@ type ValidatePolicyResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Policy  string   `protobuf:"bytes,1,opt,name=policy,proto3" json:"policy,omitempty"`
-	Compile bool     `protobuf:"varint,2,opt,name=compile,proto3" json:"compile,omitempty"`
-	Errors  []string `protobuf:"bytes,3,rep,name=errors,proto3" json:"errors,omitempty"`
+	// Policy is the raw Rego code.
+	Policy string `protobuf:"bytes,1,opt,name=policy,proto3" json:"policy,omitempty"`
+	// Compile is a flag that indicates whether compilation of the Rego code was successful.
+	Compile bool `protobuf:"varint,2,opt,name=compile,proto3" json:"compile,omitempty"`
+	// Errors is a list of validation errors.
+	Errors []string `protobuf:"bytes,3,rep,name=errors,proto3" json:"errors,omitempty"`
 }
 
 func (x *ValidatePolicyResponse) Reset() {
@@ -427,6 +446,7 @@ type GetPolicyRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// Id is the autogenerated id of the policy.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 }
 
@@ -474,6 +494,7 @@ type DeletePolicyRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// Id is the autogenerated id of the policy.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 }
 
@@ -521,8 +542,12 @@ type ListPoliciesRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Filter    string `protobuf:"bytes,1,opt,name=filter,proto3" json:"filter,omitempty"`
-	PageSize  int32  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Filter is a CEL (common expression language) filter that can be used to limit results. If a filter isn't specified,
+	// all policies are returned.
+	Filter string `protobuf:"bytes,1,opt,name=filter,proto3" json:"filter,omitempty"`
+	// PageSize controls the number of results.
+	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// PageToken can be used to retrieve a specific page of results. The ListPoliciesResponse will include the next page token.
 	PageToken string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 }
 
@@ -584,8 +609,11 @@ type ListPoliciesResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Policies      []*Policy `protobuf:"bytes,1,rep,name=policies,proto3" json:"policies,omitempty"`
-	NextPageToken string    `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	// Policies is the list of policies, with the number of results controlled by the ListPoliciesRequest.Filter and ListPoliciesRequest.PageSize.
+	Policies []*Policy `protobuf:"bytes,1,rep,name=policies,proto3" json:"policies,omitempty"`
+	// NextPageToken can be used to retrieve the next page of results. It will be empty if the caller has reached the end
+	// of the result set.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 }
 
 func (x *ListPoliciesResponse) Reset() {
@@ -639,10 +667,12 @@ type UpdatePolicyRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// the auto-generated id of the policy
-	Id     string  `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Id is the autogenerated id of the policy.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Policy is the Policy message. Only Policy.Name, Policy.Description, and Policy.CurrentVersion can be updated. Changes to Policy.Policy are
+	// represented as new versions of a policy.
 	Policy *Policy `protobuf:"bytes,2,opt,name=policy,proto3" json:"policy,omitempty"`
-	// The fields to update.
+	// UpdateMask controls which fields should be updated with the values from Policy.
 	UpdateMask *field_mask.FieldMask `protobuf:"bytes,4,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
 }
 
@@ -704,23 +734,25 @@ type Policy struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// Unique autogenerated id
+	// Id is the unique autogenerated identifier of a policy.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// The name of the policy
+	// Name of the policy
 	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	// A brief description of the policy
+	// Description should be a brief message about the intention of the policy. Updates to a policy can be described in
+	// the PolicyEntity.Message field.
 	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	// The current policy version -- not necessarily the newest.
+	// CurrentVersion is the default policy version that's used when a policy is retrieved or evaluated. It's not necessarily
+	// the latest, as it may be overwritten if an older policy version should be used instead.
 	CurrentVersion int32 `protobuf:"varint,4,opt,name=current_version,json=currentVersion,proto3" json:"current_version,omitempty"`
-	// Current policy code or source. The policy.version matches current_version
-	// This is set by Rode, and isn't meant to be populated by users
+	// Policy contains the Rego policy code or a source location. The PolicyEntity.Version matches CurrentVersion unless
+	// it was otherwise specified.
 	Policy *PolicyEntity `protobuf:"bytes,5,opt,name=policy,proto3" json:"policy,omitempty"`
-	// When the policy was created
+	// Created is when the policy was first stored.
 	Created *timestamp.Timestamp `protobuf:"bytes,6,opt,name=created,proto3" json:"created,omitempty"`
-	// A timestamp indicating when either an edit occurred on the policy itself
-	// or a new policy version was created
+	// Updated indicates when either an edit occurred on the policy itself or a new policy version was created.
 	Updated *timestamp.Timestamp `protobuf:"bytes,7,opt,name=updated,proto3" json:"updated,omitempty"`
-	// Indicates whether the policy has been soft-deleted
+	// Deleted is a flag controlling soft deletes. Deleted policies won't be returned by the ListPolicies RPC, but can
+	// still be retrieved and evaluated.
 	Deleted bool `protobuf:"varint,8,opt,name=deleted,proto3" json:"deleted,omitempty"`
 }
 
@@ -817,15 +849,17 @@ type PolicyEntity struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// The numeric version of the policy.
+	// Version is a number that represents revisions of a policy. Policy contents are immutable, so changes to the source
+	// are represented as new versions.
 	Version int32 `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
-	// A message indicating what was changed in this version
+	// Message should contain a brief summary of the changes to the policy code between the current version
+	// and the previous version.
 	Message string `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
-	// The Rego code for the policy represented as a string
+	// RegoContent contains the Rego code for a given policy. Only one of RegoContent and SourcePath should be specified.
 	RegoContent string `protobuf:"bytes,3,opt,name=rego_content,json=regoContent,proto3" json:"rego_content,omitempty"`
-	// The location of the policy stored in source control
+	// SourcePath is the location of the policy stored in source control.
 	SourcePath string `protobuf:"bytes,4,opt,name=source_path,json=sourcePath,proto3" json:"source_path,omitempty"`
-	// When this version was created
+	// Created represents when this policy version was stored. Policy contents are immutable, so there is no corresponding Updated field.
 	Created *timestamp.Timestamp `protobuf:"bytes,5,opt,name=created,proto3" json:"created,omitempty"`
 }
 
