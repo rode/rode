@@ -40,12 +40,15 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var (
 	//go:embed test/good.rego
 	goodPolicy string
+	//go:embed test/minimal.rego
+	minimalPolicy string
 	//go:embed test/missing_rode_fields.rego
 	compilablePolicyMissingRodeFields string
 	//go:embed test/missing_results_fields.rego
@@ -99,7 +102,7 @@ var _ = Describe("PolicyManager", func() {
 		var (
 			policyId        string
 			policyVersionId string
-			version         int32
+			version         uint32
 			policy          *pb.Policy
 			policyEntity    *pb.PolicyEntity
 
@@ -161,7 +164,7 @@ var _ = Describe("PolicyManager", func() {
 
 				Expect(actualRequest.Index).To(Equal(expectedPoliciesAlias))
 				Expect(actualRequest.Refresh).To(Equal(esConfig.Refresh.String()))
-				Expect(actualRequest.Items).To(HaveLen(2))
+				Expect(actualRequest.Items).To(HaveLen(3))
 
 				createPolicyItem := actualRequest.Items[0]
 				Expect(createPolicyItem.Operation).To(Equal(esutil.BULK_CREATE))
@@ -169,7 +172,12 @@ var _ = Describe("PolicyManager", func() {
 				Expect(createPolicyItem.Join.Field).To(Equal("join"))
 				Expect(createPolicyItem.Join.Name).To(Equal("policy"))
 
-				createPolicyEntityItem := actualRequest.Items[1]
+				createCounterItem := actualRequest.Items[1]
+				Expect(createCounterItem.Operation).To(Equal(esutil.BULK_CREATE))
+				Expect(createCounterItem.DocumentId).To(Equal(policyId + ".counter"))
+				Expect(createCounterItem.Message).To(Equal(&emptypb.Empty{}))
+
+				createPolicyEntityItem := actualRequest.Items[2]
 				Expect(createPolicyEntityItem.Operation).To(Equal(esutil.BULK_CREATE))
 				Expect(createPolicyEntityItem.DocumentId).To(Equal(policyVersionId))
 				Expect(createPolicyEntityItem.Join.Field).To(Equal("join"))
@@ -326,7 +334,7 @@ var _ = Describe("PolicyManager", func() {
 		var (
 			policyId             string
 			policyVersionId      string
-			version              int32
+			version              uint32
 			request              *pb.GetPolicyRequest
 			expectedPolicy       *pb.Policy
 			expectedPolicyEntity *pb.PolicyEntity
@@ -343,7 +351,7 @@ var _ = Describe("PolicyManager", func() {
 
 		BeforeEach(func() {
 			policyId = fake.UUID()
-			version = int32(fake.Number(1, 10))
+			version = uint32(fake.Number(1, 10))
 			policyVersionId = fmt.Sprintf("%s.%d", policyId, version)
 
 			request = &pb.GetPolicyRequest{
@@ -421,7 +429,7 @@ var _ = Describe("PolicyManager", func() {
 		When("a policy version id is passed", func() {
 			BeforeEach(func() {
 				request.Id = policyVersionId
-				expectedPolicy.CurrentVersion = fake.Int32()
+				expectedPolicy.CurrentVersion = fake.Uint32()
 				policyJson, _ := protojson.Marshal(expectedPolicy)
 
 				getPolicyResponse.Source = policyJson
@@ -589,7 +597,7 @@ var _ = Describe("PolicyManager", func() {
 			multiGetError = nil
 
 			for i := 0; i < policyCount; i++ {
-				policy := createRandomPolicy(fake.UUID(), fake.Int32())
+				policy := createRandomPolicy(fake.UUID(), fake.Uint32())
 				policyVersion := createRandomPolicyEntity(goodPolicy, policy.CurrentVersion)
 
 				policies = append(policies, policy)
@@ -834,8 +842,29 @@ var _ = Describe("PolicyManager", func() {
 
 	Context("UpdatePolicy", func() {
 		var (
-			policyId string
-			request  *pb.UpdatePolicyRequest
+			policyId       string
+			currentVersion uint32
+			newVersion     uint32
+
+			currentPolicy        *pb.Policy
+			currentPolicyVersion *pb.PolicyEntity
+
+			updatedPolicy        *pb.Policy
+			updatedPolicyVersion *pb.PolicyEntity
+
+			getPolicyResponse *esutil.EsGetResponse
+			getPolicyError    error
+
+			getPolicyVersionResponse *esutil.EsGetResponse
+			getPolicyVersionError    error
+
+			updateResponse *esutil.EsIndexDocResponse
+			updateError    error
+
+			bulkResponse *esutil.EsBulkResponse
+			bulkError    error
+
+			request *pb.UpdatePolicyRequest
 
 			actualResponse *pb.Policy
 			actualError    error
@@ -843,21 +872,354 @@ var _ = Describe("PolicyManager", func() {
 
 		BeforeEach(func() {
 			policyId = fake.UUID()
+			currentVersion = fake.Uint32()
+			newVersion = fake.Uint32()
+
+			currentPolicy = createRandomPolicy(policyId, currentVersion)
+			currentPolicyVersion = createRandomPolicyEntity(goodPolicy, currentVersion)
+			currentPolicy.Policy = currentPolicyVersion
+
+			updatedPolicy = deepCopyPolicy(currentPolicy)
+			updatedPolicy.Name = fake.Word()
+			updatedPolicy.Description = fake.Word()
+			updatedPolicyVersion = createRandomPolicyEntity(minimalPolicy, newVersion)
+			updatedPolicy.Policy = updatedPolicyVersion
+
+			policyJson, _ := protojson.Marshal(currentPolicy)
+			getPolicyResponse = &esutil.EsGetResponse{
+				Id:     policyId,
+				Found:  true,
+				Source: policyJson,
+			}
+			getPolicyError = nil
+
+			versionJson, _ := protojson.Marshal(currentPolicyVersion)
+			getPolicyVersionResponse = &esutil.EsGetResponse{
+				Id:     fmt.Sprintf("%s.%d", policyId, currentVersion),
+				Found:  true,
+				Source: versionJson,
+			}
+			getPolicyVersionError = nil
+
+			updateResponse = &esutil.EsIndexDocResponse{
+				Id:      policyId + ".counter",
+				Version: int(newVersion),
+			}
+			updateError = nil
+
+			bulkResponse = &esutil.EsBulkResponse{
+				Items: []*esutil.EsBulkResponseItem{
+					{
+						Index: &esutil.EsIndexDocResponse{
+							Status: http.StatusOK,
+						},
+					},
+					{
+						Create: &esutil.EsIndexDocResponse{
+							Status: http.StatusOK,
+						},
+					},
+				},
+				Errors: false,
+			}
+			bulkError = nil
+
 			request = &pb.UpdatePolicyRequest{
-				Id: policyId,
+				Policy: deepCopyPolicy(updatedPolicy),
 			}
 		})
 
 		JustBeforeEach(func() {
+			esClient.GetReturnsOnCall(0, getPolicyResponse, getPolicyError)
+			esClient.GetReturnsOnCall(1, getPolicyVersionResponse, getPolicyVersionError)
+
+			esClient.UpdateReturns(updateResponse, updateError)
+			if esClient.BulkStub == nil {
+				esClient.BulkReturns(bulkResponse, bulkError)
+			}
+
 			actualResponse, actualError = manager.UpdatePolicy(ctx, request)
+		})
+
+		It("should fetch the current policy and version", func() {
+			Expect(esClient.GetCallCount()).To(Equal(2))
+
+			_, actualGetPolicyRequest := esClient.GetArgsForCall(0)
+			Expect(actualGetPolicyRequest.DocumentId).To(Equal(policyId))
+			Expect(actualGetPolicyRequest.Index).To(Equal(expectedPoliciesAlias))
+			Expect(actualGetPolicyRequest.Routing).To(BeEmpty())
+
+			_, actualGetPolicyVersionRequest := esClient.GetArgsForCall(1)
+			Expect(actualGetPolicyVersionRequest.DocumentId).To(Equal(fmt.Sprintf("%s.%d", policyId, currentVersion)))
+			Expect(actualGetPolicyVersionRequest.Index).To(Equal(expectedPoliciesAlias))
+			Expect(actualGetPolicyVersionRequest.Routing).To(Equal(policyId))
+		})
+
+		It("should update the counter document", func() {
+			Expect(esClient.UpdateCallCount()).To(Equal(1))
+
+			_, actualRequest := esClient.UpdateArgsForCall(0)
+
+			Expect(actualRequest.Message).To(Equal(&emptypb.Empty{}))
+			Expect(actualRequest.Index).To(Equal(expectedPoliciesAlias))
+			Expect(actualRequest.DocumentId).To(Equal(fmt.Sprintf("%s.counter", policyId)))
+			Expect(actualRequest.Refresh).To(Equal(esConfig.Refresh.String()))
+		})
+
+		It("should send a bulk request to update the policy and create a new version", func() {
+			Expect(esClient.BulkCallCount()).To(Equal(1))
+
+			_, actualRequest := esClient.BulkArgsForCall(0)
+
+			Expect(actualRequest.Refresh).To(Equal(esConfig.Refresh.String()))
+			Expect(actualRequest.Index).To(Equal(expectedPoliciesAlias))
+			Expect(actualRequest.Items).To(HaveLen(2))
+
+			actualUpdate := actualRequest.Items[0]
+			Expect(actualUpdate.Operation).To(Equal(esutil.BULK_INDEX))
+			Expect(actualUpdate.DocumentId).To(Equal(policyId))
+			Expect(actualUpdate.Join.Name).To(Equal("policy"))
+			Expect(actualUpdate.Join.Field).To(Equal("join"))
+			actualPolicy := actualUpdate.Message.(*pb.Policy)
+			Expect(actualPolicy.CurrentVersion).To(Equal(newVersion))
+
+			actualCreate := actualRequest.Items[1]
+			Expect(actualCreate.DocumentId).To(Equal(fmt.Sprintf("%s.%d", policyId, newVersion)))
+			Expect(actualCreate.Join.Field).To(Equal("join"))
+			Expect(actualCreate.Join.Name).To(Equal("version"))
+			Expect(actualCreate.Join.Parent).To(Equal(policyId))
+			Expect(actualCreate.Operation).To(Equal(esutil.BULK_CREATE))
+			actualPolicyVersion := actualCreate.Message.(*pb.PolicyEntity)
+
+			Expect(actualPolicyVersion.RegoContent).To(Equal(minimalPolicy))
+			Expect(actualPolicyVersion.Version).To(Equal(newVersion))
+			Expect(actualPolicyVersion.Created.IsValid()).To(BeTrue())
 		})
 
 		It("should not return an error", func() {
 			Expect(actualError).NotTo(HaveOccurred())
 		})
 
-		It("should return an empty policy", func() {
-			Expect(actualResponse).To(Equal(&pb.Policy{}))
+		It("should return the updated policy", func() {
+			Expect(actualResponse.CurrentVersion).To(Equal(newVersion))
+			Expect(actualResponse.Updated).NotTo(Equal(currentPolicy.Updated))
+
+			Expect(actualResponse.Policy.Version).To(Equal(newVersion))
+			Expect(actualResponse.Policy.RegoContent).To(Equal(minimalPolicy))
+			Expect(actualResponse.Policy.Created.IsValid()).To(BeTrue())
+		})
+
+		When("the policy was previously deleted", func() {
+			BeforeEach(func() {
+				currentPolicy.Deleted = true
+				policyJson, _ := protojson.Marshal(currentPolicy)
+
+				getPolicyResponse.Source = policyJson
+			})
+
+			It("should return a validation error", func() {
+				Expect(actualResponse).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.FailedPrecondition))
+			})
+
+			It("should not update the counter", func() {
+				Expect(esClient.UpdateCallCount()).To(Equal(0))
+			})
+
+			It("should not make a bulk request", func() {
+				Expect(esClient.BulkCallCount()).To(Equal(0))
+			})
+		})
+
+		When("the policy doesn't exist", func() {
+			BeforeEach(func() {
+				getPolicyResponse.Found = false
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.NotFound))
+			})
+
+			It("should not persist updates", func() {
+				Expect(esClient.UpdateCallCount()).To(Equal(0))
+				Expect(esClient.BulkCallCount()).To(Equal(0))
+			})
+		})
+
+		When("the policy version doesn't exist", func() {
+			BeforeEach(func() {
+				getPolicyVersionResponse.Found = false
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+
+			It("should not persist updates", func() {
+				Expect(esClient.UpdateCallCount()).To(Equal(0))
+				Expect(esClient.BulkCallCount()).To(Equal(0))
+			})
+		})
+
+		When("an error occurs retrieving the policy", func() {
+			BeforeEach(func() {
+				getPolicyError = errors.New("get policy error")
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+
+			It("should not persist updates", func() {
+				Expect(esClient.UpdateCallCount()).To(Equal(0))
+				Expect(esClient.BulkCallCount()).To(Equal(0))
+			})
+		})
+
+		When("an error occurs fetching the policy version", func() {
+			BeforeEach(func() {
+				getPolicyVersionError = errors.New("get policy version error")
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+
+			It("should not persist updates", func() {
+				Expect(esClient.UpdateCallCount()).To(Equal(0))
+				Expect(esClient.BulkCallCount()).To(Equal(0))
+			})
+		})
+
+		When("an error occurs updating the policy counter document", func() {
+			BeforeEach(func() {
+				updateError = errors.New("update error")
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+
+			It("should not persist updates", func() {
+				Expect(esClient.BulkCallCount()).To(Equal(0))
+			})
+		})
+
+		When("an error occurs during the bulk update", func() {
+			BeforeEach(func() {
+				bulkError = errors.New("bulk error")
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+		})
+
+		When("the policy update fails", func() {
+			BeforeEach(func() {
+				bulkResponse.Items[0].Index.Error = &esutil.EsIndexDocError{
+					Type:   fake.Word(),
+					Reason: fake.Word(),
+				}
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+		})
+
+		When("creating the new policy version fails", func() {
+			BeforeEach(func() {
+				bulkResponse.Items[1].Create.Error = &esutil.EsIndexDocError{
+					Type:   fake.Word(),
+					Reason: fake.Word(),
+				}
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+		})
+
+		When("an update message isn't specified", func() {
+			BeforeEach(func() {
+				request.Policy.Policy.Message = ""
+			})
+
+			It("should add a message", func() {
+				expectedMessage := "Updated policy"
+				_, actualRequest := esClient.BulkArgsForCall(0)
+
+				actualVersion := (actualRequest.Items[1].Message).(*pb.PolicyEntity)
+
+				Expect(actualVersion.Message).To(Equal(expectedMessage))
+				Expect(actualResponse.Policy.Message).To(Equal(expectedMessage))
+			})
+		})
+
+		When("the policy content hasn't changed", func() {
+			BeforeEach(func() {
+				request.Policy.Policy.RegoContent = currentPolicy.Policy.RegoContent
+				request.Policy.Policy.SourcePath = currentPolicy.Policy.SourcePath
+			})
+
+			It("should not update the counter document", func() {
+				Expect(esClient.UpdateCallCount()).To(Equal(0))
+			})
+
+			It("should not create a new policy version", func() {
+				Expect(esClient.BulkCallCount()).To(Equal(1))
+				_, actualRequest := esClient.BulkArgsForCall(0)
+
+				Expect(actualRequest.Items).To(HaveLen(1))
+			})
+
+			It("should not change the version", func() {
+				Expect(actualResponse.CurrentVersion).To(Equal(currentVersion))
+			})
+		})
+
+		When("the new Rego code is invalid", func() {
+			BeforeEach(func() {
+				request.Policy.Policy.RegoContent = uncompilablePolicy
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.InvalidArgument))
+			})
+
+			It("should not persist updates", func() {
+				Expect(esClient.BulkCallCount()).To(Equal(0))
+			})
+		})
+
+		When("persisting policy updates", func() {
+			var actualPolicyMessage *pb.Policy
+
+			BeforeEach(func() {
+				esClient.BulkCalls(func(ctx context.Context, request *esutil.BulkRequest) (*esutil.EsBulkResponse, error) {
+					message, ok := request.Items[0].Message.(*pb.Policy)
+					Expect(ok).To(BeTrue())
+					actualPolicyMessage = deepCopyPolicy(message)
+
+					return bulkResponse, bulkError
+				})
+			})
+
+			It("should remove the policy content from the parent document", func() {
+				Expect(actualPolicyMessage).NotTo(BeNil())
+				Expect(actualPolicyMessage.Policy).To(BeNil())
+			})
 		})
 	})
 
@@ -875,7 +1237,7 @@ var _ = Describe("PolicyManager", func() {
 
 		BeforeEach(func() {
 			policyId = fake.UUID()
-			policy := createRandomPolicy(policyId, fake.Int32())
+			policy := createRandomPolicy(policyId, fake.Uint32())
 			policyJson, _ := protojson.Marshal(policy)
 			getPolicyResponse = &esutil.EsGetResponse{
 				Id:     policyId,
@@ -890,7 +1252,7 @@ var _ = Describe("PolicyManager", func() {
 
 		JustBeforeEach(func() {
 			esClient.GetReturns(getPolicyResponse, getPolicyError)
-			esClient.UpdateReturns(updateError)
+			esClient.UpdateReturns(nil, updateError)
 			_, actualError = manager.DeletePolicy(ctx, request)
 		})
 
@@ -1084,14 +1446,13 @@ var _ = Describe("PolicyManager", func() {
 			It("should include an error message", func() {
 				Expect(actualResponse.Errors).To(HaveLen(1))
 			})
-
 		})
 	})
 
 	Context("EvaluatePolicy", func() {
 		var (
 			policyId string
-			version  int32
+			version  uint32
 			policy   *pb.Policy
 
 			resourceUri string
@@ -1117,7 +1478,7 @@ var _ = Describe("PolicyManager", func() {
 
 		BeforeEach(func() {
 			policyId = fake.UUID()
-			version = fake.Int32()
+			version = fake.Uint32()
 			resourceUri = fake.URL()
 
 			policy = createRandomPolicy(policyId, version)
@@ -1363,7 +1724,7 @@ var _ = Describe("PolicyManager", func() {
 	})
 })
 
-func createRandomPolicy(id string, version int32) *pb.Policy {
+func createRandomPolicy(id string, version uint32) *pb.Policy {
 	return &pb.Policy{
 		Id:             id,
 		Name:           fake.Word(),
@@ -1372,7 +1733,7 @@ func createRandomPolicy(id string, version int32) *pb.Policy {
 	}
 }
 
-func createRandomPolicyEntity(policy string, version int32) *pb.PolicyEntity {
+func createRandomPolicyEntity(policy string, version uint32) *pb.PolicyEntity {
 	return &pb.PolicyEntity{
 		Version:     version,
 		RegoContent: policy,

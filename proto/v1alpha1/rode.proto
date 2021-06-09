@@ -102,10 +102,10 @@ service Rode {
   }
   rpc UpdatePolicy(UpdatePolicyRequest) returns (Policy) {
     option (google.api.http) = {
-      patch: "/v1alpha1/policies/{id}"
+      patch: "/v1alpha1/policies/{policy.id}"
       body: "policy"
     };
-    option (google.api.method_signature) = "id,update_mask";
+    option (google.api.method_signature) = "policy";
   }
   // RegisterCollector accepts a collector ID and a list of notes that this collector will reference when creating
   // occurrences. The response will contain the notes with the fully qualified note name. This operation is idempotent,

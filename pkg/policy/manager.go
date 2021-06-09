@@ -104,7 +104,7 @@ func (m *manager) CreatePolicy(ctx context.Context, policy *pb.Policy) (*pb.Poli
 	policyId := newUuid().String()
 	log = log.With(zap.String("id", policyId))
 
-	version := int32(1)
+	version := uint32(1)
 	policyVersionId := policyVersionId(policyId, version)
 	currentTime := timestamppb.Now()
 
@@ -120,15 +120,8 @@ func (m *manager) CreatePolicy(ctx context.Context, policy *pb.Policy) (*pb.Poli
 	policyVersion.Created = currentTime
 
 	log.Debug("validating policy")
-	result, err := m.ValidatePolicy(ctx, &pb.ValidatePolicyRequest{Policy: policyVersion.RegoContent})
-	if (err != nil) || !result.Compile {
-		message := &pb.ValidatePolicyResponse{
-			Policy:  policyVersion.RegoContent,
-			Compile: false,
-			Errors:  result.Errors,
-		}
-		s, _ := status.New(codes.InvalidArgument, "failed to compile the provided policy").WithDetails(message)
-		return nil, s.Err()
+	if err := m.validatePolicy(ctx, log, policyVersion); err != nil {
+		return nil, err
 	}
 
 	log.Debug("performing bulk request")
@@ -147,6 +140,12 @@ func (m *manager) CreatePolicy(ctx context.Context, policy *pb.Policy) (*pb.Poli
 			},
 			{
 				Operation:  esutil.BULK_CREATE,
+				DocumentId: policyCounterId(policyId),
+				// the counter document's version is used to track the current policy version, but the document itself is empty
+				Message: &emptypb.Empty{},
+			},
+			{
+				Operation:  esutil.BULK_CREATE,
 				Message:    policyVersion,
 				DocumentId: policyVersionId,
 				Join: &esutil.EsJoin{
@@ -162,15 +161,8 @@ func (m *manager) CreatePolicy(ctx context.Context, policy *pb.Policy) (*pb.Poli
 		return nil, createError(log, "error creating policy", err)
 	}
 
-	var bulkErrors []error
-	for _, item := range response.Items {
-		if item.Create.Error != nil {
-			bulkErrors = append(bulkErrors, fmt.Errorf("error creating policy [%d] %s: %s", item.Create.Status, item.Create.Error.Type, item.Create.Error.Reason))
-		}
-	}
-
-	if len(bulkErrors) > 0 {
-		return nil, createError(log, "failed to create policy", fmt.Errorf("bulk creation errors: %v", bulkErrors))
+	if err := checkBulkResponseErrors(response); err != nil {
+		return nil, createError(log, "policy creation failed", err)
 	}
 
 	policy.Policy = policyVersion
@@ -189,7 +181,6 @@ func (m *manager) GetPolicy(ctx context.Context, request *pb.GetPolicyRequest) (
 	}
 
 	log = log.With(zap.String("id", policyId))
-	log.Debug("Received request")
 
 	policy, err := m.getPolicy(ctx, log, policyId)
 	if err != nil {
@@ -200,7 +191,7 @@ func (m *manager) GetPolicy(ctx context.Context, request *pb.GetPolicyRequest) (
 		version = policy.CurrentVersion
 	}
 
-	log = log.With(zap.Int32("version", version))
+	log = log.With(zap.Uint32("version", version))
 
 	response, err := m.esClient.Get(ctx, &esutil.GetRequest{
 		Routing:    policyId,
@@ -238,7 +229,7 @@ func (m *manager) DeletePolicy(ctx context.Context, request *pb.DeletePolicyRequ
 
 	policy.Deleted = true
 
-	if err := m.esClient.Update(ctx, &esutil.UpdateRequest{
+	if _, err := m.esClient.Update(ctx, &esutil.UpdateRequest{
 		Index:      m.policiesAlias(),
 		DocumentId: request.Id,
 		Refresh:    m.esConfig.Refresh.String(),
@@ -353,9 +344,92 @@ func (m *manager) ListPolicies(ctx context.Context, request *pb.ListPoliciesRequ
 }
 
 func (m *manager) UpdatePolicy(ctx context.Context, request *pb.UpdatePolicyRequest) (*pb.Policy, error) {
-	// TODO: Unimplemented after versioning changes
-	// Previous implementation: https://github.com/rode/rode/blob/8c1f35f7ce2b7196088e06985cc165cce93d804e/server/server.go#L636-L694
-	return &pb.Policy{}, nil
+	log := m.logger.Named("UpdatePolicy").With(zap.String("policyId", request.Policy.Id))
+	log.Debug("Received request")
+
+	policyId := request.Policy.Id
+	log.Debug("Fetching existing policy")
+	currentPolicy, err := m.GetPolicy(ctx, &pb.GetPolicyRequest{Id: policyId})
+	if err != nil {
+		return nil, err
+	}
+
+	if currentPolicy.Deleted {
+		return nil, createErrorWithCode(log, "cannot update a deleted policy", nil, codes.FailedPrecondition)
+	}
+
+	updatedPolicy := request.Policy
+	currentTime := timestamppb.Now()
+	// Update the existing policy to disallow clients from updating server-managed fields (e.g., timestamps)
+	currentPolicy.Name = updatedPolicy.Name
+	currentPolicy.Description = updatedPolicy.Description
+	currentPolicy.Updated = currentTime
+	policyVersion := currentPolicy.Policy
+
+	bulkItems := []*esutil.BulkRequestItem{
+		{
+			Operation:  esutil.BULK_INDEX,
+			Message:    currentPolicy,
+			DocumentId: policyId,
+			Join: &esutil.EsJoin{
+				Field: policyDocumentJoinField,
+				Name:  policyRelationName,
+			},
+		},
+	}
+
+	if hasPolicyContentChanges(currentPolicy, updatedPolicy) {
+		policyVersion = updatedPolicy.Policy
+		log.Debug("Policy content has changed. A new version will be created")
+
+		if err := m.validatePolicy(ctx, log, policyVersion); err != nil {
+			return nil, err
+		}
+
+		newVersion, err := m.incrementPolicyVersion(ctx, log, policyId)
+		if err != nil {
+			return nil, err
+		}
+
+		currentPolicy.CurrentVersion = newVersion
+		policyVersion.Created = currentTime
+		policyVersion.Version = newVersion
+
+		if policyVersion.Message == "" {
+			policyVersion.Message = fmt.Sprintf("Updated policy")
+		}
+
+		bulkItems = append(bulkItems, &esutil.BulkRequestItem{
+			Operation:  esutil.BULK_CREATE,
+			Message:    policyVersion,
+			DocumentId: policyVersionId(policyId, newVersion),
+			Join: &esutil.EsJoin{
+				Parent: policyId,
+				Field:  policyDocumentJoinField,
+				Name:   policyVersionRelationName,
+			},
+		})
+	}
+
+	currentPolicy.Policy = nil // unset the embedded policy entity so that it isn't persisted to Elasticsearch
+	log.Debug("Sending bulk request to Elasticsearch")
+	response, err := m.esClient.Bulk(ctx, &esutil.BulkRequest{
+		Index:   m.policiesAlias(),
+		Refresh: m.esConfig.Refresh.String(),
+		Items:   bulkItems,
+	})
+
+	if err != nil {
+		return nil, createError(log, "error updating policy", err)
+	}
+
+	if err := checkBulkResponseErrors(response); err != nil {
+		return nil, createError(log, "failed to update policy", err)
+	}
+
+	currentPolicy.Policy = policyVersion
+
+	return currentPolicy, nil
 }
 
 func (m *manager) ValidatePolicy(_ context.Context, policy *pb.ValidatePolicyRequest) (*pb.ValidatePolicyResponse, error) {
@@ -531,8 +605,44 @@ func (m *manager) getPolicy(ctx context.Context, log *zap.Logger, id string) (*p
 	return &policy, nil
 }
 
+func (m *manager) validatePolicy(ctx context.Context, log *zap.Logger, policy *pb.PolicyEntity) error {
+	result, err := m.ValidatePolicy(ctx, &pb.ValidatePolicyRequest{Policy: policy.RegoContent})
+
+	message := &pb.ValidatePolicyResponse{
+		Policy: policy.RegoContent,
+	}
+
+	if result != nil && !result.Compile {
+		message.Errors = result.Errors
+	}
+
+	if err != nil || (result != nil && !result.Compile) {
+		s, _ := status.New(codes.InvalidArgument, "failed to compile the provided policy").WithDetails(message)
+		log.Error("failed to compile policy", zap.Error(s.Err()))
+
+		return s.Err()
+	}
+
+	return nil
+}
+
 func (m *manager) policiesAlias() string {
 	return m.indexManager.AliasName(policiesDocumentKind, "")
+}
+
+func (m *manager) incrementPolicyVersion(ctx context.Context, log *zap.Logger, policyId string) (uint32, error) {
+	updateResponse, err := m.esClient.Update(ctx, &esutil.UpdateRequest{
+		Index:      m.policiesAlias(),
+		DocumentId: policyCounterId(policyId),
+		Refresh:    m.esConfig.Refresh.String(),
+		Message:    &emptypb.Empty{},
+	})
+
+	if err != nil {
+		return 0, createError(log, "error updating policy version counter", err)
+	}
+
+	return uint32(updateResponse.Version), nil
 }
 
 func createErrorWithCode(log *zap.Logger, message string, err error, code codes.Code, fields ...zap.Field) error {
@@ -630,13 +740,17 @@ func validateResultTermsInBody(body ast.Body) bool {
 	return true
 }
 
-func policyVersionId(policyId string, version int32) string {
+func policyVersionId(policyId string, version uint32) string {
 	return fmt.Sprintf("%s.%d", policyId, version)
+}
+
+func policyCounterId(policyId string) string {
+	return fmt.Sprintf("%s.counter", policyId)
 }
 
 // Parses a policy or policy version id
 // If the separator is present, treat the id as containing the policy id and the version
-func parsePolicyVersionId(id string) (string, int32, error) {
+func parsePolicyVersionId(id string) (string, uint32, error) {
 	if !strings.ContainsRune(id, '.') {
 		return id, 0, nil
 	}
@@ -651,5 +765,29 @@ func parsePolicyVersionId(id string) (string, int32, error) {
 		return "", 0, err
 	}
 
-	return pieces[0], int32(version), nil
+	return pieces[0], uint32(version), nil
+}
+
+func checkBulkResponseErrors(response *esutil.EsBulkResponse) error {
+	var bulkErrors []error
+	for _, item := range response.Items {
+		if item.Create != nil && item.Create.Error != nil {
+			bulkErrors = append(bulkErrors, fmt.Errorf("error creating new policy version [%d] %s: %s", item.Create.Status, item.Create.Error.Type, item.Create.Error.Reason))
+		} else if item.Index != nil && item.Index.Error != nil {
+			bulkErrors = append(bulkErrors, fmt.Errorf("error updating policy [%d] %s: %s", item.Index.Status, item.Index.Error.Type, item.Index.Error.Reason))
+		}
+	}
+
+	if len(bulkErrors) > 0 {
+		return fmt.Errorf("errors: %v", bulkErrors)
+	}
+
+	return nil
+}
+
+func hasPolicyContentChanges(currentPolicy, updatedPolicy *pb.Policy) bool {
+	updated := updatedPolicy.Policy
+	current := currentPolicy.Policy
+
+	return !(updated.RegoContent == current.RegoContent && updated.SourcePath == current.SourcePath)
 }

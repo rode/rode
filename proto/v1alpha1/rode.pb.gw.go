@@ -585,10 +585,6 @@ func local_request_Rode_ValidatePolicy_0(ctx context.Context, marshaler runtime.
 
 }
 
-var (
-	filter_Rode_UpdatePolicy_0 = &utilities.DoubleArray{Encoding: map[string]int{"policy": 0, "id": 1}, Base: []int{1, 1, 2, 0, 0}, Check: []int{0, 1, 1, 2, 3}}
-)
-
 func request_Rode_UpdatePolicy_0(ctx context.Context, marshaler runtime.Marshaler, client RodeClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq UpdatePolicyRequest
 	var metadata runtime.ServerMetadata
@@ -600,13 +596,6 @@ func request_Rode_UpdatePolicy_0(ctx context.Context, marshaler runtime.Marshale
 	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq.Policy); err != nil && err != io.EOF {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if protoReq.UpdateMask == nil || len(protoReq.UpdateMask.GetPaths()) == 0 {
-		if fieldMask, err := runtime.FieldMaskFromRequestBody(newReader(), protoReq.Policy); err != nil {
-			return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-		} else {
-			protoReq.UpdateMask = fieldMask
-		}
-	}
 
 	var (
 		val string
@@ -615,21 +604,14 @@ func request_Rode_UpdatePolicy_0(ctx context.Context, marshaler runtime.Marshale
 		_   = err
 	)
 
-	val, ok = pathParams["id"]
+	val, ok = pathParams["policy.id"]
 	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "policy.id")
 	}
 
-	protoReq.Id, err = runtime.String(val)
+	err = runtime.PopulateFieldFromPath(&protoReq, "policy.id", val)
 	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
-	}
-
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Rode_UpdatePolicy_0); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "policy.id", err)
 	}
 
 	msg, err := client.UpdatePolicy(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
@@ -648,13 +630,6 @@ func local_request_Rode_UpdatePolicy_0(ctx context.Context, marshaler runtime.Ma
 	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq.Policy); err != nil && err != io.EOF {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if protoReq.UpdateMask == nil || len(protoReq.UpdateMask.GetPaths()) == 0 {
-		if fieldMask, err := runtime.FieldMaskFromRequestBody(newReader(), protoReq.Policy); err != nil {
-			return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-		} else {
-			protoReq.UpdateMask = fieldMask
-		}
-	}
 
 	var (
 		val string
@@ -663,21 +638,14 @@ func local_request_Rode_UpdatePolicy_0(ctx context.Context, marshaler runtime.Ma
 		_   = err
 	)
 
-	val, ok = pathParams["id"]
+	val, ok = pathParams["policy.id"]
 	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "policy.id")
 	}
 
-	protoReq.Id, err = runtime.String(val)
+	err = runtime.PopulateFieldFromPath(&protoReq, "policy.id", val)
 	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
-	}
-
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Rode_UpdatePolicy_0); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "policy.id", err)
 	}
 
 	msg, err := server.UpdatePolicy(ctx, &protoReq)
@@ -1525,7 +1493,7 @@ var (
 
 	pattern_Rode_ValidatePolicy_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"v1alpha1", "policies"}, "validate"))
 
-	pattern_Rode_UpdatePolicy_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1alpha1", "policies", "id"}, ""))
+	pattern_Rode_UpdatePolicy_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1alpha1", "policies", "policy.id"}, ""))
 
 	pattern_Rode_RegisterCollector_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 1, 0, 4, 1, 5, 2}, []string{"v1alpha1", "collectors", "id"}, "register"))
 
