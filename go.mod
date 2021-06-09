@@ -24,7 +24,7 @@ require (
 	github.com/pquerna/cachecontrol v0.1.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/rode/es-index-manager v0.1.2
-	github.com/rode/grafeas-elasticsearch v0.8.2
+	github.com/rode/grafeas-elasticsearch v0.8.3
 	github.com/soheilhy/cmux v0.1.4
 	github.com/stretchr/testify v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
@@ -38,8 +38,4 @@ require (
 	google.golang.org/protobuf v1.26.0
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
-)
-
-replace (
-	github.com/rode/grafeas-elasticsearch => /Users/alex/Developer/liatrio/rode/grafeas-elasticsearch
 )
