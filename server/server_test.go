@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/rode/rode/pkg/constants"
+	"github.com/rode/rode/pkg/grafeas/grafeasfakes"
 	"strings"
 
 	"github.com/rode/rode/pkg/policy/policyfakes"
@@ -47,6 +48,7 @@ var _ = Describe("rode server", func() {
 		server                pb.RodeServer
 		grafeasClient         *mocks.FakeGrafeasV1Beta1Client
 		grafeasProjectsClient *mocks.FakeProjectsClient
+		grafeasHelper         *grafeasfakes.FakeHelper
 		resourceManager       *resourcefakes.FakeManager
 		policyManager         *policyfakes.FakeManager
 		indexManager          *immocks.FakeIndexManager
@@ -61,6 +63,7 @@ var _ = Describe("rode server", func() {
 	BeforeEach(func() {
 		grafeasClient = &mocks.FakeGrafeasV1Beta1Client{}
 		grafeasProjectsClient = &mocks.FakeProjectsClient{}
+		grafeasHelper = &grafeasfakes.FakeHelper{}
 		resourceManager = &resourcefakes.FakeManager{}
 
 		expectedPoliciesIndex = gofakeit.LetterN(10)
@@ -119,7 +122,7 @@ var _ = Describe("rode server", func() {
 			grafeasProjectsClient.GetProjectReturns(expectedProject, expectedGetProjectError)
 			grafeasProjectsClient.CreateProjectReturns(expectedProject, expectedCreateProjectError)
 
-			actualRodeServer, actualError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, resourceManager, indexManager, policyManager)
+			actualRodeServer, actualError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, grafeasHelper, resourceManager, indexManager, policyManager)
 		})
 
 		It("should check if the rode project exists", func() {

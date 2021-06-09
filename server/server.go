@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/rode/rode/pkg/constants"
+	"github.com/rode/rode/pkg/grafeas"
 	"strings"
 
 	"github.com/rode/rode/pkg/policy"
@@ -41,6 +42,7 @@ func NewRodeServer(
 	logger *zap.Logger,
 	grafeasCommon grafeas_proto.GrafeasV1Beta1Client,
 	grafeasProjects grafeas_project_proto.ProjectsClient,
+	grafeasHelper grafeas.Helper,
 	resourceManager resource.Manager,
 	indexManager indexmanager.IndexManager,
 	policyManager policy.Manager,
@@ -49,6 +51,7 @@ func NewRodeServer(
 		logger,
 		grafeasCommon,
 		grafeasProjects,
+		grafeasHelper,
 		resourceManager,
 		indexManager,
 		policyManager,
@@ -65,6 +68,7 @@ type rodeServer struct {
 	logger          *zap.Logger
 	grafeasCommon   grafeas_proto.GrafeasV1Beta1Client
 	grafeasProjects grafeas_project_proto.ProjectsClient
+	grafeasHelper   grafeas.Helper
 	resourceManager resource.Manager
 	indexManager    indexmanager.IndexManager
 	policy.Manager
