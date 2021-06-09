@@ -184,50 +184,18 @@ func (r *rodeServer) ListVersionedResourceOccurrences(ctx context.Context, reque
 		return nil, createErrorWithCode(log, "invalid request", errors.New("must set resource_uri"), codes.InvalidArgument)
 	}
 
-	log.Debug("listing build occurrences")
-	buildOccurrences, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{
-		Parent:   constants.RodeProjectSlug,
-		PageSize: constants.MaxPageSize,
-		Filter:   fmt.Sprintf(`kind == "BUILD" && (resource.uri == "%[1]s" || build.provenance.builtArtifacts.nestedFilter(id == "%[1]s"))`, resourceUri),
-	})
+	occurrences, nextPageToken, err := r.grafeasHelper.ListVersionedResourceOccurrences(ctx, resourceUri, request.PageToken, request.PageSize)
 	if err != nil {
-		return nil, createError(log, "error fetching build occurrences", err)
-	}
-
-	resourceUris := map[string]string{
-		resourceUri: resourceUri,
-	}
-	for _, occurrence := range buildOccurrences.Occurrences {
-		resourceUris[occurrence.Resource.Uri] = occurrence.Resource.Uri
-		for _, artifact := range occurrence.GetBuild().GetProvenance().BuiltArtifacts {
-			resourceUris[artifact.Id] = artifact.Id
-		}
-	}
-
-	var resourceFilters []string
-	for k := range resourceUris {
-		resourceFilters = append(resourceFilters, fmt.Sprintf(`resource.uri == "%s"`, k))
-	}
-
-	filter := strings.Join(resourceFilters, " || ")
-	log.Debug("listing occurrences", zap.String("filter", filter))
-	allOccurrences, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{
-		Parent:    constants.RodeProjectSlug,
-		Filter:    filter,
-		PageSize:  request.PageSize,
-		PageToken: request.PageToken,
-	})
-	if err != nil {
-		return nil, createError(log, "error listing occurrences", err)
+		return nil, createError(log, "error listing versioned resource occurrences", err)
 	}
 
 	response := &pb.ListVersionedResourceOccurrencesResponse{
-		Occurrences:   allOccurrences.Occurrences,
-		NextPageToken: allOccurrences.NextPageToken,
+		Occurrences:   occurrences,
+		NextPageToken: nextPageToken,
 	}
 
 	if request.FetchRelatedNotes {
-		relatedNotes, err := r.fetchRelatedNotes(ctx, log, allOccurrences.Occurrences)
+		relatedNotes, err := r.fetchRelatedNotes(ctx, log, occurrences)
 		if err != nil {
 			return nil, createError(log, "error fetching related notes", err)
 		}
