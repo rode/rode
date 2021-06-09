@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/rode/rode/pkg/constants"
 	"strings"
 
 	"github.com/rode/rode/pkg/policy"
@@ -33,15 +34,6 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-)
-
-const (
-	rodeProjectSlug                   = "projects/rode"
-	rodeElasticsearchOccurrencesAlias = "grafeas-rode-occurrences"
-	policiesDocumentKind              = "policies"
-	genericResourcesDocumentKind      = "generic-resources"
-	maxPageSize                       = 1000
-	pitKeepAlive                      = "5m"
 )
 
 // NewRodeServer constructor for rodeServer
@@ -83,7 +75,7 @@ func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceReque
 	log.Debug("received request", zap.Any("BatchCreateOccurrencesRequest", occurrenceRequest))
 
 	occurrenceResponse, err := r.grafeasCommon.BatchCreateOccurrences(ctx, &grafeas_proto.BatchCreateOccurrencesRequest{
-		Parent:      rodeProjectSlug,
+		Parent:      constants.RodeProjectSlug,
 		Occurrences: occurrenceRequest.GetOccurrences(),
 	})
 	if err != nil {
@@ -138,10 +130,10 @@ func (r *rodeServer) initialize(ctx context.Context) error {
 		return fmt.Errorf("error initializing index manager: %s", err)
 	}
 
-	_, err := r.grafeasProjects.GetProject(ctx, &grafeas_project_proto.GetProjectRequest{Name: rodeProjectSlug})
+	_, err := r.grafeasProjects.GetProject(ctx, &grafeas_project_proto.GetProjectRequest{Name: constants.RodeProjectSlug})
 	if err != nil {
 		if status.Code(err) == codes.NotFound {
-			_, err := r.grafeasProjects.CreateProject(ctx, &grafeas_project_proto.CreateProjectRequest{Project: &grafeas_project_proto.Project{Name: rodeProjectSlug}})
+			_, err := r.grafeasProjects.CreateProject(ctx, &grafeas_project_proto.CreateProjectRequest{Project: &grafeas_project_proto.Project{Name: constants.RodeProjectSlug}})
 			if err != nil {
 				log.Error("failed to create rode project", zap.Error(err))
 				return err
@@ -159,14 +151,14 @@ func (r *rodeServer) initialize(ctx context.Context) error {
 		documentKind string
 	}{
 		{
-			indexName:    r.indexManager.IndexName(policiesDocumentKind, ""),
-			aliasName:    r.indexManager.AliasName(policiesDocumentKind, ""),
-			documentKind: policiesDocumentKind,
+			indexName:    r.indexManager.IndexName(constants.PoliciesDocumentKind, ""),
+			aliasName:    r.indexManager.AliasName(constants.PoliciesDocumentKind, ""),
+			documentKind: constants.PoliciesDocumentKind,
 		},
 		{
-			indexName:    r.indexManager.IndexName(genericResourcesDocumentKind, ""),
-			aliasName:    r.indexManager.AliasName(genericResourcesDocumentKind, ""),
-			documentKind: genericResourcesDocumentKind,
+			indexName:    r.indexManager.IndexName(constants.GenericResourcesDocumentKind, ""),
+			aliasName:    r.indexManager.AliasName(constants.GenericResourcesDocumentKind, ""),
+			documentKind: constants.GenericResourcesDocumentKind,
 		},
 	}
 
@@ -190,8 +182,8 @@ func (r *rodeServer) ListVersionedResourceOccurrences(ctx context.Context, reque
 
 	log.Debug("listing build occurrences")
 	buildOccurrences, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{
-		Parent:   rodeProjectSlug,
-		PageSize: maxPageSize,
+		Parent:   constants.RodeProjectSlug,
+		PageSize: constants.MaxPageSize,
 		Filter:   fmt.Sprintf(`kind == "BUILD" && (resource.uri == "%[1]s" || build.provenance.builtArtifacts.nestedFilter(id == "%[1]s"))`, resourceUri),
 	})
 	if err != nil {
@@ -216,7 +208,7 @@ func (r *rodeServer) ListVersionedResourceOccurrences(ctx context.Context, reque
 	filter := strings.Join(resourceFilters, " || ")
 	log.Debug("listing occurrences", zap.String("filter", filter))
 	allOccurrences, err := r.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{
-		Parent:    rodeProjectSlug,
+		Parent:    constants.RodeProjectSlug,
 		Filter:    filter,
 		PageSize:  request.PageSize,
 		PageToken: request.PageToken,
@@ -263,9 +255,9 @@ func (r *rodeServer) fetchRelatedNotes(ctx context.Context, logger *zap.Logger, 
 
 	log.Debug("fetching related notes")
 	listNotesResponse, err := r.grafeasCommon.ListNotes(ctx, &grafeas_proto.ListNotesRequest{
-		Parent:   rodeProjectSlug,
+		Parent:   constants.RodeProjectSlug,
 		Filter:   strings.Join(noteFilters, " || "),
-		PageSize: maxPageSize,
+		PageSize: constants.MaxPageSize,
 	})
 	if err != nil {
 		return nil, err
@@ -284,7 +276,7 @@ func (r *rodeServer) ListOccurrences(ctx context.Context, occurrenceRequest *pb.
 	log.Debug("received request", zap.Any("ListOccurrencesRequest", occurrenceRequest))
 
 	request := &grafeas_proto.ListOccurrencesRequest{
-		Parent:    rodeProjectSlug,
+		Parent:    constants.RodeProjectSlug,
 		Filter:    occurrenceRequest.Filter,
 		PageToken: occurrenceRequest.PageToken,
 		PageSize:  occurrenceRequest.PageSize,
@@ -352,9 +344,9 @@ func (r *rodeServer) RegisterCollector(ctx context.Context, registerCollectorReq
 	log = log.With(zap.Any("notes", notesWithIds))
 
 	// find out which notes already exist
-	filter := fmt.Sprintf(`name.startsWith("%s/notes/%s-")`, rodeProjectSlug, registerCollectorRequest.Id)
+	filter := fmt.Sprintf(`name.startsWith("%s/notes/%s-")`, constants.RodeProjectSlug, registerCollectorRequest.Id)
 	listNotesResponse, err := r.grafeasCommon.ListNotes(ctx, &grafeas_proto.ListNotesRequest{
-		Parent: rodeProjectSlug,
+		Parent: constants.RodeProjectSlug,
 		Filter: filter,
 	})
 	if err != nil {
@@ -373,7 +365,7 @@ func (r *rodeServer) RegisterCollector(ctx context.Context, registerCollectorReq
 
 	if len(notesToCreate) != 0 {
 		batchCreateNotesResponse, err := r.grafeasCommon.BatchCreateNotes(ctx, &grafeas_proto.BatchCreateNotesRequest{
-			Parent: rodeProjectSlug,
+			Parent: constants.RodeProjectSlug,
 			Notes:  notesToCreate,
 		})
 		if err != nil {
@@ -401,7 +393,7 @@ func (r *rodeServer) CreateNote(ctx context.Context, request *pb.CreateNoteReque
 	log.Debug("creating note in grafeas")
 
 	return r.grafeasCommon.CreateNote(ctx, &grafeas_proto.CreateNoteRequest{
-		Parent: rodeProjectSlug,
+		Parent: constants.RodeProjectSlug,
 		NoteId: request.NoteId,
 		Note:   request.Note,
 	})
@@ -448,5 +440,5 @@ func buildNoteIdFromCollectorId(collectorId string, note *grafeas_proto.Note) st
 
 func getNoteIdFromNoteName(noteName string) string {
 	// note name format: projects/${projectId}/notes/${noteId}
-	return strings.TrimPrefix(noteName, rodeProjectSlug+"/notes/")
+	return strings.TrimPrefix(noteName, constants.RodeProjectSlug+"/notes/")
 }

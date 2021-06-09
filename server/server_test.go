@@ -15,24 +15,19 @@
 package server
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
+	"github.com/rode/rode/pkg/constants"
 	"strings"
 
 	"github.com/rode/rode/pkg/policy/policyfakes"
 	"github.com/rode/rode/pkg/resource/resourcefakes"
 
 	"github.com/brianvoe/gofakeit/v5"
-	"github.com/golang/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	immocks "github.com/rode/es-index-manager/mocks"
-	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
 	"github.com/rode/rode/mocks"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/build_go_proto"
@@ -43,7 +38,6 @@ import (
 	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/provenance_go_proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -77,15 +71,15 @@ var _ = Describe("rode server", func() {
 
 		indexManager.AliasNameStub = func(documentKind, _ string) string {
 			return map[string]string{
-				genericResourcesDocumentKind: expectedGenericResourceAlias,
-				policiesDocumentKind:         expectedPoliciesAlias,
+				constants.GenericResourcesDocumentKind: expectedGenericResourceAlias,
+				constants.PoliciesDocumentKind:         expectedPoliciesAlias,
 			}[documentKind]
 		}
 
 		indexManager.IndexNameStub = func(documentKind, _ string) string {
 			return map[string]string{
-				genericResourcesDocumentKind: expectedGenericResourceIndex,
-				policiesDocumentKind:         expectedPoliciesIndex,
+				constants.GenericResourcesDocumentKind: expectedGenericResourceIndex,
+				constants.PoliciesDocumentKind:         expectedPoliciesIndex,
 			}[documentKind]
 		}
 
@@ -132,7 +126,7 @@ var _ = Describe("rode server", func() {
 			Expect(grafeasProjectsClient.GetProjectCallCount()).To(Equal(1))
 
 			_, getProjectRequest, _ := grafeasProjectsClient.GetProjectArgsForCall(0)
-			Expect(getProjectRequest.Name).To(Equal(rodeProjectSlug))
+			Expect(getProjectRequest.Name).To(Equal(constants.RodeProjectSlug))
 		})
 
 		// happy path: project already exists
@@ -151,7 +145,7 @@ var _ = Describe("rode server", func() {
 
 			Expect(actualIndexName).To(Equal(expectedPoliciesIndex))
 			Expect(actualAliasName).To(Equal(expectedPoliciesAlias))
-			Expect(documentKind).To(Equal(policiesDocumentKind))
+			Expect(documentKind).To(Equal(constants.PoliciesDocumentKind))
 		})
 
 		It("should create an index for generic resources", func() {
@@ -161,7 +155,7 @@ var _ = Describe("rode server", func() {
 
 			Expect(actualIndexName).To(Equal(expectedGenericResourceIndex))
 			Expect(actualAliasName).To(Equal(expectedGenericResourceAlias))
-			Expect(documentKind).To(Equal(genericResourcesDocumentKind))
+			Expect(documentKind).To(Equal(constants.GenericResourcesDocumentKind))
 		})
 
 		It("should return the initialized rode server", func() {
@@ -197,7 +191,7 @@ var _ = Describe("rode server", func() {
 				Expect(grafeasProjectsClient.CreateProjectCallCount()).To(Equal(1))
 
 				_, createProjectRequest, _ := grafeasProjectsClient.CreateProjectArgsForCall(0)
-				Expect(createProjectRequest.Project.Name).To(Equal(rodeProjectSlug))
+				Expect(createProjectRequest.Project.Name).To(Equal(constants.RodeProjectSlug))
 			})
 
 			When("creating the rode project fails", func() {
@@ -758,8 +752,8 @@ var _ = Describe("rode server", func() {
 				Expect(filters).To(HaveLen(2))
 				Expect(filters).To(ConsistOf(fmt.Sprintf(`"name" == "%s"`, expectedBuildNoteName), fmt.Sprintf(`"name" == "%s"`, expectedNoteName)))
 
-				Expect(listNotesRequest.Parent).To(Equal(rodeProjectSlug))
-				Expect(listNotesRequest.PageSize).To(BeEquivalentTo(maxPageSize))
+				Expect(listNotesRequest.Parent).To(Equal(constants.RodeProjectSlug))
+				Expect(listNotesRequest.PageSize).To(BeEquivalentTo(constants.MaxPageSize))
 			})
 
 			It("should respond with the related notes", func() {
@@ -868,7 +862,7 @@ var _ = Describe("rode server", func() {
 			Expect(grafeasClient.ListOccurrencesCallCount()).To(Equal(1))
 			_, listOccurrencesRequest, _ := grafeasClient.ListOccurrencesArgsForCall(0)
 
-			Expect(listOccurrencesRequest.Parent).To(Equal(rodeProjectSlug))
+			Expect(listOccurrencesRequest.Parent).To(Equal(constants.RodeProjectSlug))
 			Expect(listOccurrencesRequest.Filter).To(Equal(expectedFilter))
 			Expect(listOccurrencesRequest.PageToken).To(Equal(expectedPageToken))
 			Expect(listOccurrencesRequest.PageSize).To(Equal(expectedPageSize))
@@ -1021,8 +1015,8 @@ var _ = Describe("rode server", func() {
 			expectedCreatedDiscoveryNote := deepCopyNote(expectedDiscoveryNote)
 			expectedCreatedAttestationNote := deepCopyNote(expectedAttestationNote)
 
-			expectedCreatedDiscoveryNote.Name = fmt.Sprintf("%s/notes/%s", rodeProjectSlug, buildNoteIdFromCollectorId(expectedCollectorId, expectedCreatedDiscoveryNote))
-			expectedCreatedAttestationNote.Name = fmt.Sprintf("%s/notes/%s", rodeProjectSlug, buildNoteIdFromCollectorId(expectedCollectorId, expectedCreatedAttestationNote))
+			expectedCreatedDiscoveryNote.Name = fmt.Sprintf("%s/notes/%s", constants.RodeProjectSlug, buildNoteIdFromCollectorId(expectedCollectorId, expectedCreatedDiscoveryNote))
+			expectedCreatedAttestationNote.Name = fmt.Sprintf("%s/notes/%s", constants.RodeProjectSlug, buildNoteIdFromCollectorId(expectedCollectorId, expectedCreatedAttestationNote))
 
 			expectedBatchCreateNotesResponse = &grafeas_proto.BatchCreateNotesResponse{
 				Notes: []*grafeas_proto.Note{
@@ -1044,15 +1038,15 @@ var _ = Describe("rode server", func() {
 			Expect(grafeasClient.ListNotesCallCount()).To(Equal(1))
 
 			_, listNotesRequest, _ := grafeasClient.ListNotesArgsForCall(0)
-			Expect(listNotesRequest.Parent).To(Equal(rodeProjectSlug))
-			Expect(listNotesRequest.Filter).To(Equal(fmt.Sprintf(`name.startsWith("%s/notes/%s-")`, rodeProjectSlug, expectedCollectorId)))
+			Expect(listNotesRequest.Parent).To(Equal(constants.RodeProjectSlug))
+			Expect(listNotesRequest.Filter).To(Equal(fmt.Sprintf(`name.startsWith("%s/notes/%s-")`, constants.RodeProjectSlug, expectedCollectorId)))
 		})
 
 		It("should create the missing notes", func() {
 			Expect(grafeasClient.BatchCreateNotesCallCount()).To(Equal(1))
 
 			_, batchCreateNotesRequest, _ := grafeasClient.BatchCreateNotesArgsForCall(0)
-			Expect(batchCreateNotesRequest.Parent).To(Equal(rodeProjectSlug))
+			Expect(batchCreateNotesRequest.Parent).To(Equal(constants.RodeProjectSlug))
 			Expect(batchCreateNotesRequest.Notes).To(ConsistOf(expectedNotes))
 		})
 
@@ -1070,7 +1064,7 @@ var _ = Describe("rode server", func() {
 		When("a note already exists", func() {
 			BeforeEach(func() {
 				expectedNoteThatAlreadyExists := deepCopyNote(expectedNotes[0])
-				expectedNoteThatAlreadyExists.Name = fmt.Sprintf("%s/notes/%s", rodeProjectSlug, buildNoteIdFromCollectorId(expectedCollectorId, expectedNoteThatAlreadyExists))
+				expectedNoteThatAlreadyExists.Name = fmt.Sprintf("%s/notes/%s", constants.RodeProjectSlug, buildNoteIdFromCollectorId(expectedCollectorId, expectedNoteThatAlreadyExists))
 
 				expectedListNotesResponse.Notes = []*grafeas_proto.Note{
 					expectedNoteThatAlreadyExists,
@@ -1081,7 +1075,7 @@ var _ = Describe("rode server", func() {
 				Expect(grafeasClient.BatchCreateNotesCallCount()).To(Equal(1))
 
 				_, batchCreateNotesRequest, _ := grafeasClient.BatchCreateNotesArgsForCall(0)
-				Expect(batchCreateNotesRequest.Parent).To(Equal(rodeProjectSlug))
+				Expect(batchCreateNotesRequest.Parent).To(Equal(constants.RodeProjectSlug))
 				Expect(batchCreateNotesRequest.Notes).To(HaveLen(1))
 				Expect(batchCreateNotesRequest.Notes).To(ContainElement(expectedNotes[1]))
 			})
@@ -1092,7 +1086,7 @@ var _ = Describe("rode server", func() {
 				var notesThatAlreadyExist []*grafeas_proto.Note
 				for _, note := range expectedNotes {
 					noteThatAlreadyExists := deepCopyNote(note)
-					noteThatAlreadyExists.Name = fmt.Sprintf("%s/notes/%s", rodeProjectSlug, buildNoteIdFromCollectorId(expectedCollectorId, noteThatAlreadyExists))
+					noteThatAlreadyExists.Name = fmt.Sprintf("%s/notes/%s", constants.RodeProjectSlug, buildNoteIdFromCollectorId(expectedCollectorId, noteThatAlreadyExists))
 
 					notesThatAlreadyExist = append(notesThatAlreadyExist, noteThatAlreadyExists)
 				}
@@ -1145,7 +1139,7 @@ var _ = Describe("rode server", func() {
 			_, createNoteRequest, _ := grafeasClient.CreateNoteArgsForCall(0)
 			Expect(createNoteRequest.NoteId).To(Equal(expectedNoteId))
 			Expect(createNoteRequest.Note).To(Equal(expectedNote))
-			Expect(createNoteRequest.Parent).To(Equal(rodeProjectSlug))
+			Expect(createNoteRequest.Parent).To(Equal(constants.RodeProjectSlug))
 
 			Expect(actualNote).To(Equal(expectedNote))
 			Expect(actualError).ToNot(HaveOccurred())
@@ -1178,63 +1172,6 @@ func createRandomOccurrence(kind grafeas_common_proto.NoteKind) *grafeas_proto.O
 		UpdateTime:  timestamppb.New(gofakeit.Date()),
 		Details:     nil,
 	}
-}
-
-func structToJsonBody(i interface{}) io.ReadCloser {
-	b, err := json.Marshal(i)
-	Expect(err).ToNot(HaveOccurred())
-
-	return io.NopCloser(strings.NewReader(string(b)))
-}
-
-func createEsSearchResponse(occurrences []*grafeas_proto.Occurrence) io.ReadCloser {
-	return createPaginatedEsSearchResponse(occurrences, len(occurrences))
-}
-
-func createPaginatedEsSearchResponse(occurrences []*grafeas_proto.Occurrence, totalResults int) io.ReadCloser {
-	var occurrenceHits []*esutil.EsSearchResponseHit
-
-	for _, occurrence := range occurrences {
-		source, err := protojson.Marshal(proto.MessageV2(occurrence))
-		Expect(err).To(BeNil())
-
-		response := &esutil.EsSearchResponseHit{
-			ID:     gofakeit.UUID(),
-			Source: source,
-		}
-
-		occurrenceHits = append(occurrenceHits, response)
-	}
-
-	response := &esutil.EsSearchResponse{
-		Hits: &esutil.EsSearchResponseHits{
-			Total: &esutil.EsSearchResponseTotal{
-				Value: totalResults,
-			},
-			Hits: occurrenceHits,
-		},
-		Took: gofakeit.Number(1, 10),
-	}
-
-	responseBody, err := json.Marshal(response)
-	Expect(err).To(BeNil())
-
-	return io.NopCloser(bytes.NewReader(responseBody))
-}
-
-func readEsSearchResponse(request *http.Request) *esutil.EsSearch {
-	search := &esutil.EsSearch{}
-	readResponseBody(request, search)
-
-	return search
-}
-
-func readResponseBody(request *http.Request, v interface{}) {
-	requestBody, err := io.ReadAll(request.Body)
-	Expect(err).To(BeNil())
-
-	err = json.Unmarshal(requestBody, v)
-	Expect(err).To(BeNil())
 }
 
 func getGRPCStatusFromError(err error) *status.Status {
