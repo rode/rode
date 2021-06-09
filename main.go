@@ -81,17 +81,14 @@ func main() {
 		return status.Errorf(codes.Internal, "Unexpected error")
 	})
 	s := grpc.NewServer(
-		grpc.StreamInterceptor(
-			grpc_middleware.ChainStreamServer(
-				grpc_auth.StreamServerInterceptor(authenticator.Authenticate),
-				grpc_recovery.StreamServerInterceptor(recoveryHandler),
-			),
+		grpc_middleware.WithStreamServerChain(
+			grpc_auth.StreamServerInterceptor(authenticator.Authenticate),
+			grpc_recovery.StreamServerInterceptor(recoveryHandler),
 		),
-		grpc.UnaryInterceptor(
-			grpc_middleware.ChainUnaryServer(
-				grpc_auth.UnaryServerInterceptor(authenticator.Authenticate),
-				grpc_recovery.UnaryServerInterceptor(recoveryHandler),
-			),
+
+		grpc_middleware.WithUnaryServerChain(
+			grpc_auth.UnaryServerInterceptor(authenticator.Authenticate),
+			grpc_recovery.UnaryServerInterceptor(recoveryHandler),
 		),
 	)
 	if c.Debug {
