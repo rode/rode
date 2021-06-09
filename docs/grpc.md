@@ -15,8 +15,6 @@
     - [ListGenericResourcesResponse](#rode.v1alpha1.ListGenericResourcesResponse)
     - [ListOccurrencesRequest](#rode.v1alpha1.ListOccurrencesRequest)
     - [ListOccurrencesResponse](#rode.v1alpha1.ListOccurrencesResponse)
-    - [ListResourcesRequest](#rode.v1alpha1.ListResourcesRequest)
-    - [ListResourcesResponse](#rode.v1alpha1.ListResourcesResponse)
     - [ListVersionedResourceOccurrencesRequest](#rode.v1alpha1.ListVersionedResourceOccurrencesRequest)
     - [ListVersionedResourceOccurrencesResponse](#rode.v1alpha1.ListVersionedResourceOccurrencesResponse)
     - [ListVersionedResourceOccurrencesResponse.RelatedNotesEntry](#rode.v1alpha1.ListVersionedResourceOccurrencesResponse.RelatedNotesEntry)
@@ -236,40 +234,6 @@ Response for creating occurrences in batch.
 
 
 
-<a name="rode.v1alpha1.ListResourcesRequest"></a>
-
-### ListResourcesRequest
-modeled after Grafeas&#39; ListOccurrence request/response
-https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576/proto/v1beta1/grafeas.proto#L345-L374
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| filter | [string](#string) |  |  |
-| page_size | [int32](#int32) |  |  |
-| page_token | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="rode.v1alpha1.ListResourcesResponse"></a>
-
-### ListResourcesResponse
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| resources | [grafeas.v1beta1.Resource](#grafeas.v1beta1.Resource) | repeated |  |
-| next_page_token | [string](#string) |  |  |
-
-
-
-
-
-
 <a name="rode.v1alpha1.ListVersionedResourceOccurrencesRequest"></a>
 
 ### ListVersionedResourceOccurrencesRequest
@@ -420,7 +384,6 @@ https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576
 | ----------- | ------------ | ------------- | ------------|
 | BatchCreateOccurrences | [BatchCreateOccurrencesRequest](#rode.v1alpha1.BatchCreateOccurrencesRequest) | [BatchCreateOccurrencesResponse](#rode.v1alpha1.BatchCreateOccurrencesResponse) | Create occurrences |
 | EvaluatePolicy | [EvaluatePolicyRequest](#rode.v1alpha1.EvaluatePolicyRequest) | [EvaluatePolicyResponse](#rode.v1alpha1.EvaluatePolicyResponse) | Verify that an artifact satisfies a policy |
-| ListResources | [ListResourcesRequest](#rode.v1alpha1.ListResourcesRequest) | [ListResourcesResponse](#rode.v1alpha1.ListResourcesResponse) | List resource URI |
 | ListGenericResources | [ListGenericResourcesRequest](#rode.v1alpha1.ListGenericResourcesRequest) | [ListGenericResourcesResponse](#rode.v1alpha1.ListGenericResourcesResponse) |  |
 | ListGenericResourceVersions | [ListGenericResourceVersionsRequest](#rode.v1alpha1.ListGenericResourceVersionsRequest) | [ListGenericResourceVersionsResponse](#rode.v1alpha1.ListGenericResourceVersionsResponse) | ListGenericResourceVersions can be used to list all known versions of a generic resource. Versions will always include the unique identifier (in the case of Docker images, the sha256) and will optionally include any related names (in the case of Docker images, any associated tags for the image). |
 | ListVersionedResourceOccurrences | [ListVersionedResourceOccurrencesRequest](#rode.v1alpha1.ListVersionedResourceOccurrencesRequest) | [ListVersionedResourceOccurrencesResponse](#rode.v1alpha1.ListVersionedResourceOccurrencesResponse) |  |

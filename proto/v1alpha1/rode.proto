@@ -42,12 +42,6 @@ service Rode {
       body: "*"
     };
   }
-  // List resource URI
-  rpc ListResources(ListResourcesRequest) returns (ListResourcesResponse) {
-    option (google.api.http) = {
-      get: "/v1alpha1/resources"
-    };
-  }
   rpc ListGenericResources(ListGenericResourcesRequest) returns (ListGenericResourcesResponse) {
     option (google.api.http) = {
       get: "/v1alpha1/generic-resources"
@@ -182,20 +176,6 @@ message BatchCreateOccurrencesRequest {
 message BatchCreateOccurrencesResponse {
   // The occurrences that were created.
   repeated grafeas.v1beta1.Occurrence occurrences = 1;
-}
-
-// modeled after Grafeas' ListOccurrence request/response
-// https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576/proto/v1beta1/grafeas.proto#L345-L374
-message ListResourcesRequest {
-  string filter = 1;
-  int32 page_size = 2;
-  string page_token = 3;
-}
-// https://github.com/grafeas/grafeas/blob/5b072a9930eace404066502b49a72e5b420d3576/proto/v1beta1/grafeas.proto#L254-L271
-
-message ListResourcesResponse {
-  repeated grafeas.v1beta1.Resource resources = 1;
-  string next_page_token = 2;
 }
 
 message ListGenericResourcesRequest {
