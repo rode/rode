@@ -26,11 +26,14 @@ import (
 	"syscall"
 	"time"
 
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/rode/es-index-manager/indexmanager"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
 	"github.com/rode/rode/pkg/policy"
 	"github.com/rode/rode/pkg/resource"
 	"github.com/soheilhy/cmux"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"golang.org/x/sync/errgroup"
 
@@ -40,6 +43,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
+	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	"github.com/rode/rode/auth"
 	"github.com/rode/rode/config"
 	"github.com/rode/rode/opa"
@@ -71,12 +75,20 @@ func main() {
 	}
 
 	authenticator := auth.NewAuthenticator(c.Auth)
+	recoveryHandler := grpc_recovery.WithRecoveryHandler(func(p interface{}) (err error) {
+		logger.Error("Panic in gRPC handler", zap.Any("panic", p))
+
+		return status.Errorf(codes.Internal, "Unexpected error")
+	})
 	s := grpc.NewServer(
-		grpc.StreamInterceptor(
+		grpc_middleware.WithStreamServerChain(
 			grpc_auth.StreamServerInterceptor(authenticator.Authenticate),
+			grpc_recovery.StreamServerInterceptor(recoveryHandler),
 		),
-		grpc.UnaryInterceptor(
+
+		grpc_middleware.WithUnaryServerChain(
 			grpc_auth.UnaryServerInterceptor(authenticator.Authenticate),
+			grpc_recovery.UnaryServerInterceptor(recoveryHandler),
 		),
 	)
 	if c.Debug {
