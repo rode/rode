@@ -840,6 +840,193 @@ var _ = Describe("PolicyManager", func() {
 		})
 	})
 
+	Context("ListPolicyVersions", func() {
+		var (
+			policyId       string
+			policyVersions []*pb.PolicyEntity
+			versionCount   int
+			request        *pb.ListPolicyVersionsRequest
+
+			searchResponse *esutil.SearchResponse
+			searchError    error
+
+			filterQuery *filtering.Query
+			filterError error
+
+			actualResponse *pb.ListPolicyVersionsResponse
+			actualError    error
+		)
+
+		BeforeEach(func() {
+			policyId = fake.UUID()
+			request = &pb.ListPolicyVersionsRequest{
+				Id: policyId,
+			}
+			policyVersions = []*pb.PolicyEntity{}
+			versionCount = fake.Number(2, 5)
+			searchResponse = &esutil.SearchResponse{
+				Hits: &esutil.EsSearchResponseHits{
+					Total: &esutil.EsSearchResponseTotal{
+						Value: versionCount,
+					},
+				},
+			}
+			searchError = nil
+			filterQuery = nil
+			filterError = nil
+
+			for i := 0; i < versionCount; i++ {
+				version := fake.Uint32()
+				policy := createRandomPolicyEntity(minimalPolicy, version)
+
+				policyVersions = append(policyVersions, policy)
+				versionJson, _ := protojson.Marshal(policy)
+				searchResponse.Hits.Hits = append(searchResponse.Hits.Hits, &esutil.EsSearchResponseHit{
+					ID:     fmt.Sprintf("%s.%d", policyId, version),
+					Source: versionJson,
+				})
+			}
+		})
+
+		JustBeforeEach(func() {
+			filterer.ParseExpressionReturns(filterQuery, filterError)
+			esClient.SearchReturns(searchResponse, searchError)
+
+			actualResponse, actualError = manager.ListPolicyVersions(ctx, request)
+		})
+
+		It("should not apply a filter", func() {
+			Expect(filterer.ParseExpressionCallCount()).To(Equal(0))
+		})
+
+		It("should search for all versions of a policy", func() {
+			Expect(esClient.SearchCallCount()).To(Equal(1))
+
+			_, actualRequest := esClient.SearchArgsForCall(0)
+
+			Expect(actualRequest.Index).To(Equal(expectedPoliciesAlias))
+			Expect(actualRequest.Pagination).To(BeNil())
+			Expect(actualRequest.Search.Sort["created"]).To(Equal(esutil.EsSortOrderDescending))
+			Expect(*actualRequest.Search.Query.Bool.Must).To(HaveLen(1))
+
+			actualQuery := (*actualRequest.Search.Query.Bool.Must)[0].(*filtering.Query)
+			Expect(actualQuery.HasParent.ParentType).To(Equal("policy"))
+			Expect((*actualQuery.HasParent.Query.Term)["_id"]).To(Equal(policyId))
+		})
+
+		It("should return all versions for the given policy id", func() {
+			Expect(actualResponse.Versions).To(ConsistOf(policyVersions))
+		})
+
+		It("should not return an error", func() {
+			Expect(actualError).NotTo(HaveOccurred())
+		})
+
+		When("a filter is supplied", func() {
+			var expectedFilter string
+
+			BeforeEach(func() {
+				expectedFilter = fake.Word()
+				request.Filter = expectedFilter
+
+				filterQuery = &filtering.Query{
+					Term: &filtering.Term{
+						fake.Word(): fake.Word(),
+					},
+				}
+			})
+
+			It("should parse the filter expression", func() {
+				Expect(filterer.ParseExpressionCallCount()).To(Equal(1))
+
+				actualFilter := filterer.ParseExpressionArgsForCall(0)
+
+				Expect(actualFilter).To(Equal(expectedFilter))
+			})
+
+			It("should add the filter query to the search", func() {
+				_, actualRequest := esClient.SearchArgsForCall(0)
+				Expect(*actualRequest.Search.Query.Bool.Must).To(HaveLen(2))
+
+				actualFilterQuery := (*actualRequest.Search.Query.Bool.Must)[1].(*filtering.Query)
+				Expect(actualFilterQuery).To(Equal(filterQuery))
+			})
+		})
+
+		When("the filter is invalid", func() {
+			BeforeEach(func() {
+				request.Filter = fake.Word()
+				filterError = errors.New("parse error")
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+
+			It("should not attempt a search", func() {
+				Expect(esClient.SearchCallCount()).To(Equal(0))
+			})
+		})
+
+		When("a pagination options are supplied", func() {
+			var (
+				pageSize      int32
+				pageToken     string
+				nextPageToken string
+			)
+
+			BeforeEach(func() {
+				pageSize = int32(fake.Number(10, 100))
+				pageToken = fake.Word()
+				nextPageToken = fake.Word()
+
+				request.PageSize = pageSize
+				request.PageToken = pageToken
+				searchResponse.NextPageToken = nextPageToken
+			})
+
+			It("should include the page size and token in the search", func() {
+				Expect(esClient.SearchCallCount()).To(Equal(1))
+				_, actualRequest := esClient.SearchArgsForCall(0)
+
+				Expect(actualRequest.Pagination).NotTo(BeNil())
+				Expect(actualRequest.Pagination.Token).To(Equal(pageToken))
+				Expect(actualRequest.Pagination.Size).To(BeEquivalentTo(pageSize))
+			})
+
+			It("should include the next page token in the response", func() {
+				Expect(actualResponse.NextPageToken).To(Equal(nextPageToken))
+			})
+		})
+
+		When("the search fails", func() {
+			BeforeEach(func() {
+				searchError = errors.New("search error")
+			})
+
+			It("should return an error", func() {
+				Expect(actualResponse).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+		})
+
+		When("one of the version documents is invalid", func() {
+			BeforeEach(func() {
+				randomIndex := fake.Number(0, versionCount-1)
+
+				searchResponse.Hits.Hits[randomIndex].Source = invalidJson
+			})
+
+			It("should return an error", func() {
+				Expect(actualResponse).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+		})
+	})
+
 	Context("UpdatePolicy", func() {
 		var (
 			policyId       string
