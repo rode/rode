@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"strings"
 
 	"github.com/rode/rode/pkg/policy/policyfakes"
@@ -1179,6 +1180,17 @@ func createRandomOccurrence(kind grafeas_common_proto.NoteKind) *grafeas_proto.O
 	}
 }
 
+func structToJsonBody(i interface{}) io.ReadCloser {
+	b, err := json.Marshal(i)
+	Expect(err).ToNot(HaveOccurred())
+
+	return io.NopCloser(strings.NewReader(string(b)))
+}
+
+func createEsSearchResponse(occurrences []*grafeas_proto.Occurrence) io.ReadCloser {
+	return createPaginatedEsSearchResponse(occurrences, len(occurrences))
+}
+
 func createPaginatedEsSearchResponse(occurrences []*grafeas_proto.Occurrence, totalResults int) io.ReadCloser {
 	var occurrenceHits []*esutil.EsSearchResponseHit
 
@@ -1208,6 +1220,21 @@ func createPaginatedEsSearchResponse(occurrences []*grafeas_proto.Occurrence, to
 	Expect(err).To(BeNil())
 
 	return io.NopCloser(bytes.NewReader(responseBody))
+}
+
+func readEsSearchResponse(request *http.Request) *esutil.EsSearch {
+	search := &esutil.EsSearch{}
+	readResponseBody(request, search)
+
+	return search
+}
+
+func readResponseBody(request *http.Request, v interface{}) {
+	requestBody, err := io.ReadAll(request.Body)
+	Expect(err).To(BeNil())
+
+	err = json.Unmarshal(requestBody, v)
+	Expect(err).To(BeNil())
 }
 
 func getGRPCStatusFromError(err error) *status.Status {

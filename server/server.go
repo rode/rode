@@ -36,10 +36,12 @@ import (
 )
 
 const (
-	rodeProjectSlug              = "projects/rode"
-	policiesDocumentKind         = "policies"
-	genericResourcesDocumentKind = "generic-resources"
-	maxPageSize                  = 1000
+	rodeProjectSlug                   = "projects/rode"
+	rodeElasticsearchOccurrencesAlias = "grafeas-rode-occurrences"
+	policiesDocumentKind              = "policies"
+	genericResourcesDocumentKind      = "generic-resources"
+	maxPageSize                       = 1000
+	pitKeepAlive                      = "5m"
 )
 
 // NewRodeServer constructor for rodeServer
