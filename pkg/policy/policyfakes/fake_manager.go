@@ -81,6 +81,20 @@ type FakeManager struct {
 		result1 *v1alpha1.ListPoliciesResponse
 		result2 error
 	}
+	ListPolicyVersionsStub        func(context.Context, *v1alpha1.ListPolicyVersionsRequest) (*v1alpha1.ListPolicyVersionsResponse, error)
+	listPolicyVersionsMutex       sync.RWMutex
+	listPolicyVersionsArgsForCall []struct {
+		arg1 context.Context
+		arg2 *v1alpha1.ListPolicyVersionsRequest
+	}
+	listPolicyVersionsReturns struct {
+		result1 *v1alpha1.ListPolicyVersionsResponse
+		result2 error
+	}
+	listPolicyVersionsReturnsOnCall map[int]struct {
+		result1 *v1alpha1.ListPolicyVersionsResponse
+		result2 error
+	}
 	UpdatePolicyStub        func(context.Context, *v1alpha1.UpdatePolicyRequest) (*v1alpha1.Policy, error)
 	updatePolicyMutex       sync.RWMutex
 	updatePolicyArgsForCall []struct {
@@ -438,6 +452,71 @@ func (fake *FakeManager) ListPoliciesReturnsOnCall(i int, result1 *v1alpha1.List
 	}{result1, result2}
 }
 
+func (fake *FakeManager) ListPolicyVersions(arg1 context.Context, arg2 *v1alpha1.ListPolicyVersionsRequest) (*v1alpha1.ListPolicyVersionsResponse, error) {
+	fake.listPolicyVersionsMutex.Lock()
+	ret, specificReturn := fake.listPolicyVersionsReturnsOnCall[len(fake.listPolicyVersionsArgsForCall)]
+	fake.listPolicyVersionsArgsForCall = append(fake.listPolicyVersionsArgsForCall, struct {
+		arg1 context.Context
+		arg2 *v1alpha1.ListPolicyVersionsRequest
+	}{arg1, arg2})
+	stub := fake.ListPolicyVersionsStub
+	fakeReturns := fake.listPolicyVersionsReturns
+	fake.recordInvocation("ListPolicyVersions", []interface{}{arg1, arg2})
+	fake.listPolicyVersionsMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeManager) ListPolicyVersionsCallCount() int {
+	fake.listPolicyVersionsMutex.RLock()
+	defer fake.listPolicyVersionsMutex.RUnlock()
+	return len(fake.listPolicyVersionsArgsForCall)
+}
+
+func (fake *FakeManager) ListPolicyVersionsCalls(stub func(context.Context, *v1alpha1.ListPolicyVersionsRequest) (*v1alpha1.ListPolicyVersionsResponse, error)) {
+	fake.listPolicyVersionsMutex.Lock()
+	defer fake.listPolicyVersionsMutex.Unlock()
+	fake.ListPolicyVersionsStub = stub
+}
+
+func (fake *FakeManager) ListPolicyVersionsArgsForCall(i int) (context.Context, *v1alpha1.ListPolicyVersionsRequest) {
+	fake.listPolicyVersionsMutex.RLock()
+	defer fake.listPolicyVersionsMutex.RUnlock()
+	argsForCall := fake.listPolicyVersionsArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeManager) ListPolicyVersionsReturns(result1 *v1alpha1.ListPolicyVersionsResponse, result2 error) {
+	fake.listPolicyVersionsMutex.Lock()
+	defer fake.listPolicyVersionsMutex.Unlock()
+	fake.ListPolicyVersionsStub = nil
+	fake.listPolicyVersionsReturns = struct {
+		result1 *v1alpha1.ListPolicyVersionsResponse
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeManager) ListPolicyVersionsReturnsOnCall(i int, result1 *v1alpha1.ListPolicyVersionsResponse, result2 error) {
+	fake.listPolicyVersionsMutex.Lock()
+	defer fake.listPolicyVersionsMutex.Unlock()
+	fake.ListPolicyVersionsStub = nil
+	if fake.listPolicyVersionsReturnsOnCall == nil {
+		fake.listPolicyVersionsReturnsOnCall = make(map[int]struct {
+			result1 *v1alpha1.ListPolicyVersionsResponse
+			result2 error
+		})
+	}
+	fake.listPolicyVersionsReturnsOnCall[i] = struct {
+		result1 *v1alpha1.ListPolicyVersionsResponse
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeManager) UpdatePolicy(arg1 context.Context, arg2 *v1alpha1.UpdatePolicyRequest) (*v1alpha1.Policy, error) {
 	fake.updatePolicyMutex.Lock()
 	ret, specificReturn := fake.updatePolicyReturnsOnCall[len(fake.updatePolicyArgsForCall)]
@@ -581,6 +660,8 @@ func (fake *FakeManager) Invocations() map[string][][]interface{} {
 	defer fake.getPolicyMutex.RUnlock()
 	fake.listPoliciesMutex.RLock()
 	defer fake.listPoliciesMutex.RUnlock()
+	fake.listPolicyVersionsMutex.RLock()
+	defer fake.listPolicyVersionsMutex.RUnlock()
 	fake.updatePolicyMutex.RLock()
 	defer fake.updatePolicyMutex.RUnlock()
 	fake.validatePolicyMutex.RLock()

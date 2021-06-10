@@ -104,6 +104,18 @@ message ListPoliciesResponse {
   string next_page_token = 2;
 }
 
+message ListPolicyVersionsRequest {
+  string id = 1;
+  string filter = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListPolicyVersionsResponse {
+  repeated PolicyEntity versions = 1;
+  string next_page_token = 2;
+}
+
 message UpdatePolicyRequest {
   // Policy is the Policy message. Only Policy.Name, Policy.Description, and Policy.CurrentVersion can be updated. Changes to Policy.Policy are
   // represented as new versions of a policy.
