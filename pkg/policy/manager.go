@@ -141,6 +141,7 @@ func (m *manager) CreatePolicy(ctx context.Context, policy *pb.Policy) (*pb.Poli
 			{
 				Operation:  esutil.BULK_CREATE,
 				DocumentId: policyCounterId(policyId),
+				Routing:    policyId,
 				// the counter document's version is used to track the current policy version, but the document itself is empty
 				Message: &emptypb.Empty{},
 			},
@@ -636,6 +637,7 @@ func (m *manager) incrementPolicyVersion(ctx context.Context, log *zap.Logger, p
 		DocumentId: policyCounterId(policyId),
 		Refresh:    m.esConfig.Refresh.String(),
 		Message:    &emptypb.Empty{},
+		Routing:    policyId,
 	})
 
 	if err != nil {

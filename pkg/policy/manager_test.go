@@ -176,6 +176,7 @@ var _ = Describe("PolicyManager", func() {
 				Expect(createCounterItem.Operation).To(Equal(esutil.BULK_CREATE))
 				Expect(createCounterItem.DocumentId).To(Equal(policyId + ".counter"))
 				Expect(createCounterItem.Message).To(Equal(&emptypb.Empty{}))
+				Expect(createCounterItem.Routing).To(Equal(policyId))
 
 				createPolicyEntityItem := actualRequest.Items[2]
 				Expect(createPolicyEntityItem.Operation).To(Equal(esutil.BULK_CREATE))
@@ -964,6 +965,7 @@ var _ = Describe("PolicyManager", func() {
 			Expect(actualRequest.Index).To(Equal(expectedPoliciesAlias))
 			Expect(actualRequest.DocumentId).To(Equal(fmt.Sprintf("%s.counter", policyId)))
 			Expect(actualRequest.Refresh).To(Equal(esConfig.Refresh.String()))
+			Expect(actualRequest.Routing).To(Equal(policyId))
 		})
 
 		It("should send a bulk request to update the policy and create a new version", func() {
