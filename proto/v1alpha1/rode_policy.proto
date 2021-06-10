@@ -105,14 +105,20 @@ message ListPoliciesResponse {
 }
 
 message ListPolicyVersionsRequest {
+  // Id is the unique policy identifier
   string id = 1;
+  // Filter is a CEL expression that can be used to constrain which policy versions are returned.
   string filter = 2;
+  // PageSize controls the number of results.
   int32 page_size = 3;
+  // PageToken can be used to retrieve a specific page of results. The response will include the next page token.
   string page_token = 4;
 }
 
 message ListPolicyVersionsResponse {
+  // Versions is the list of policy versions matching the filter.
   repeated PolicyEntity versions = 1;
+  // NextPageToken can be used to retrieve the next set of results.
   string next_page_token = 2;
 }
 

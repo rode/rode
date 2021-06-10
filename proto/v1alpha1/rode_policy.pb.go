@@ -666,9 +666,13 @@ type ListPolicyVersionsRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id        string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Filter    string `protobuf:"bytes,2,opt,name=filter,proto3" json:"filter,omitempty"`
-	PageSize  int32  `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Id is the unique policy identifier
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Filter is a CEL expression that can be used to constrain which policy versions are returned.
+	Filter string `protobuf:"bytes,2,opt,name=filter,proto3" json:"filter,omitempty"`
+	// PageSize controls the number of results.
+	PageSize int32 `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// PageToken can be used to retrieve a specific page of results. The response will include the next page token.
 	PageToken string `protobuf:"bytes,4,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 }
 
@@ -737,8 +741,10 @@ type ListPolicyVersionsResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Versions      []*PolicyEntity `protobuf:"bytes,1,rep,name=versions,proto3" json:"versions,omitempty"`
-	NextPageToken string          `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	// Versions is the list of policy versions matching the filter.
+	Versions []*PolicyEntity `protobuf:"bytes,1,rep,name=versions,proto3" json:"versions,omitempty"`
+	// NextPageToken can be used to retrieve the next set of results.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 }
 
 func (x *ListPolicyVersionsResponse) Reset() {

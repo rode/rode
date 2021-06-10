@@ -554,10 +554,10 @@ Response for creating occurrences in batch.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| id | [string](#string) |  |  |
-| filter | [string](#string) |  |  |
-| page_size | [int32](#int32) |  |  |
-| page_token | [string](#string) |  |  |
+| id | [string](#string) |  | Id is the unique policy identifier |
+| filter | [string](#string) |  | Filter is a CEL expression that can be used to constrain which policy versions are returned. |
+| page_size | [int32](#int32) |  | PageSize controls the number of results. |
+| page_token | [string](#string) |  | PageToken can be used to retrieve a specific page of results. The response will include the next page token. |
 
 
 
@@ -572,8 +572,8 @@ Response for creating occurrences in batch.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| versions | [PolicyEntity](#rode.v1alpha1.PolicyEntity) | repeated |  |
-| next_page_token | [string](#string) |  |  |
+| versions | [PolicyEntity](#rode.v1alpha1.PolicyEntity) | repeated | Versions is the list of policy versions matching the filter. |
+| next_page_token | [string](#string) |  | NextPageToken can be used to retrieve the next set of results. |
 
 
 
