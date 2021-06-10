@@ -101,6 +101,10 @@ func (m *manager) CreatePolicy(ctx context.Context, policy *pb.Policy) (*pb.Poli
 		return nil, status.Errorf(codes.InvalidArgument, "policy name not provided")
 	}
 
+	if policy.Policy == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "policy entity not provided")
+	}
+
 	policyId := newUuid().String()
 	log = log.With(zap.String("id", policyId))
 

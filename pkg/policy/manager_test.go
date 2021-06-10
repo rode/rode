@@ -279,6 +279,23 @@ var _ = Describe("PolicyManager", func() {
 			})
 		})
 
+		When("the policy entity is not set", func() {
+			BeforeEach(func() {
+				policy.Policy = nil
+			})
+
+			It("should return an error", func() {
+				Expect(actualPolicy).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.InvalidArgument))
+			})
+
+			It("should not create any documents", func() {
+				Expect(esClient.BulkCallCount()).To(Equal(0))
+			})
+		})
+
 		When("the bulk create fails", func() {
 			BeforeEach(func() {
 				bulkResponseError = errors.New("bulk error")
