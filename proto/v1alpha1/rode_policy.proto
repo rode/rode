@@ -19,6 +19,7 @@ package rode.v1alpha1;
 option go_package = "github.com/rode/rode/proto/v1alpha1";
 
 import "google/protobuf/timestamp.proto";
+import "proto/v1beta1/grafeas.proto";
 
 message EvaluatePolicyRequest {
   // Policy is the unique identifier of a policy.
@@ -60,6 +61,11 @@ message EvaluatePolicyViolation {
   string link = 5;
   // Pass indicates whether this rule succeeded or failed.
   bool pass = 6;
+}
+
+// EvaluatePolicyInput is used as the input when evaluating a policy in OPA.
+message EvaluatePolicyInput {
+  repeated grafeas.v1beta1.Occurrence occurrences = 1;
 }
 
 message ValidatePolicyRequest {

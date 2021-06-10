@@ -18,10 +18,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/rode/rode/pkg/constants"
+	"github.com/rode/rode/pkg/grafeas"
 	"strconv"
 	"strings"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/google/uuid"
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/rode/es-index-manager/indexmanager"
@@ -30,7 +31,6 @@ import (
 	"github.com/rode/rode/config"
 	"github.com/rode/rode/opa"
 	pb "github.com/rode/rode/proto/v1alpha1"
-	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -68,7 +68,7 @@ type manager struct {
 	indexManager  indexmanager.IndexManager
 	filterer      filtering.Filterer
 	opa           opa.Client
-	grafeasCommon grafeas_proto.GrafeasV1Beta1Client
+	grafeasHelper grafeas.Helper
 }
 
 func NewManager(
@@ -78,7 +78,7 @@ func NewManager(
 	indexManager indexmanager.IndexManager,
 	filterer filtering.Filterer,
 	opa opa.Client,
-	grafeasCommon grafeas_proto.GrafeasV1Beta1Client,
+	grafeasHelper grafeas.Helper,
 ) Manager {
 	return &manager{
 		logger:        logger,
@@ -87,7 +87,7 @@ func NewManager(
 		indexManager:  indexManager,
 		filterer:      filterer,
 		opa:           opa,
-		grafeasCommon: grafeasCommon,
+		grafeasHelper: grafeasHelper,
 	}
 }
 
@@ -525,18 +525,16 @@ func (m *manager) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePolicy
 	}
 
 	// fetch occurrences from grafeas
-	listOccurrencesResponse, err := m.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{
-		Parent:   rodeProjectSlug,
-		Filter:   fmt.Sprintf(`resource.uri == "%s"`, request.ResourceUri),
-		PageSize: 1000,
-	})
+	occurrences, _, err := m.grafeasHelper.ListVersionedResourceOccurrences(ctx, request.ResourceUri, "", constants.MaxPageSize)
 	if err != nil {
 		return nil, createError(log, "error listing occurrences", err)
 	}
 
-	log.Debug("Occurrences found", zap.Any("occurrences", listOccurrencesResponse))
+	log.Debug("Occurrences found", zap.Any("occurrences", occurrences))
 
-	input, _ := protojson.Marshal(proto.MessageV2(listOccurrencesResponse))
+	input, _ := protojson.Marshal(&pb.EvaluatePolicyInput{
+		Occurrences: occurrences,
+	})
 
 	evaluatePolicyResponse := &opa.EvaluatePolicyResponse{
 		Result: &opa.EvaluatePolicyResult{
