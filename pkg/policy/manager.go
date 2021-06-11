@@ -278,6 +278,9 @@ func (m *manager) ListPolicies(ctx context.Context, request *pb.ListPoliciesRequ
 					Must: &queries,
 				},
 			},
+			Sort: map[string]esutil.EsSortOrder{
+				"created": esutil.EsSortOrderDescending,
+			},
 		},
 	}
 
