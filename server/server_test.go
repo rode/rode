@@ -620,7 +620,7 @@ var _ = Describe("rode server", func() {
 			actualResponse, actualError = server.ListVersionedResourceOccurrences(ctx, request)
 		})
 
-		It("should delegate the occurrence search to the grafeas helper", func() {
+		It("should delegate the occurrence search to the grafeas extensions", func() {
 			Expect(grafeasExtensions.ListVersionedResourceOccurrencesCallCount()).To(Equal(1))
 
 			_, resourceUri, pageToken, pageSize := grafeasExtensions.ListVersionedResourceOccurrencesArgsForCall(0)

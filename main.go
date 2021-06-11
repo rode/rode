@@ -115,7 +115,7 @@ func main() {
 
 	filterer := filtering.NewFilterer()
 
-	grafeasExtensions := grafeas.NewExtensions(logger.Named("GrafeasHelper"), grafeasClientCommon)
+	grafeasExtensions := grafeas.NewExtensions(logger.Named("GrafeasExtensions"), grafeasClientCommon)
 	resourceManager := resource.NewManager(logger.Named("Resource Manager"), esutilClient, c.Elasticsearch, indexManager, filterer)
 	policyManager := policy.NewManager(logger.Named("PolicyManager"), esutilClient, c.Elasticsearch, indexManager, filterer, opaClient, grafeasExtensions)
 	rodeServer, err := server.NewRodeServer(logger.Named("rode"), grafeasClientCommon, grafeasClientProjects, grafeasExtensions, resourceManager, indexManager, policyManager)

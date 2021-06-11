@@ -35,14 +35,14 @@ var _ = Describe("grafeas extensions", func() {
 		ctx           context.Context
 		grafeasClient *mocks.FakeGrafeasV1Beta1Client
 
-		helper Extensions
+		extensions Extensions
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
 		grafeasClient = &mocks.FakeGrafeasV1Beta1Client{}
 
-		helper = NewExtensions(logger, grafeasClient)
+		extensions = NewExtensions(logger, grafeasClient)
 	})
 
 	Context("ListVersionedResourceOccurrences", func() {
@@ -112,7 +112,7 @@ var _ = Describe("grafeas extensions", func() {
 			grafeasClient.ListOccurrencesReturnsOnCall(0, listBuildOccurrencesResponse, listBuildOccurrencesError)
 			grafeasClient.ListOccurrencesReturnsOnCall(1, listAllOccurrencesResponse, listAllOccurrencesError)
 
-			actualOccurrences, actualNextPageToken, actualError = helper.ListVersionedResourceOccurrences(ctx, resourceUri, currentPageToken, pageSize)
+			actualOccurrences, actualNextPageToken, actualError = extensions.ListVersionedResourceOccurrences(ctx, resourceUri, currentPageToken, pageSize)
 		})
 
 		It("should list build occurrences for the resource uri", func() {
