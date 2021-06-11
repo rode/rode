@@ -19,9 +19,10 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"github.com/rode/rode/pkg/constants"
+	"github.com/rode/rode/pkg/grafeas/grafeasfakes"
 	"net/http"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -31,7 +32,6 @@ import (
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering/filteringfakes"
 	"github.com/rode/rode/config"
-	"github.com/rode/rode/mocks"
 	"github.com/rode/rode/opa"
 	"github.com/rode/rode/opa/opafakes"
 	pb "github.com/rode/rode/proto/v1alpha1"
@@ -72,19 +72,19 @@ var _ = Describe("PolicyManager", func() {
 		ctx                   = context.Background()
 		expectedPoliciesAlias string
 
-		esClient      *esutilfakes.FakeClient
-		esConfig      *config.ElasticsearchConfig
-		grafeasClient *mocks.FakeGrafeasV1Beta1Client
-		opaClient     *opafakes.FakeClient
-		indexManager  *immocks.FakeIndexManager
-		filterer      *filteringfakes.FakeFilterer
+		esClient          *esutilfakes.FakeClient
+		esConfig          *config.ElasticsearchConfig
+		grafeasExtensions *grafeasfakes.FakeExtensions
+		opaClient         *opafakes.FakeClient
+		indexManager      *immocks.FakeIndexManager
+		filterer          *filteringfakes.FakeFilterer
 
 		manager Manager
 	)
 
 	BeforeEach(func() {
 		esClient = &esutilfakes.FakeClient{}
-		grafeasClient = &mocks.FakeGrafeasV1Beta1Client{}
+		grafeasExtensions = &grafeasfakes.FakeExtensions{}
 		indexManager = &immocks.FakeIndexManager{}
 		opaClient = &opafakes.FakeClient{}
 		filterer = &filteringfakes.FakeFilterer{}
@@ -95,7 +95,7 @@ var _ = Describe("PolicyManager", func() {
 		expectedPoliciesAlias = fake.LetterN(10)
 		indexManager.AliasNameReturns(expectedPoliciesAlias)
 
-		manager = NewManager(logger, esClient, esConfig, indexManager, filterer, opaClient, grafeasClient)
+		manager = NewManager(logger, esClient, esConfig, indexManager, filterer, opaClient, grafeasExtensions)
 	})
 
 	Context("CreatePolicy", func() {
@@ -266,6 +266,23 @@ var _ = Describe("PolicyManager", func() {
 		When("the policy name is unset", func() {
 			BeforeEach(func() {
 				policy.Name = ""
+			})
+
+			It("should return an error", func() {
+				Expect(actualPolicy).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.InvalidArgument))
+			})
+
+			It("should not create any documents", func() {
+				Expect(esClient.BulkCallCount()).To(Equal(0))
+			})
+		})
+
+		When("the policy entity is not set", func() {
+			BeforeEach(func() {
+				policy.Policy = nil
 			})
 
 			It("should return an error", func() {
@@ -1659,8 +1676,8 @@ var _ = Describe("PolicyManager", func() {
 			opaEvaluatePolicyResponse *opa.EvaluatePolicyResponse
 			opaEvaluatePolicyError    error
 
-			listOccurrencesResponse *grafeas_proto.ListOccurrencesResponse
-			listOccurrencesError    error
+			listVersionedResourceOccurrencesResponse []*grafeas_proto.Occurrence
+			listVersionedResourceOccurrencesError    error
 
 			actualResponse *pb.EvaluatePolicyResponse
 			actualError    error
@@ -1692,13 +1709,11 @@ var _ = Describe("PolicyManager", func() {
 
 			opaInitializePolicyError = nil
 
-			listOccurrencesResponse = &grafeas_proto.ListOccurrencesResponse{
-				Occurrences: []*grafeas_proto.Occurrence{
-					createRandomOccurrence(grafeas_common_proto.NoteKind_VULNERABILITY),
-					createRandomOccurrence(grafeas_common_proto.NoteKind_ATTESTATION),
-				},
+			listVersionedResourceOccurrencesResponse = []*grafeas_proto.Occurrence{
+				createRandomOccurrence(grafeas_common_proto.NoteKind_VULNERABILITY),
+				createRandomOccurrence(grafeas_common_proto.NoteKind_ATTESTATION),
 			}
-			listOccurrencesError = nil
+			listVersionedResourceOccurrencesError = nil
 
 			opaEvaluatePolicyResponse = &opa.EvaluatePolicyResponse{
 				Result: &opa.EvaluatePolicyResult{
@@ -1720,7 +1735,7 @@ var _ = Describe("PolicyManager", func() {
 			esClient.GetReturnsOnCall(1, getPolicyEntityResponse, getPolicyEntityError)
 
 			opaClient.InitializePolicyReturns(opaInitializePolicyError)
-			grafeasClient.ListOccurrencesReturns(listOccurrencesResponse, listOccurrencesError)
+			grafeasExtensions.ListVersionedResourceOccurrencesReturns(listVersionedResourceOccurrencesResponse, "", listVersionedResourceOccurrencesError)
 			opaClient.EvaluatePolicyReturns(opaEvaluatePolicyResponse, opaEvaluatePolicyError)
 
 			actualResponse, actualError = manager.EvaluatePolicy(ctx, request)
@@ -1746,21 +1761,23 @@ var _ = Describe("PolicyManager", func() {
 				Expect(policyContent).To(Equal(goodPolicy))
 			})
 
-			It("should fetch occurrences from Grafeas", func() {
-				Expect(grafeasClient.ListOccurrencesCallCount()).To(Equal(1))
+			It("should fetch versioned resource occurrences from Grafeas", func() {
+				Expect(grafeasExtensions.ListVersionedResourceOccurrencesCallCount()).To(Equal(1))
 
-				_, actualRequest, _ := grafeasClient.ListOccurrencesArgsForCall(0)
+				_, actualResourceUri, actualPageToken, actualPageSize := grafeasExtensions.ListVersionedResourceOccurrencesArgsForCall(0)
 
-				Expect(actualRequest.Parent).To(Equal("projects/rode"))
-				Expect(actualRequest.PageSize).To(BeEquivalentTo(1000))
-				Expect(actualRequest.Filter).To(Equal(fmt.Sprintf(`resource.uri == "%s"`, resourceUri)))
+				Expect(actualResourceUri).To(Equal(resourceUri))
+				Expect(actualPageToken).To(BeEmpty())
+				Expect(actualPageSize).To(BeEquivalentTo(constants.MaxPageSize))
 			})
 
 			It("should evaluate the policy in Open Policy Agent", func() {
 				Expect(opaClient.EvaluatePolicyCallCount()).To(Equal(1))
 				actualPolicy, actualInput := opaClient.EvaluatePolicyArgsForCall(0)
 
-				expectedInput, err := protojson.Marshal(proto.MessageV2(listOccurrencesResponse))
+				expectedInput, err := protojson.Marshal(&pb.EvaluatePolicyInput{
+					Occurrences: listVersionedResourceOccurrencesResponse,
+				})
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(actualPolicy).To(Equal(goodPolicy))
@@ -1842,7 +1859,7 @@ var _ = Describe("PolicyManager", func() {
 
 		When("an error occurs listing occurrences", func() {
 			BeforeEach(func() {
-				listOccurrencesError = errors.New("grafeas error")
+				listVersionedResourceOccurrencesError = errors.New("grafeas error")
 			})
 
 			It("should return an error", func() {

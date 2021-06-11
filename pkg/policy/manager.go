@@ -18,10 +18,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/rode/rode/pkg/constants"
+	"github.com/rode/rode/pkg/grafeas"
 	"strconv"
 	"strings"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/google/uuid"
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/rode/es-index-manager/indexmanager"
@@ -30,7 +31,6 @@ import (
 	"github.com/rode/rode/config"
 	"github.com/rode/rode/opa"
 	pb "github.com/rode/rode/proto/v1alpha1"
-	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -40,7 +40,6 @@ import (
 )
 
 const (
-	rodeProjectSlug           = "projects/rode"
 	policiesDocumentKind      = "policies"
 	policyDocumentJoinField   = "join"
 	policyRelationName        = "policy"
@@ -64,12 +63,12 @@ type Manager interface {
 type manager struct {
 	logger *zap.Logger
 
-	esClient      esutil.Client
-	esConfig      *config.ElasticsearchConfig
-	indexManager  indexmanager.IndexManager
-	filterer      filtering.Filterer
-	opa           opa.Client
-	grafeasCommon grafeas_proto.GrafeasV1Beta1Client
+	esClient          esutil.Client
+	esConfig          *config.ElasticsearchConfig
+	indexManager      indexmanager.IndexManager
+	filterer          filtering.Filterer
+	opa               opa.Client
+	grafeasExtensions grafeas.Extensions
 }
 
 func NewManager(
@@ -79,16 +78,16 @@ func NewManager(
 	indexManager indexmanager.IndexManager,
 	filterer filtering.Filterer,
 	opa opa.Client,
-	grafeasCommon grafeas_proto.GrafeasV1Beta1Client,
+	grafeasExtensions grafeas.Extensions,
 ) Manager {
 	return &manager{
-		logger:        logger,
-		esClient:      esClient,
-		esConfig:      esConfig,
-		indexManager:  indexManager,
-		filterer:      filterer,
-		opa:           opa,
-		grafeasCommon: grafeasCommon,
+		logger:            logger,
+		esClient:          esClient,
+		esConfig:          esConfig,
+		indexManager:      indexManager,
+		filterer:          filterer,
+		opa:               opa,
+		grafeasExtensions: grafeasExtensions,
 	}
 }
 
@@ -100,6 +99,10 @@ func (m *manager) CreatePolicy(ctx context.Context, policy *pb.Policy) (*pb.Poli
 
 	if len(policy.Name) == 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "policy name not provided")
+	}
+
+	if policy.Policy == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "policy entity not provided")
 	}
 
 	policyId := newUuid().String()
@@ -595,18 +598,16 @@ func (m *manager) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePolicy
 	}
 
 	// fetch occurrences from grafeas
-	listOccurrencesResponse, err := m.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{
-		Parent:   rodeProjectSlug,
-		Filter:   fmt.Sprintf(`resource.uri == "%s"`, request.ResourceUri),
-		PageSize: 1000,
-	})
+	occurrences, _, err := m.grafeasExtensions.ListVersionedResourceOccurrences(ctx, request.ResourceUri, "", constants.MaxPageSize)
 	if err != nil {
 		return nil, createError(log, "error listing occurrences", err)
 	}
 
-	log.Debug("Occurrences found", zap.Any("occurrences", listOccurrencesResponse))
+	log.Debug("Occurrences found", zap.Any("occurrences", occurrences))
 
-	input, _ := protojson.Marshal(proto.MessageV2(listOccurrencesResponse))
+	input, _ := protojson.Marshal(&pb.EvaluatePolicyInput{
+		Occurrences: occurrences,
+	})
 
 	evaluatePolicyResponse := &opa.EvaluatePolicyResponse{
 		Result: &opa.EvaluatePolicyResult{
