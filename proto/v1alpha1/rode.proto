@@ -94,6 +94,12 @@ service Rode {
     };
     option (google.api.method_signature) = "filter";
   }
+  rpc ListPolicyVersions(ListPolicyVersionsRequest) returns (ListPolicyVersionsResponse) {
+    option (google.api.http) = {
+      get: "/v1alpha1/policies/{id}/versions"
+    };
+    option (google.api.method_signature) = "filter";
+  }
   rpc ValidatePolicy(ValidatePolicyRequest) returns (ValidatePolicyResponse) {
     option (google.api.http) = {
       post: "/v1alpha1/policies:validate"

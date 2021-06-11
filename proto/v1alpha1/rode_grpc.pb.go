@@ -36,6 +36,7 @@ type RodeClient interface {
 	GetPolicy(ctx context.Context, in *GetPolicyRequest, opts ...grpc.CallOption) (*Policy, error)
 	DeletePolicy(ctx context.Context, in *DeletePolicyRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	ListPolicies(ctx context.Context, in *ListPoliciesRequest, opts ...grpc.CallOption) (*ListPoliciesResponse, error)
+	ListPolicyVersions(ctx context.Context, in *ListPolicyVersionsRequest, opts ...grpc.CallOption) (*ListPolicyVersionsResponse, error)
 	ValidatePolicy(ctx context.Context, in *ValidatePolicyRequest, opts ...grpc.CallOption) (*ValidatePolicyResponse, error)
 	UpdatePolicy(ctx context.Context, in *UpdatePolicyRequest, opts ...grpc.CallOption) (*Policy, error)
 	// RegisterCollector accepts a collector ID and a list of notes that this collector will reference when creating
@@ -154,6 +155,15 @@ func (c *rodeClient) ListPolicies(ctx context.Context, in *ListPoliciesRequest, 
 	return out, nil
 }
 
+func (c *rodeClient) ListPolicyVersions(ctx context.Context, in *ListPolicyVersionsRequest, opts ...grpc.CallOption) (*ListPolicyVersionsResponse, error) {
+	out := new(ListPolicyVersionsResponse)
+	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/ListPolicyVersions", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *rodeClient) ValidatePolicy(ctx context.Context, in *ValidatePolicyRequest, opts ...grpc.CallOption) (*ValidatePolicyResponse, error) {
 	out := new(ValidatePolicyResponse)
 	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/ValidatePolicy", in, out, opts...)
@@ -210,6 +220,7 @@ type RodeServer interface {
 	GetPolicy(context.Context, *GetPolicyRequest) (*Policy, error)
 	DeletePolicy(context.Context, *DeletePolicyRequest) (*empty.Empty, error)
 	ListPolicies(context.Context, *ListPoliciesRequest) (*ListPoliciesResponse, error)
+	ListPolicyVersions(context.Context, *ListPolicyVersionsRequest) (*ListPolicyVersionsResponse, error)
 	ValidatePolicy(context.Context, *ValidatePolicyRequest) (*ValidatePolicyResponse, error)
 	UpdatePolicy(context.Context, *UpdatePolicyRequest) (*Policy, error)
 	// RegisterCollector accepts a collector ID and a list of notes that this collector will reference when creating
@@ -257,6 +268,9 @@ func (UnimplementedRodeServer) DeletePolicy(context.Context, *DeletePolicyReques
 }
 func (UnimplementedRodeServer) ListPolicies(context.Context, *ListPoliciesRequest) (*ListPoliciesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListPolicies not implemented")
+}
+func (UnimplementedRodeServer) ListPolicyVersions(context.Context, *ListPolicyVersionsRequest) (*ListPolicyVersionsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListPolicyVersions not implemented")
 }
 func (UnimplementedRodeServer) ValidatePolicy(context.Context, *ValidatePolicyRequest) (*ValidatePolicyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ValidatePolicy not implemented")
@@ -480,6 +494,24 @@ func _Rode_ListPolicies_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Rode_ListPolicyVersions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListPolicyVersionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RodeServer).ListPolicyVersions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rode.v1alpha1.Rode/ListPolicyVersions",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RodeServer).ListPolicyVersions(ctx, req.(*ListPolicyVersionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Rode_ValidatePolicy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ValidatePolicyRequest)
 	if err := dec(in); err != nil {
@@ -602,6 +634,10 @@ var Rode_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListPolicies",
 			Handler:    _Rode_ListPolicies_Handler,
+		},
+		{
+			MethodName: "ListPolicyVersions",
+			Handler:    _Rode_ListPolicyVersions_Handler,
 		},
 		{
 			MethodName: "ValidatePolicy",

@@ -710,6 +710,138 @@ func (x *ListPoliciesResponse) GetNextPageToken() string {
 	return ""
 }
 
+type ListPolicyVersionsRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// Id is the unique policy identifier
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Filter is a CEL expression that can be used to constrain which policy versions are returned.
+	Filter string `protobuf:"bytes,2,opt,name=filter,proto3" json:"filter,omitempty"`
+	// PageSize controls the number of results.
+	PageSize int32 `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// PageToken can be used to retrieve a specific page of results. The response will include the next page token.
+	PageToken string `protobuf:"bytes,4,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+}
+
+func (x *ListPolicyVersionsRequest) Reset() {
+	*x = ListPolicyVersionsRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[11]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ListPolicyVersionsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPolicyVersionsRequest) ProtoMessage() {}
+
+func (x *ListPolicyVersionsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[11]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPolicyVersionsRequest.ProtoReflect.Descriptor instead.
+func (*ListPolicyVersionsRequest) Descriptor() ([]byte, []int) {
+	return file_proto_v1alpha1_rode_policy_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ListPolicyVersionsRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ListPolicyVersionsRequest) GetFilter() string {
+	if x != nil {
+		return x.Filter
+	}
+	return ""
+}
+
+func (x *ListPolicyVersionsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListPolicyVersionsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+type ListPolicyVersionsResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// Versions is the list of policy versions matching the filter.
+	Versions []*PolicyEntity `protobuf:"bytes,1,rep,name=versions,proto3" json:"versions,omitempty"`
+	// NextPageToken can be used to retrieve the next set of results.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+}
+
+func (x *ListPolicyVersionsResponse) Reset() {
+	*x = ListPolicyVersionsResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[12]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ListPolicyVersionsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPolicyVersionsResponse) ProtoMessage() {}
+
+func (x *ListPolicyVersionsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[12]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPolicyVersionsResponse.ProtoReflect.Descriptor instead.
+func (*ListPolicyVersionsResponse) Descriptor() ([]byte, []int) {
+	return file_proto_v1alpha1_rode_policy_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *ListPolicyVersionsResponse) GetVersions() []*PolicyEntity {
+	if x != nil {
+		return x.Versions
+	}
+	return nil
+}
+
+func (x *ListPolicyVersionsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
 type UpdatePolicyRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -723,7 +855,7 @@ type UpdatePolicyRequest struct {
 func (x *UpdatePolicyRequest) Reset() {
 	*x = UpdatePolicyRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[11]
+		mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[13]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -736,7 +868,7 @@ func (x *UpdatePolicyRequest) String() string {
 func (*UpdatePolicyRequest) ProtoMessage() {}
 
 func (x *UpdatePolicyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[11]
+	mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[13]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -749,7 +881,7 @@ func (x *UpdatePolicyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdatePolicyRequest.ProtoReflect.Descriptor instead.
 func (*UpdatePolicyRequest) Descriptor() ([]byte, []int) {
-	return file_proto_v1alpha1_rode_policy_proto_rawDescGZIP(), []int{11}
+	return file_proto_v1alpha1_rode_policy_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *UpdatePolicyRequest) GetPolicy() *Policy {
@@ -789,7 +921,7 @@ type Policy struct {
 func (x *Policy) Reset() {
 	*x = Policy{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[12]
+		mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[14]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -802,7 +934,7 @@ func (x *Policy) String() string {
 func (*Policy) ProtoMessage() {}
 
 func (x *Policy) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[12]
+	mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[14]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -815,7 +947,7 @@ func (x *Policy) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Policy.ProtoReflect.Descriptor instead.
 func (*Policy) Descriptor() ([]byte, []int) {
-	return file_proto_v1alpha1_rode_policy_proto_rawDescGZIP(), []int{12}
+	return file_proto_v1alpha1_rode_policy_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *Policy) GetId() string {
@@ -896,7 +1028,7 @@ type PolicyEntity struct {
 func (x *PolicyEntity) Reset() {
 	*x = PolicyEntity{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[13]
+		mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[15]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -909,7 +1041,7 @@ func (x *PolicyEntity) String() string {
 func (*PolicyEntity) ProtoMessage() {}
 
 func (x *PolicyEntity) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[13]
+	mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[15]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -922,7 +1054,7 @@ func (x *PolicyEntity) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PolicyEntity.ProtoReflect.Descriptor instead.
 func (*PolicyEntity) Descriptor() ([]byte, []int) {
-	return file_proto_v1alpha1_rode_policy_proto_rawDescGZIP(), []int{13}
+	return file_proto_v1alpha1_rode_policy_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *PolicyEntity) GetVersion() uint32 {
@@ -1039,6 +1171,22 @@ var file_proto_v1alpha1_rode_policy_proto_rawDesc = []byte{
 	0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x08, 0x70, 0x6f,
 	0x6c, 0x69, 0x63, 0x69, 0x65, 0x73, 0x12, 0x26, 0x0a, 0x0f, 0x6e, 0x65, 0x78, 0x74, 0x5f, 0x70,
 	0x61, 0x67, 0x65, 0x5f, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x0d, 0x6e, 0x65, 0x78, 0x74, 0x50, 0x61, 0x67, 0x65, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x22, 0x7f,
+	0x0a, 0x19, 0x4c, 0x69, 0x73, 0x74, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x56, 0x65, 0x72, 0x73,
+	0x69, 0x6f, 0x6e, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x69,
+	0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x16, 0x0a, 0x06, 0x66,
+	0x69, 0x6c, 0x74, 0x65, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x66, 0x69, 0x6c,
+	0x74, 0x65, 0x72, 0x12, 0x1b, 0x0a, 0x09, 0x70, 0x61, 0x67, 0x65, 0x5f, 0x73, 0x69, 0x7a, 0x65,
+	0x18, 0x03, 0x20, 0x01, 0x28, 0x05, 0x52, 0x08, 0x70, 0x61, 0x67, 0x65, 0x53, 0x69, 0x7a, 0x65,
+	0x12, 0x1d, 0x0a, 0x0a, 0x70, 0x61, 0x67, 0x65, 0x5f, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x18, 0x04,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x70, 0x61, 0x67, 0x65, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x22,
+	0x7d, 0x0a, 0x1a, 0x4c, 0x69, 0x73, 0x74, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x56, 0x65, 0x72,
+	0x73, 0x69, 0x6f, 0x6e, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x37, 0x0a,
+	0x08, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32,
+	0x1b, 0x2e, 0x72, 0x6f, 0x64, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e,
+	0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x45, 0x6e, 0x74, 0x69, 0x74, 0x79, 0x52, 0x08, 0x76, 0x65,
+	0x72, 0x73, 0x69, 0x6f, 0x6e, 0x73, 0x12, 0x26, 0x0a, 0x0f, 0x6e, 0x65, 0x78, 0x74, 0x5f, 0x70,
+	0x61, 0x67, 0x65, 0x5f, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
 	0x0d, 0x6e, 0x65, 0x78, 0x74, 0x50, 0x61, 0x67, 0x65, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x22, 0x44,
 	0x0a, 0x13, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x52, 0x65,
 	0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x2d, 0x0a, 0x06, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x18,
@@ -1093,7 +1241,7 @@ func file_proto_v1alpha1_rode_policy_proto_rawDescGZIP() []byte {
 	return file_proto_v1alpha1_rode_policy_proto_rawDescData
 }
 
-var file_proto_v1alpha1_rode_policy_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_proto_v1alpha1_rode_policy_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_proto_v1alpha1_rode_policy_proto_goTypes = []interface{}{
 	(*EvaluatePolicyRequest)(nil),       // 0: rode.v1alpha1.EvaluatePolicyRequest
 	(*EvaluatePolicyResponse)(nil),      // 1: rode.v1alpha1.EvaluatePolicyResponse
@@ -1106,28 +1254,31 @@ var file_proto_v1alpha1_rode_policy_proto_goTypes = []interface{}{
 	(*DeletePolicyRequest)(nil),         // 8: rode.v1alpha1.DeletePolicyRequest
 	(*ListPoliciesRequest)(nil),         // 9: rode.v1alpha1.ListPoliciesRequest
 	(*ListPoliciesResponse)(nil),        // 10: rode.v1alpha1.ListPoliciesResponse
-	(*UpdatePolicyRequest)(nil),         // 11: rode.v1alpha1.UpdatePolicyRequest
-	(*Policy)(nil),                      // 12: rode.v1alpha1.Policy
-	(*PolicyEntity)(nil),                // 13: rode.v1alpha1.PolicyEntity
-	(*timestamp.Timestamp)(nil),         // 14: google.protobuf.Timestamp
-	(*grafeas_go_proto.Occurrence)(nil), // 15: grafeas.v1beta1.Occurrence
+	(*ListPolicyVersionsRequest)(nil),   // 11: rode.v1alpha1.ListPolicyVersionsRequest
+	(*ListPolicyVersionsResponse)(nil),  // 12: rode.v1alpha1.ListPolicyVersionsResponse
+	(*UpdatePolicyRequest)(nil),         // 13: rode.v1alpha1.UpdatePolicyRequest
+	(*Policy)(nil),                      // 14: rode.v1alpha1.Policy
+	(*PolicyEntity)(nil),                // 15: rode.v1alpha1.PolicyEntity
+	(*timestamp.Timestamp)(nil),         // 16: google.protobuf.Timestamp
+	(*grafeas_go_proto.Occurrence)(nil), // 17: grafeas.v1beta1.Occurrence
 }
 var file_proto_v1alpha1_rode_policy_proto_depIdxs = []int32{
 	2,  // 0: rode.v1alpha1.EvaluatePolicyResponse.result:type_name -> rode.v1alpha1.EvaluatePolicyResult
-	14, // 1: rode.v1alpha1.EvaluatePolicyResult.created:type_name -> google.protobuf.Timestamp
+	16, // 1: rode.v1alpha1.EvaluatePolicyResult.created:type_name -> google.protobuf.Timestamp
 	3,  // 2: rode.v1alpha1.EvaluatePolicyResult.violations:type_name -> rode.v1alpha1.EvaluatePolicyViolation
-	15, // 3: rode.v1alpha1.EvaluatePolicyInput.occurrences:type_name -> grafeas.v1beta1.Occurrence
-	12, // 4: rode.v1alpha1.ListPoliciesResponse.policies:type_name -> rode.v1alpha1.Policy
-	12, // 5: rode.v1alpha1.UpdatePolicyRequest.policy:type_name -> rode.v1alpha1.Policy
-	13, // 6: rode.v1alpha1.Policy.policy:type_name -> rode.v1alpha1.PolicyEntity
-	14, // 7: rode.v1alpha1.Policy.created:type_name -> google.protobuf.Timestamp
-	14, // 8: rode.v1alpha1.Policy.updated:type_name -> google.protobuf.Timestamp
-	14, // 9: rode.v1alpha1.PolicyEntity.created:type_name -> google.protobuf.Timestamp
-	10, // [10:10] is the sub-list for method output_type
-	10, // [10:10] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	17, // 3: rode.v1alpha1.EvaluatePolicyInput.occurrences:type_name -> grafeas.v1beta1.Occurrence
+	14, // 4: rode.v1alpha1.ListPoliciesResponse.policies:type_name -> rode.v1alpha1.Policy
+	15, // 5: rode.v1alpha1.ListPolicyVersionsResponse.versions:type_name -> rode.v1alpha1.PolicyEntity
+	14, // 6: rode.v1alpha1.UpdatePolicyRequest.policy:type_name -> rode.v1alpha1.Policy
+	15, // 7: rode.v1alpha1.Policy.policy:type_name -> rode.v1alpha1.PolicyEntity
+	16, // 8: rode.v1alpha1.Policy.created:type_name -> google.protobuf.Timestamp
+	16, // 9: rode.v1alpha1.Policy.updated:type_name -> google.protobuf.Timestamp
+	16, // 10: rode.v1alpha1.PolicyEntity.created:type_name -> google.protobuf.Timestamp
+	11, // [11:11] is the sub-list for method output_type
+	11, // [11:11] is the sub-list for method input_type
+	11, // [11:11] is the sub-list for extension type_name
+	11, // [11:11] is the sub-list for extension extendee
+	0,  // [0:11] is the sub-list for field type_name
 }
 
 func init() { file_proto_v1alpha1_rode_policy_proto_init() }
@@ -1269,7 +1420,7 @@ func file_proto_v1alpha1_rode_policy_proto_init() {
 			}
 		}
 		file_proto_v1alpha1_rode_policy_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UpdatePolicyRequest); i {
+			switch v := v.(*ListPolicyVersionsRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1281,7 +1432,7 @@ func file_proto_v1alpha1_rode_policy_proto_init() {
 			}
 		}
 		file_proto_v1alpha1_rode_policy_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Policy); i {
+			switch v := v.(*ListPolicyVersionsResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1293,6 +1444,30 @@ func file_proto_v1alpha1_rode_policy_proto_init() {
 			}
 		}
 		file_proto_v1alpha1_rode_policy_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*UpdatePolicyRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_v1alpha1_rode_policy_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Policy); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_v1alpha1_rode_policy_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*PolicyEntity); i {
 			case 0:
 				return &v.state
@@ -1311,7 +1486,7 @@ func file_proto_v1alpha1_rode_policy_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_proto_v1alpha1_rode_policy_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

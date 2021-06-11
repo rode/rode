@@ -57,6 +57,7 @@ type Manager interface {
 	UpdatePolicy(context.Context, *pb.UpdatePolicyRequest) (*pb.Policy, error)
 	EvaluatePolicy(context.Context, *pb.EvaluatePolicyRequest) (*pb.EvaluatePolicyResponse, error)
 	ValidatePolicy(context.Context, *pb.ValidatePolicyRequest) (*pb.ValidatePolicyResponse, error)
+	ListPolicyVersions(context.Context, *pb.ListPolicyVersionsRequest) (*pb.ListPolicyVersionsResponse, error)
 }
 
 type manager struct {
@@ -144,6 +145,7 @@ func (m *manager) CreatePolicy(ctx context.Context, policy *pb.Policy) (*pb.Poli
 			{
 				Operation:  esutil.BULK_CREATE,
 				DocumentId: policyCounterId(policyId),
+				Routing:    policyId,
 				// the counter document's version is used to track the current policy version, but the document itself is empty
 				Message: &emptypb.Empty{},
 			},
@@ -344,6 +346,75 @@ func (m *manager) ListPolicies(ctx context.Context, request *pb.ListPoliciesRequ
 		NextPageToken: response.NextPageToken,
 	}, nil
 
+}
+
+func (m *manager) ListPolicyVersions(ctx context.Context, request *pb.ListPolicyVersionsRequest) (*pb.ListPolicyVersionsResponse, error) {
+	log := m.logger.Named("ListPolicyVersions")
+	log.Debug("received request", zap.Any("request", request))
+
+	queries := filtering.Must{
+		&filtering.Query{
+			HasParent: &filtering.HasParent{
+				ParentType: policyRelationName,
+				Query: &filtering.Query{
+					Term: &filtering.Term{
+						"_id": request.Id,
+					},
+				},
+			},
+		},
+	}
+
+	if request.Filter != "" {
+		filterQuery, err := m.filterer.ParseExpression(request.Filter)
+
+		if err != nil {
+			return nil, createError(log, "unable to create filter query", err)
+		}
+
+		queries = append(queries, filterQuery)
+	}
+
+	searchRequest := &esutil.SearchRequest{
+		Index: m.policiesAlias(),
+		Search: &esutil.EsSearch{
+			Query: &filtering.Query{
+				Bool: &filtering.Bool{
+					Must: &queries,
+				},
+			},
+			Sort: map[string]esutil.EsSortOrder{
+				"created": esutil.EsSortOrderDescending,
+			},
+		},
+	}
+
+	if request.PageSize != 0 {
+		searchRequest.Pagination = &esutil.SearchPaginationOptions{
+			Size:  int(request.PageSize),
+			Token: request.PageToken,
+		}
+	}
+
+	response, err := m.esClient.Search(ctx, searchRequest)
+	if err != nil {
+		return nil, createError(log, "error searching for policy versions", err)
+	}
+
+	var policyVersions []*pb.PolicyEntity
+	for _, hit := range response.Hits.Hits {
+		var policyVersion pb.PolicyEntity
+		if err := (protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(hit.Source, &policyVersion)); err != nil {
+			return nil, createError(log, "error unmarshalling policy version", err)
+		}
+
+		policyVersions = append(policyVersions, &policyVersion)
+	}
+
+	return &pb.ListPolicyVersionsResponse{
+		Versions:      policyVersions,
+		NextPageToken: response.NextPageToken,
+	}, nil
 }
 
 func (m *manager) UpdatePolicy(ctx context.Context, request *pb.UpdatePolicyRequest) (*pb.Policy, error) {
@@ -637,6 +708,7 @@ func (m *manager) incrementPolicyVersion(ctx context.Context, log *zap.Logger, p
 		DocumentId: policyCounterId(policyId),
 		Refresh:    m.esConfig.Refresh.String(),
 		Message:    &emptypb.Empty{},
+		Routing:    policyId,
 	})
 
 	if err != nil {

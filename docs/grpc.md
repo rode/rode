@@ -37,6 +37,8 @@
     - [GetPolicyRequest](#rode.v1alpha1.GetPolicyRequest)
     - [ListPoliciesRequest](#rode.v1alpha1.ListPoliciesRequest)
     - [ListPoliciesResponse](#rode.v1alpha1.ListPoliciesResponse)
+    - [ListPolicyVersionsRequest](#rode.v1alpha1.ListPolicyVersionsRequest)
+    - [ListPolicyVersionsResponse](#rode.v1alpha1.ListPolicyVersionsResponse)
     - [Policy](#rode.v1alpha1.Policy)
     - [PolicyEntity](#rode.v1alpha1.PolicyEntity)
     - [UpdatePolicyRequest](#rode.v1alpha1.UpdatePolicyRequest)
@@ -394,6 +396,7 @@ Response for creating occurrences in batch.
 | GetPolicy | [GetPolicyRequest](#rode.v1alpha1.GetPolicyRequest) | [Policy](#rode.v1alpha1.Policy) |  |
 | DeletePolicy | [DeletePolicyRequest](#rode.v1alpha1.DeletePolicyRequest) | [.google.protobuf.Empty](#google.protobuf.Empty) |  |
 | ListPolicies | [ListPoliciesRequest](#rode.v1alpha1.ListPoliciesRequest) | [ListPoliciesResponse](#rode.v1alpha1.ListPoliciesResponse) |  |
+| ListPolicyVersions | [ListPolicyVersionsRequest](#rode.v1alpha1.ListPolicyVersionsRequest) | [ListPolicyVersionsResponse](#rode.v1alpha1.ListPolicyVersionsResponse) |  |
 | ValidatePolicy | [ValidatePolicyRequest](#rode.v1alpha1.ValidatePolicyRequest) | [ValidatePolicyResponse](#rode.v1alpha1.ValidatePolicyResponse) |  |
 | UpdatePolicy | [UpdatePolicyRequest](#rode.v1alpha1.UpdatePolicyRequest) | [Policy](#rode.v1alpha1.Policy) |  |
 | RegisterCollector | [RegisterCollectorRequest](#rode.v1alpha1.RegisterCollectorRequest) | [RegisterCollectorResponse](#rode.v1alpha1.RegisterCollectorResponse) | RegisterCollector accepts a collector ID and a list of notes that this collector will reference when creating occurrences. The response will contain the notes with the fully qualified note name. This operation is idempotent, so any notes that already exist will not be re-created. Collectors are expected to invoke this RPC each time they start. |
@@ -553,6 +556,40 @@ EvaluatePolicyInput is used as the input when evaluating a policy in OPA.
 | ----- | ---- | ----- | ----------- |
 | policies | [Policy](#rode.v1alpha1.Policy) | repeated | Policies is the list of policies, with the number of results controlled by the ListPoliciesRequest.Filter and ListPoliciesRequest.PageSize. |
 | next_page_token | [string](#string) |  | NextPageToken can be used to retrieve the next page of results. It will be empty if the caller has reached the end of the result set. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ListPolicyVersionsRequest"></a>
+
+### ListPolicyVersionsRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  | Id is the unique policy identifier |
+| filter | [string](#string) |  | Filter is a CEL expression that can be used to constrain which policy versions are returned. |
+| page_size | [int32](#int32) |  | PageSize controls the number of results. |
+| page_token | [string](#string) |  | PageToken can be used to retrieve a specific page of results. The response will include the next page token. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ListPolicyVersionsResponse"></a>
+
+### ListPolicyVersionsResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| versions | [PolicyEntity](#rode.v1alpha1.PolicyEntity) | repeated | Versions is the list of policy versions matching the filter. |
+| next_page_token | [string](#string) |  | NextPageToken can be used to retrieve the next set of results. |
 
 
 
