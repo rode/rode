@@ -30,19 +30,19 @@ import (
 	"strings"
 )
 
-var _ = Describe("grafeas helper", func() {
+var _ = Describe("grafeas extensions", func() {
 	var (
 		ctx           context.Context
 		grafeasClient *mocks.FakeGrafeasV1Beta1Client
 
-		helper Helper
+		helper Extensions
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
 		grafeasClient = &mocks.FakeGrafeasV1Beta1Client{}
 
-		helper = NewHelper(logger, grafeasClient)
+		helper = NewExtensions(logger, grafeasClient)
 	})
 
 	Context("ListVersionedResourceOccurrences", func() {

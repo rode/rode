@@ -46,7 +46,7 @@ var _ = Describe("rode server", func() {
 		server                pb.RodeServer
 		grafeasClient         *mocks.FakeGrafeasV1Beta1Client
 		grafeasProjectsClient *mocks.FakeProjectsClient
-		grafeasHelper         *grafeasfakes.FakeHelper
+		grafeasExtensions     *grafeasfakes.FakeExtensions
 		resourceManager       *resourcefakes.FakeManager
 		policyManager         *policyfakes.FakeManager
 		indexManager          *immocks.FakeIndexManager
@@ -61,7 +61,7 @@ var _ = Describe("rode server", func() {
 	BeforeEach(func() {
 		grafeasClient = &mocks.FakeGrafeasV1Beta1Client{}
 		grafeasProjectsClient = &mocks.FakeProjectsClient{}
-		grafeasHelper = &grafeasfakes.FakeHelper{}
+		grafeasExtensions = &grafeasfakes.FakeExtensions{}
 		resourceManager = &resourcefakes.FakeManager{}
 
 		expectedPoliciesIndex = gofakeit.LetterN(10)
@@ -88,12 +88,12 @@ var _ = Describe("rode server", func() {
 
 		// not using the constructor as it has side effects. side effects are tested under the "initialize" context
 		server = &rodeServer{
-			logger:          logger,
-			grafeasCommon:   grafeasClient,
-			grafeasProjects: grafeasProjectsClient,
-			grafeasHelper:   grafeasHelper,
-			resourceManager: resourceManager,
-			indexManager:    indexManager,
+			logger:            logger,
+			grafeasCommon:     grafeasClient,
+			grafeasProjects:   grafeasProjectsClient,
+			grafeasExtensions: grafeasExtensions,
+			resourceManager:   resourceManager,
+			indexManager:      indexManager,
 		}
 	})
 
@@ -121,7 +121,7 @@ var _ = Describe("rode server", func() {
 			grafeasProjectsClient.GetProjectReturns(expectedProject, expectedGetProjectError)
 			grafeasProjectsClient.CreateProjectReturns(expectedProject, expectedCreateProjectError)
 
-			actualRodeServer, actualError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, grafeasHelper, resourceManager, indexManager, policyManager)
+			actualRodeServer, actualError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, grafeasExtensions, resourceManager, indexManager, policyManager)
 		})
 
 		It("should check if the rode project exists", func() {
@@ -614,16 +614,16 @@ var _ = Describe("rode server", func() {
 		})
 
 		JustBeforeEach(func() {
-			grafeasHelper.ListVersionedResourceOccurrencesReturns(occurrences, nextPageToken, listVersionedResourceOccurrencesError)
+			grafeasExtensions.ListVersionedResourceOccurrencesReturns(occurrences, nextPageToken, listVersionedResourceOccurrencesError)
 			grafeasClient.ListNotesReturns(listNotesResponse, listNotesError)
 
 			actualResponse, actualError = server.ListVersionedResourceOccurrences(ctx, request)
 		})
 
 		It("should delegate the occurrence search to the grafeas helper", func() {
-			Expect(grafeasHelper.ListVersionedResourceOccurrencesCallCount()).To(Equal(1))
+			Expect(grafeasExtensions.ListVersionedResourceOccurrencesCallCount()).To(Equal(1))
 
-			_, resourceUri, pageToken, pageSize := grafeasHelper.ListVersionedResourceOccurrencesArgsForCall(0)
+			_, resourceUri, pageToken, pageSize := grafeasExtensions.ListVersionedResourceOccurrencesArgsForCall(0)
 
 			Expect(resourceUri).To(Equal(expectedResourceUri))
 			Expect(pageToken).To(Equal(expectedPageToken))

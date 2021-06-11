@@ -25,30 +25,33 @@ import (
 
 //go:generate counterfeiter -generate
 
-//counterfeiter:generate . Helper
-type Helper interface {
+//counterfeiter:generate . Extensions
+type Extensions interface {
 	ListVersionedResourceOccurrences(ctx context.Context, resourceUri, pageToken string, pageSize int32) ([]*grafeas_proto.Occurrence, string, error)
 }
 
-type helper struct {
+type extensions struct {
 	logger        *zap.Logger
 	grafeasCommon grafeas_proto.GrafeasV1Beta1Client
 }
 
-func NewHelper(logger *zap.Logger, grafeasCommon grafeas_proto.GrafeasV1Beta1Client) Helper {
-	return &helper{logger, grafeasCommon}
+func NewExtensions(logger *zap.Logger, grafeasCommon grafeas_proto.GrafeasV1Beta1Client) Extensions {
+	return &extensions{logger, grafeasCommon}
 }
 
-func (h *helper) ListVersionedResourceOccurrences(ctx context.Context, resourceUri, pageToken string, pageSize int32) ([]*grafeas_proto.Occurrence, string, error) {
-	log := h.logger.Named("ListVersionedResourceOccurrences")
+func (e *extensions) ListVersionedResourceOccurrences(ctx context.Context, resourceUri, pageToken string, pageSize int32) ([]*grafeas_proto.Occurrence, string, error) {
+	log := e.logger.Named("ListVersionedResourceOccurrences")
 
-	buildOccurrences, err := h.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{
+	buildOccurrences, err := e.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{
 		Parent:   constants.RodeProjectSlug,
 		PageSize: constants.MaxPageSize,
 		Filter:   fmt.Sprintf(`kind == "BUILD" && (resource.uri == "%[1]s" || build.provenance.builtArtifacts.nestedFilter(id == "%[1]s"))`, resourceUri),
 	})
 	if err != nil {
 		return nil, "", fmt.Errorf("error fetching build occurrences: %v", err)
+	}
+	if buildOccurrences.NextPageToken != "" {
+		log.Warn(fmt.Sprintf("listing build occurrences returned a page token, implying that there are more than %d build occurrences for this resource", constants.MaxPageSize))
 	}
 
 	resourceUris := map[string]string{
@@ -68,7 +71,7 @@ func (h *helper) ListVersionedResourceOccurrences(ctx context.Context, resourceU
 
 	filter := strings.Join(resourceFilters, " || ")
 	log.Debug("listing occurrences", zap.String("filter", filter))
-	allOccurrences, err := h.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{
+	allOccurrences, err := e.grafeasCommon.ListOccurrences(ctx, &grafeas_proto.ListOccurrencesRequest{
 		Parent:    constants.RodeProjectSlug,
 		Filter:    filter,
 		PageSize:  pageSize,

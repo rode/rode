@@ -9,7 +9,7 @@ import (
 	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 )
 
-type FakeHelper struct {
+type FakeExtensions struct {
 	ListVersionedResourceOccurrencesStub        func(context.Context, string, string, int32) ([]*grafeas_go_proto.Occurrence, string, error)
 	listVersionedResourceOccurrencesMutex       sync.RWMutex
 	listVersionedResourceOccurrencesArgsForCall []struct {
@@ -32,7 +32,7 @@ type FakeHelper struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeHelper) ListVersionedResourceOccurrences(arg1 context.Context, arg2 string, arg3 string, arg4 int32) ([]*grafeas_go_proto.Occurrence, string, error) {
+func (fake *FakeExtensions) ListVersionedResourceOccurrences(arg1 context.Context, arg2 string, arg3 string, arg4 int32) ([]*grafeas_go_proto.Occurrence, string, error) {
 	fake.listVersionedResourceOccurrencesMutex.Lock()
 	ret, specificReturn := fake.listVersionedResourceOccurrencesReturnsOnCall[len(fake.listVersionedResourceOccurrencesArgsForCall)]
 	fake.listVersionedResourceOccurrencesArgsForCall = append(fake.listVersionedResourceOccurrencesArgsForCall, struct {
@@ -54,26 +54,26 @@ func (fake *FakeHelper) ListVersionedResourceOccurrences(arg1 context.Context, a
 	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
 }
 
-func (fake *FakeHelper) ListVersionedResourceOccurrencesCallCount() int {
+func (fake *FakeExtensions) ListVersionedResourceOccurrencesCallCount() int {
 	fake.listVersionedResourceOccurrencesMutex.RLock()
 	defer fake.listVersionedResourceOccurrencesMutex.RUnlock()
 	return len(fake.listVersionedResourceOccurrencesArgsForCall)
 }
 
-func (fake *FakeHelper) ListVersionedResourceOccurrencesCalls(stub func(context.Context, string, string, int32) ([]*grafeas_go_proto.Occurrence, string, error)) {
+func (fake *FakeExtensions) ListVersionedResourceOccurrencesCalls(stub func(context.Context, string, string, int32) ([]*grafeas_go_proto.Occurrence, string, error)) {
 	fake.listVersionedResourceOccurrencesMutex.Lock()
 	defer fake.listVersionedResourceOccurrencesMutex.Unlock()
 	fake.ListVersionedResourceOccurrencesStub = stub
 }
 
-func (fake *FakeHelper) ListVersionedResourceOccurrencesArgsForCall(i int) (context.Context, string, string, int32) {
+func (fake *FakeExtensions) ListVersionedResourceOccurrencesArgsForCall(i int) (context.Context, string, string, int32) {
 	fake.listVersionedResourceOccurrencesMutex.RLock()
 	defer fake.listVersionedResourceOccurrencesMutex.RUnlock()
 	argsForCall := fake.listVersionedResourceOccurrencesArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
 }
 
-func (fake *FakeHelper) ListVersionedResourceOccurrencesReturns(result1 []*grafeas_go_proto.Occurrence, result2 string, result3 error) {
+func (fake *FakeExtensions) ListVersionedResourceOccurrencesReturns(result1 []*grafeas_go_proto.Occurrence, result2 string, result3 error) {
 	fake.listVersionedResourceOccurrencesMutex.Lock()
 	defer fake.listVersionedResourceOccurrencesMutex.Unlock()
 	fake.ListVersionedResourceOccurrencesStub = nil
@@ -84,7 +84,7 @@ func (fake *FakeHelper) ListVersionedResourceOccurrencesReturns(result1 []*grafe
 	}{result1, result2, result3}
 }
 
-func (fake *FakeHelper) ListVersionedResourceOccurrencesReturnsOnCall(i int, result1 []*grafeas_go_proto.Occurrence, result2 string, result3 error) {
+func (fake *FakeExtensions) ListVersionedResourceOccurrencesReturnsOnCall(i int, result1 []*grafeas_go_proto.Occurrence, result2 string, result3 error) {
 	fake.listVersionedResourceOccurrencesMutex.Lock()
 	defer fake.listVersionedResourceOccurrencesMutex.Unlock()
 	fake.ListVersionedResourceOccurrencesStub = nil
@@ -102,7 +102,7 @@ func (fake *FakeHelper) ListVersionedResourceOccurrencesReturnsOnCall(i int, res
 	}{result1, result2, result3}
 }
 
-func (fake *FakeHelper) Invocations() map[string][][]interface{} {
+func (fake *FakeExtensions) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.listVersionedResourceOccurrencesMutex.RLock()
@@ -114,7 +114,7 @@ func (fake *FakeHelper) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *FakeHelper) recordInvocation(key string, args []interface{}) {
+func (fake *FakeExtensions) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -126,4 +126,4 @@ func (fake *FakeHelper) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ grafeas.Helper = new(FakeHelper)
+var _ grafeas.Extensions = new(FakeExtensions)

@@ -72,19 +72,19 @@ var _ = Describe("PolicyManager", func() {
 		ctx                   = context.Background()
 		expectedPoliciesAlias string
 
-		esClient      *esutilfakes.FakeClient
-		esConfig      *config.ElasticsearchConfig
-		grafeasHelper *grafeasfakes.FakeHelper
-		opaClient     *opafakes.FakeClient
-		indexManager  *immocks.FakeIndexManager
-		filterer      *filteringfakes.FakeFilterer
+		esClient          *esutilfakes.FakeClient
+		esConfig          *config.ElasticsearchConfig
+		grafeasExtensions *grafeasfakes.FakeExtensions
+		opaClient         *opafakes.FakeClient
+		indexManager      *immocks.FakeIndexManager
+		filterer          *filteringfakes.FakeFilterer
 
 		manager Manager
 	)
 
 	BeforeEach(func() {
 		esClient = &esutilfakes.FakeClient{}
-		grafeasHelper = &grafeasfakes.FakeHelper{}
+		grafeasExtensions = &grafeasfakes.FakeExtensions{}
 		indexManager = &immocks.FakeIndexManager{}
 		opaClient = &opafakes.FakeClient{}
 		filterer = &filteringfakes.FakeFilterer{}
@@ -95,7 +95,7 @@ var _ = Describe("PolicyManager", func() {
 		expectedPoliciesAlias = fake.LetterN(10)
 		indexManager.AliasNameReturns(expectedPoliciesAlias)
 
-		manager = NewManager(logger, esClient, esConfig, indexManager, filterer, opaClient, grafeasHelper)
+		manager = NewManager(logger, esClient, esConfig, indexManager, filterer, opaClient, grafeasExtensions)
 	})
 
 	Context("CreatePolicy", func() {
@@ -1545,7 +1545,7 @@ var _ = Describe("PolicyManager", func() {
 			esClient.GetReturnsOnCall(1, getPolicyEntityResponse, getPolicyEntityError)
 
 			opaClient.InitializePolicyReturns(opaInitializePolicyError)
-			grafeasHelper.ListVersionedResourceOccurrencesReturns(listVersionedResourceOccurrencesResponse, "", listVersionedResourceOccurrencesError)
+			grafeasExtensions.ListVersionedResourceOccurrencesReturns(listVersionedResourceOccurrencesResponse, "", listVersionedResourceOccurrencesError)
 			opaClient.EvaluatePolicyReturns(opaEvaluatePolicyResponse, opaEvaluatePolicyError)
 
 			actualResponse, actualError = manager.EvaluatePolicy(ctx, request)
@@ -1572,9 +1572,9 @@ var _ = Describe("PolicyManager", func() {
 			})
 
 			It("should fetch versioned resource occurrences from Grafeas", func() {
-				Expect(grafeasHelper.ListVersionedResourceOccurrencesCallCount()).To(Equal(1))
+				Expect(grafeasExtensions.ListVersionedResourceOccurrencesCallCount()).To(Equal(1))
 
-				_, actualResourceUri, actualPageToken, actualPageSize := grafeasHelper.ListVersionedResourceOccurrencesArgsForCall(0)
+				_, actualResourceUri, actualPageToken, actualPageSize := grafeasExtensions.ListVersionedResourceOccurrencesArgsForCall(0)
 
 				Expect(actualResourceUri).To(Equal(resourceUri))
 				Expect(actualPageToken).To(BeEmpty())

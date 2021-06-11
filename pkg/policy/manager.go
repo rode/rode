@@ -40,7 +40,6 @@ import (
 )
 
 const (
-	rodeProjectSlug           = "projects/rode"
 	policiesDocumentKind      = "policies"
 	policyDocumentJoinField   = "join"
 	policyRelationName        = "policy"
@@ -63,12 +62,12 @@ type Manager interface {
 type manager struct {
 	logger *zap.Logger
 
-	esClient      esutil.Client
-	esConfig      *config.ElasticsearchConfig
-	indexManager  indexmanager.IndexManager
-	filterer      filtering.Filterer
-	opa           opa.Client
-	grafeasHelper grafeas.Helper
+	esClient          esutil.Client
+	esConfig          *config.ElasticsearchConfig
+	indexManager      indexmanager.IndexManager
+	filterer          filtering.Filterer
+	opa               opa.Client
+	grafeasExtensions grafeas.Extensions
 }
 
 func NewManager(
@@ -78,16 +77,16 @@ func NewManager(
 	indexManager indexmanager.IndexManager,
 	filterer filtering.Filterer,
 	opa opa.Client,
-	grafeasHelper grafeas.Helper,
+	grafeasExtensions grafeas.Extensions,
 ) Manager {
 	return &manager{
-		logger:        logger,
-		esClient:      esClient,
-		esConfig:      esConfig,
-		indexManager:  indexManager,
-		filterer:      filterer,
-		opa:           opa,
-		grafeasHelper: grafeasHelper,
+		logger:            logger,
+		esClient:          esClient,
+		esConfig:          esConfig,
+		indexManager:      indexManager,
+		filterer:          filterer,
+		opa:               opa,
+		grafeasExtensions: grafeasExtensions,
 	}
 }
 
@@ -525,7 +524,7 @@ func (m *manager) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePolicy
 	}
 
 	// fetch occurrences from grafeas
-	occurrences, _, err := m.grafeasHelper.ListVersionedResourceOccurrences(ctx, request.ResourceUri, "", constants.MaxPageSize)
+	occurrences, _, err := m.grafeasExtensions.ListVersionedResourceOccurrences(ctx, request.ResourceUri, "", constants.MaxPageSize)
 	if err != nil {
 		return nil, createError(log, "error listing occurrences", err)
 	}

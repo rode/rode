@@ -42,7 +42,7 @@ func NewRodeServer(
 	logger *zap.Logger,
 	grafeasCommon grafeas_proto.GrafeasV1Beta1Client,
 	grafeasProjects grafeas_project_proto.ProjectsClient,
-	grafeasHelper grafeas.Helper,
+	grafeasExtensions grafeas.Extensions,
 	resourceManager resource.Manager,
 	indexManager indexmanager.IndexManager,
 	policyManager policy.Manager,
@@ -51,7 +51,7 @@ func NewRodeServer(
 		logger,
 		grafeasCommon,
 		grafeasProjects,
-		grafeasHelper,
+		grafeasExtensions,
 		resourceManager,
 		indexManager,
 		policyManager,
@@ -65,12 +65,12 @@ func NewRodeServer(
 }
 
 type rodeServer struct {
-	logger          *zap.Logger
-	grafeasCommon   grafeas_proto.GrafeasV1Beta1Client
-	grafeasProjects grafeas_project_proto.ProjectsClient
-	grafeasHelper   grafeas.Helper
-	resourceManager resource.Manager
-	indexManager    indexmanager.IndexManager
+	logger            *zap.Logger
+	grafeasCommon     grafeas_proto.GrafeasV1Beta1Client
+	grafeasProjects   grafeas_project_proto.ProjectsClient
+	grafeasExtensions grafeas.Extensions
+	resourceManager   resource.Manager
+	indexManager      indexmanager.IndexManager
 	policy.Manager
 }
 
@@ -184,7 +184,7 @@ func (r *rodeServer) ListVersionedResourceOccurrences(ctx context.Context, reque
 		return nil, createErrorWithCode(log, "invalid request", errors.New("must set resource_uri"), codes.InvalidArgument)
 	}
 
-	occurrences, nextPageToken, err := r.grafeasHelper.ListVersionedResourceOccurrences(ctx, resourceUri, request.PageToken, request.PageSize)
+	occurrences, nextPageToken, err := r.grafeasExtensions.ListVersionedResourceOccurrences(ctx, resourceUri, request.PageToken, request.PageSize)
 	if err != nil {
 		return nil, createError(log, "error listing versioned resource occurrences", err)
 	}
