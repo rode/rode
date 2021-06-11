@@ -635,6 +635,7 @@ var _ = Describe("PolicyManager", func() {
 
 			Expect(actualRequest.Index).To(Equal(expectedPoliciesAlias))
 			Expect(actualRequest.Pagination).To(BeNil())
+			Expect(actualRequest.Search.Sort["created"]).To(Equal(esutil.EsSortOrderDescending))
 			Expect(*actualRequest.Search.Query.Bool.Must).To(HaveLen(2))
 
 			actualJoinQuery := (*actualRequest.Search.Query.Bool.Must)[0].(*filtering.Query)
