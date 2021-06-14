@@ -86,12 +86,12 @@ func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceReque
 		return nil, createError(log, "error creating occurrences", err)
 	}
 
-	if err = r.resourceManager.BatchCreateGenericResources(ctx, occurrenceResponse.Occurrences); err != nil {
-		return nil, createError(log, "error creating generic resources", err)
+	if err = r.resourceManager.BatchCreateResources(ctx, occurrenceResponse.Occurrences); err != nil {
+		return nil, createError(log, "error creating resources", err)
 	}
 
-	if err = r.resourceManager.BatchCreateGenericResourceVersions(ctx, occurrenceResponse.Occurrences); err != nil {
-		return nil, createError(log, "error creating generic resource versions", err)
+	if err = r.resourceManager.BatchCreateResourceVersions(ctx, occurrenceResponse.Occurrences); err != nil {
+		return nil, createError(log, "error creating resource versions", err)
 	}
 
 	return &pb.BatchCreateOccurrencesResponse{
@@ -99,32 +99,32 @@ func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceReque
 	}, nil
 }
 
-func (r *rodeServer) ListGenericResources(ctx context.Context, request *pb.ListGenericResourcesRequest) (*pb.ListGenericResourcesResponse, error) {
-	log := r.logger.Named("ListGenericResources")
+func (r *rodeServer) ListResources(ctx context.Context, request *pb.ListResourcesRequest) (*pb.ListResourcesResponse, error) {
+	log := r.logger.Named("ListResources")
 	log.Debug("received request", zap.Any("request", request))
 
-	return r.resourceManager.ListGenericResources(ctx, request)
+	return r.resourceManager.ListResources(ctx, request)
 }
 
-func (r *rodeServer) ListGenericResourceVersions(ctx context.Context, request *pb.ListGenericResourceVersionsRequest) (*pb.ListGenericResourceVersionsResponse, error) {
-	log := r.logger.Named("ListGenericResourceVersions").With(zap.Any("resource", request.Id))
+func (r *rodeServer) ListResourceVersions(ctx context.Context, request *pb.ListResourceVersionsRequest) (*pb.ListResourceVersionsResponse, error) {
+	log := r.logger.Named("ListResourceVersions").With(zap.Any("resource", request.Id))
 
 	if request.Id == "" {
 		return nil, status.Error(codes.InvalidArgument, "resource id is required")
 	}
 
-	genericResource, err := r.resourceManager.GetGenericResource(ctx, request.Id)
+	resource, err := r.resourceManager.GetResource(ctx, request.Id)
 	if err != nil {
 		return nil, err
 	}
 
-	if genericResource == nil {
-		log.Debug("generic resource not found")
+	if resource == nil {
+		log.Debug("resource not found")
 
-		return nil, status.Error(codes.NotFound, fmt.Sprintf("generic resource with id %s not found", request.Id))
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("resource with id %s not found", request.Id))
 	}
 
-	return r.resourceManager.ListGenericResourceVersions(ctx, request)
+	return r.resourceManager.ListResourceVersions(ctx, request)
 }
 
 func (r *rodeServer) initialize(ctx context.Context) error {
@@ -160,9 +160,9 @@ func (r *rodeServer) initialize(ctx context.Context) error {
 			documentKind: constants.PoliciesDocumentKind,
 		},
 		{
-			indexName:    r.indexManager.IndexName(constants.GenericResourcesDocumentKind, ""),
-			aliasName:    r.indexManager.AliasName(constants.GenericResourcesDocumentKind, ""),
-			documentKind: constants.GenericResourcesDocumentKind,
+			indexName:    r.indexManager.IndexName(constants.ResourcesDocumentKind, ""),
+			aliasName:    r.indexManager.AliasName(constants.ResourcesDocumentKind, ""),
+			documentKind: constants.ResourcesDocumentKind,
 		},
 	}
 

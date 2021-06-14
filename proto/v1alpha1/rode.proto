@@ -42,17 +42,17 @@ service Rode {
       body: "*"
     };
   }
-  rpc ListGenericResources(ListGenericResourcesRequest) returns (ListGenericResourcesResponse) {
+  rpc ListResources(ListResourcesRequest) returns (ListResourcesResponse) {
     option (google.api.http) = {
-      get: "/v1alpha1/generic-resources"
+      get: "/v1alpha1/resources"
     };
   }
-  // ListGenericResourceVersions can be used to list all known versions of a generic resource. Versions will always include
+  // ListResourceVersions can be used to list all known versions of a resource. Versions will always include
   // the unique identifier (in the case of Docker images, the sha256) and will optionally include any related names (in the
   // case of Docker images, any associated tags for the image).
-  rpc ListGenericResourceVersions(ListGenericResourceVersionsRequest) returns (ListGenericResourceVersionsResponse) {
+  rpc ListResourceVersions(ListResourceVersionsRequest) returns (ListResourceVersionsResponse) {
     option (google.api.http) = {
-      get: "/v1alpha1/generic-resource-versions"
+      get: "/v1alpha1/resource-versions"
     };
   }
   rpc ListVersionedResourceOccurrences(ListVersionedResourceOccurrencesRequest) returns (ListVersionedResourceOccurrencesResponse) {
@@ -146,21 +146,21 @@ enum ResourceType {
   RPM = 9;
 }
 
-message GenericResource {
-  // Id represents the unique id of the generic resource. This is usually the resource prefix plus the name, except in the
-  // case of Docker images. The id is used as a parameter for the ListGenericResourceVersions RPC.
+message Resource {
+  // Id represents the unique id of the resource. This is usually the resource prefix plus the name, except in the
+  // case of Docker images. The id is used as a parameter for the ListResourceVersions RPC.
   string id = 1;
 
-  // Name represents the name of this generic resource as seen on the UI.
+  // Name represents the name of this resource as seen on the UI.
   string name = 2;
 
-  // Type represents the resource type for this generic resource, such as "DOCKER" or "GIT"
+  // Type represents the resource type for this resource, such as "DOCKER" or "GIT"
   ResourceType type = 3;
 
   google.protobuf.Timestamp created = 4;
 }
 
-message GenericResourceVersion {
+message ResourceVersion {
   // Version represents the unique artifact version as a fully qualified URI.
   // Example: a Docker image version might look like this: harbor.liatr.io/rode-demo/node-app@sha256:a235554754f9bf075ac1c1b70c224ef5997176b776f0c56e340aeb63f429ace8
   string version = 1;
@@ -184,14 +184,14 @@ message BatchCreateOccurrencesResponse {
   repeated grafeas.v1beta1.Occurrence occurrences = 1;
 }
 
-message ListGenericResourcesRequest {
+message ListResourcesRequest {
   string filter = 1;
   int32 page_size = 2;
   string page_token = 3;
 }
 
-message ListGenericResourcesResponse {
-  repeated GenericResource generic_resources = 1;
+message ListResourcesResponse {
+  repeated Resource resources = 1;
   string next_page_token = 2;
 }
 
@@ -243,7 +243,7 @@ message CreateNoteRequest {
   grafeas.v1beta1.Note note = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
-message ListGenericResourceVersionsRequest {
+message ListResourceVersionsRequest {
   string id = 1 [(google.api.field_behavior) = REQUIRED];
   string filter = 2;
 
@@ -251,7 +251,7 @@ message ListGenericResourceVersionsRequest {
   string page_token = 4;
 }
 
-message ListGenericResourceVersionsResponse {
-  repeated GenericResourceVersion versions = 1;
+message ListResourceVersionsResponse {
+  repeated ResourceVersion versions = 1;
   string next_page_token = 2;
 }
