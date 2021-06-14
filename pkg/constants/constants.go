@@ -19,6 +19,7 @@ const (
 
 	PoliciesDocumentKind         = "policies"
 	GenericResourcesDocumentKind = "generic-resources"
+	EnvironmentsDocumentKind     = "environments"
 
 	MaxPageSize = 1000
 )

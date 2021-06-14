@@ -1,0 +1,39 @@
+{
+  "version": "v1alpha1",
+  "settings": {
+    "analysis": {
+      "normalizer": {
+        "lowercase_normalizer": {
+          "type": "custom",
+          "char_filter": [],
+          "filter": ["lowercase", "asciifolding"]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "_meta": {
+      "type": "rode"
+    },
+    "properties": {
+      "name": {
+        "type": "keyword",
+        "normalizer": "lowercase_normalizer"
+      },
+      "created": {
+        "type": "date"
+      }
+    },
+    "dynamic_templates": [
+      {
+        "strings_as_keywords": {
+          "match_mapping_type": "string",
+          "mapping": {
+            "type": "keyword",
+            "norms": false
+          }
+        }
+      }
+    ]
+  }
+}

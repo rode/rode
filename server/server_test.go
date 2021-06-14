@@ -18,9 +18,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/rode/rode/pkg/constants"
 	"github.com/rode/rode/pkg/grafeas/grafeasfakes"
-	"strings"
 
 	"github.com/rode/rode/pkg/policy/policyfakes"
 	"github.com/rode/rode/pkg/resource/resourcefakes"
@@ -56,6 +57,8 @@ var _ = Describe("rode server", func() {
 		expectedPoliciesAlias        string
 		expectedGenericResourceIndex string
 		expectedGenericResourceAlias string
+		expectedEnvironmentsIndex    string
+		expectedEnvironmentsAlias    string
 	)
 
 	BeforeEach(func() {
@@ -68,12 +71,15 @@ var _ = Describe("rode server", func() {
 		expectedPoliciesAlias = gofakeit.LetterN(10)
 		expectedGenericResourceIndex = gofakeit.LetterN(10)
 		expectedGenericResourceAlias = gofakeit.LetterN(10)
+		expectedEnvironmentsIndex = gofakeit.LetterN(10)
+		expectedEnvironmentsAlias = gofakeit.LetterN(10)
 		indexManager = &immocks.FakeIndexManager{}
 
 		indexManager.AliasNameStub = func(documentKind, _ string) string {
 			return map[string]string{
 				constants.GenericResourcesDocumentKind: expectedGenericResourceAlias,
 				constants.PoliciesDocumentKind:         expectedPoliciesAlias,
+				constants.EnvironmentsDocumentKind:     expectedEnvironmentsAlias,
 			}[documentKind]
 		}
 
@@ -81,6 +87,7 @@ var _ = Describe("rode server", func() {
 			return map[string]string{
 				constants.GenericResourcesDocumentKind: expectedGenericResourceIndex,
 				constants.PoliciesDocumentKind:         expectedPoliciesIndex,
+				constants.EnvironmentsDocumentKind:     expectedEnvironmentsIndex,
 			}[documentKind]
 		}
 
@@ -140,9 +147,11 @@ var _ = Describe("rode server", func() {
 			Expect(indexManager.InitializeCallCount()).To(Equal(1))
 		})
 
-		It("should create an index for policies", func() {
-			Expect(indexManager.CreateIndexCallCount()).To(Equal(2))
+		It("should create the application indices", func() {
+			Expect(indexManager.CreateIndexCallCount()).To(Equal(3))
+		})
 
+		It("should create an index for policies", func() {
 			_, actualIndexName, actualAliasName, documentKind := indexManager.CreateIndexArgsForCall(0)
 
 			Expect(actualIndexName).To(Equal(expectedPoliciesIndex))
@@ -151,13 +160,19 @@ var _ = Describe("rode server", func() {
 		})
 
 		It("should create an index for generic resources", func() {
-			Expect(indexManager.CreateIndexCallCount()).To(Equal(2))
-
 			_, actualIndexName, actualAliasName, documentKind := indexManager.CreateIndexArgsForCall(1)
 
 			Expect(actualIndexName).To(Equal(expectedGenericResourceIndex))
 			Expect(actualAliasName).To(Equal(expectedGenericResourceAlias))
 			Expect(documentKind).To(Equal(constants.GenericResourcesDocumentKind))
+		})
+
+		It("should create an index for environments", func() {
+			_, actualIndexName, actualAliasName, documentKind := indexManager.CreateIndexArgsForCall(2)
+
+			Expect(actualIndexName).To(Equal(expectedEnvironmentsIndex))
+			Expect(actualAliasName).To(Equal(expectedEnvironmentsAlias))
+			Expect(documentKind).To(Equal(constants.EnvironmentsDocumentKind))
 		})
 
 		It("should return the initialized rode server", func() {

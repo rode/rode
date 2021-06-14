@@ -164,6 +164,11 @@ func (r *rodeServer) initialize(ctx context.Context) error {
 			aliasName:    r.indexManager.AliasName(constants.GenericResourcesDocumentKind, ""),
 			documentKind: constants.GenericResourcesDocumentKind,
 		},
+		{
+			indexName:    r.indexManager.IndexName(constants.EnvironmentsDocumentKind, ""),
+			aliasName:    r.indexManager.AliasName(constants.EnvironmentsDocumentKind, ""),
+			documentKind: constants.EnvironmentsDocumentKind,
+		},
 	}
 
 	for _, settings := range indexSettings {
