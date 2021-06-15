@@ -33,6 +33,7 @@
     - [ListPolicyVersionsResponse](#rode.v1alpha1.ListPolicyVersionsResponse)
     - [Policy](#rode.v1alpha1.Policy)
     - [PolicyEntity](#rode.v1alpha1.PolicyEntity)
+    - [PolicyEvaluation](#rode.v1alpha1.PolicyEvaluation)
     - [UpdatePolicyRequest](#rode.v1alpha1.UpdatePolicyRequest)
     - [ValidatePolicyRequest](#rode.v1alpha1.ValidatePolicyRequest)
     - [ValidatePolicyResponse](#rode.v1alpha1.ValidatePolicyResponse)
@@ -43,6 +44,8 @@
     - [ListResourcesRequest](#rode.v1alpha1.ListResourcesRequest)
     - [ListResourcesResponse](#rode.v1alpha1.ListResourcesResponse)
     - [Resource](#rode.v1alpha1.Resource)
+    - [ResourceEvaluation](#rode.v1alpha1.ResourceEvaluation)
+    - [ResourceEvaluationSource](#rode.v1alpha1.ResourceEvaluationSource)
     - [ResourceVersion](#rode.v1alpha1.ResourceVersion)
   
     - [ResourceType](#rode.v1alpha1.ResourceType)
@@ -517,6 +520,26 @@ EvaluatePolicyInput is used as the input when evaluating a policy in OPA.
 
 
 
+<a name="rode.v1alpha1.PolicyEvaluation"></a>
+
+### PolicyEvaluation
+PolicyEvaluation describes the result of a request to evaluate a particular resource version against a specific policy.
+This is a child of ResourceEvaluation.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  | Id represents the unique identifier (UUID) for this particular policy evaluation. |
+| resource_evaluation_id | [string](#string) |  | ResourceEvaluationId represents the unique identifier (UUID) of the resource evaluation that triggered this policy evaluation. |
+| pass | [bool](#bool) |  | Pass represents the overall status for this policy evaluation. This is determined by looking at the result of each rule within the policy and performing an AND on each one. |
+| policy_version_id | [string](#string) |  | PolicyVersionId represents the ID of the policy version that was evaluated. |
+| result | [EvaluatePolicyResult](#rode.v1alpha1.EvaluatePolicyResult) | repeated | Result is a list of evaluation outputs gathered by evaluating each rule within the policy. |
+
+
+
+
+
+
 <a name="rode.v1alpha1.UpdatePolicyRequest"></a>
 
 ### UpdatePolicyRequest
@@ -659,6 +682,42 @@ EvaluatePolicyInput is used as the input when evaluating a policy in OPA.
 | name | [string](#string) |  | Name represents the name of this resource as seen on the UI. |
 | type | [ResourceType](#rode.v1alpha1.ResourceType) |  | Type represents the resource type for this resource, such as &#34;DOCKER&#34; or &#34;GIT&#34; |
 | created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ResourceEvaluation"></a>
+
+### ResourceEvaluation
+ResourceEvaluation describes the result of a request to evaluate a particular resource version against a group of policies.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  | Id represents the unique identifier (UUID) for this particular resource evaluation. |
+| pass | [bool](#bool) |  | Pass represents the overall status for this resource evaluation. This is determined by looking at each policy evaluation result and performing an AND on each one. If Pass is true, this means that the referenced resource version passed each policy within the policy group at the time that the evaluation was performed. |
+| source | [ResourceEvaluationSource](#rode.v1alpha1.ResourceEvaluationSource) |  | Source represents the source of the resource evaluation request. This should be set by the enforcer or entity performing the request. |
+| created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
+| resource_version | [ResourceVersion](#rode.v1alpha1.ResourceVersion) |  | ResourceVersion represents the specific resource version that was evaluated in this request. |
+| policy_group_id | [string](#string) |  | PolicyGroupId represents the ID of the policy group that was evaluated in this request. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ResourceEvaluationSource"></a>
+
+### ResourceEvaluationSource
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| name | [string](#string) |  |  |
+| url | [string](#string) |  |  |
 
 
 

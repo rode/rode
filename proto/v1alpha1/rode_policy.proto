@@ -171,3 +171,23 @@ message PolicyEntity {
   // Created represents when this policy version was stored. Policy contents are immutable, so there is no corresponding Updated field.
   google.protobuf.Timestamp created = 5;
 }
+
+// PolicyEvaluation describes the result of a request to evaluate a particular resource version against a specific policy.
+// This is a child of ResourceEvaluation.
+message PolicyEvaluation {
+  // Id represents the unique identifier (UUID) for this particular policy evaluation.
+  string id = 1;
+
+  // ResourceEvaluationId represents the unique identifier (UUID) of the resource evaluation that triggered this policy evaluation.
+  string resource_evaluation_id = 2;
+
+  // Pass represents the overall status for this policy evaluation. This is determined by looking at the result of each rule
+  // within the policy and performing an AND on each one.
+  bool pass = 3;
+
+  // PolicyVersionId represents the ID of the policy version that was evaluated.
+  string policy_version_id = 4;
+
+  // Result is a list of evaluation outputs gathered by evaluating each rule within the policy.
+  repeated EvaluatePolicyResult result = 5;
+}
