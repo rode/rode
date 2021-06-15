@@ -47,7 +47,7 @@ var _ = Describe("resource manager", func() {
 		indexManager *immocks.FakeIndexManager
 		mockFilterer *filteringfakes.FakeFilterer
 
-		genericResourcesAlias string
+		resourcesAlias string
 	)
 
 	BeforeEach(func() {
@@ -59,15 +59,15 @@ var _ = Describe("resource manager", func() {
 		indexManager = &immocks.FakeIndexManager{}
 		mockFilterer = &filteringfakes.FakeFilterer{}
 
-		genericResourcesAlias = fake.LetterN(10)
-		indexManager.AliasNameReturns(genericResourcesAlias)
+		resourcesAlias = fake.LetterN(10)
+		indexManager.AliasNameReturns(resourcesAlias)
 	})
 
 	JustBeforeEach(func() {
 		manager = NewManager(logger, esClient, esConfig, indexManager, mockFilterer)
 	})
 
-	Context("BatchCreateGenericResources", func() {
+	Context("BatchCreateResources", func() {
 		var (
 			actualError error
 
@@ -104,7 +104,7 @@ var _ = Describe("resource manager", func() {
 			}
 			expectedMultiGetError = nil
 
-			// happy path: generic resource document created successfully
+			// happy path: resource document created successfully
 			expectedBulkResponse = &esutil.EsBulkResponse{
 				Items: []*esutil.EsBulkResponseItem{
 					{
@@ -122,33 +122,33 @@ var _ = Describe("resource manager", func() {
 			esClient.MultiGetReturns(expectedMultiGetResponse, expectedMultiGetError)
 			esClient.BulkReturns(expectedBulkResponse, expectedBulkError)
 
-			actualError = manager.BatchCreateGenericResources(ctx, expectedOccurrences)
+			actualError = manager.BatchCreateResources(ctx, expectedOccurrences)
 		})
 
-		It("should check if the generic resources already exist", func() {
+		It("should check if the resources already exist", func() {
 			Expect(esClient.MultiGetCallCount()).To(Equal(1))
 
 			_, multiGetRequest := esClient.MultiGetArgsForCall(0)
-			Expect(multiGetRequest.Index).To(Equal(genericResourcesAlias))
+			Expect(multiGetRequest.Index).To(Equal(resourcesAlias))
 			Expect(multiGetRequest.DocumentIds).To(HaveLen(1))
 			Expect(multiGetRequest.DocumentIds).To(ConsistOf(expectedResourceId))
 		})
 
-		It("should make a bulk request to create all of the generic resources", func() {
+		It("should make a bulk request to create all of the resources", func() {
 			Expect(esClient.BulkCallCount()).To(Equal(1))
 
 			_, bulkRequest := esClient.BulkArgsForCall(0)
 			Expect(bulkRequest.Refresh).To(Equal(esConfig.Refresh.String()))
-			Expect(bulkRequest.Index).To(Equal(genericResourcesAlias))
+			Expect(bulkRequest.Index).To(Equal(resourcesAlias))
 			Expect(bulkRequest.Items).To(HaveLen(1))
 
 			Expect(bulkRequest.Items[0].DocumentId).To(Equal(expectedResourceId))
 			Expect(bulkRequest.Items[0].Operation).To(Equal(esutil.BULK_INDEX))
-			genericResource := bulkRequest.Items[0].Message.(*pb.GenericResource)
+			resource := bulkRequest.Items[0].Message.(*pb.Resource)
 
-			Expect(genericResource.Name).To(Equal(expectedResourceName))
-			Expect(genericResource.Type).To(Equal(pb.ResourceType_DOCKER))
-			Expect(genericResource.Created).To(Equal(expectedOccurrence.CreateTime))
+			Expect(resource.Name).To(Equal(expectedResourceName))
+			Expect(resource.Type).To(Equal(pb.ResourceType_DOCKER))
+			Expect(resource.Created).To(Equal(expectedOccurrence.CreateTime))
 		})
 
 		It("should not return an error", func() {
@@ -160,13 +160,13 @@ var _ = Describe("resource manager", func() {
 				expectedOccurrence.Resource.Uri = fmt.Sprintf("git://github.com/rode/rode@%s", fake.LetterN(10))
 			})
 
-			It("should create a generic resource with the correct type", func() {
+			It("should create a resource with the correct type", func() {
 				Expect(esClient.BulkCallCount()).To(Equal(1))
 
 				_, bulkCreateRequest := esClient.BulkArgsForCall(0)
-				genericResource := bulkCreateRequest.Items[0].Message.(*pb.GenericResource)
+				resource := bulkCreateRequest.Items[0].Message.(*pb.Resource)
 
-				Expect(genericResource.Type).To(Equal(pb.ResourceType_GIT))
+				Expect(resource.Type).To(Equal(pb.ResourceType_GIT))
 			})
 		})
 
@@ -186,7 +186,7 @@ var _ = Describe("resource manager", func() {
 				Expect(multiGetRequest.DocumentIds).To(ConsistOf(expectedResourceId))
 			})
 
-			It("should only create the generic resource once", func() {
+			It("should only create the resource once", func() {
 				Expect(esClient.BulkCallCount()).To(Equal(1))
 
 				_, bulkCreateRequest := esClient.BulkArgsForCall(0)
@@ -204,7 +204,7 @@ var _ = Describe("resource manager", func() {
 			})
 		})
 
-		When("the generic resources already exist", func() {
+		When("the resources already exist", func() {
 			BeforeEach(func() {
 				expectedMultiGetResponse.Docs[0].Found = true
 			})
@@ -253,7 +253,7 @@ var _ = Describe("resource manager", func() {
 			})
 		})
 
-		When("attempting to create a generic resource that already exists", func() {
+		When("attempting to create a resource that already exists", func() {
 			BeforeEach(func() {
 				expectedBulkResponse.Items[0].Index = &esutil.EsIndexDocResponse{
 					Error: &esutil.EsIndexDocError{
@@ -269,15 +269,15 @@ var _ = Describe("resource manager", func() {
 		})
 	})
 
-	Context("BatchCreateGenericResourceVersions", func() {
+	Context("BatchCreateResourceVersions", func() {
 		var (
 			expectedOccurrences []*grafeas_go_proto.Occurrence
 
-			expectedDockerResourceName             string
-			expectedDockerResourceVersion          string
-			expectedDockerResourceUri              string
-			expectedDockerGenericResourceVersionId string
-			expectedDockerGenericResourceId        string
+			expectedDockerResourceName      string
+			expectedDockerResourceVersion   string
+			expectedDockerResourceUri       string
+			expectedDockerResourceVersionId string
+			expectedDockerResourceId        string
 
 			expectedMultiGetResponse *esutil.EsMultiGetResponse
 			expectedMultiGetError    error
@@ -293,8 +293,8 @@ var _ = Describe("resource manager", func() {
 			expectedDockerResourceName = strings.Split(fake.URL(), "://")[1]
 			expectedDockerResourceVersion = fake.LetterN(20)
 			expectedDockerResourceUri = fmt.Sprintf("%s@sha256:%s", expectedDockerResourceName, expectedDockerResourceVersion)
-			expectedDockerGenericResourceVersionId = expectedDockerResourceUri
-			expectedDockerGenericResourceId = expectedDockerResourceName
+			expectedDockerResourceVersionId = expectedDockerResourceUri
+			expectedDockerResourceId = expectedDockerResourceName
 
 			expectedOccurrences = []*grafeas_go_proto.Occurrence{
 				{
@@ -305,7 +305,7 @@ var _ = Describe("resource manager", func() {
 				},
 			}
 
-			// simple happy path: generic resource version does not exist
+			// simple happy path: resource version does not exist
 			expectedMultiGetResponse = &esutil.EsMultiGetResponse{
 				Docs: []*esutil.EsGetResponse{
 					{
@@ -315,7 +315,7 @@ var _ = Describe("resource manager", func() {
 			}
 			expectedMultiGetError = nil
 
-			// simple happy path: generic resource version created successfully
+			// simple happy path: resource version created successfully
 			expectedBulkResponse = &esutil.EsBulkResponse{
 				Items: []*esutil.EsBulkResponseItem{
 					{
@@ -332,32 +332,32 @@ var _ = Describe("resource manager", func() {
 			esClient.MultiGetReturns(expectedMultiGetResponse, expectedMultiGetError)
 			esClient.BulkReturns(expectedBulkResponse, expectedBulkError)
 
-			actualError = manager.BatchCreateGenericResourceVersions(ctx, expectedOccurrences)
+			actualError = manager.BatchCreateResourceVersions(ctx, expectedOccurrences)
 		})
 
-		It("should query for the generic resource version", func() {
+		It("should query for the resource version", func() {
 			Expect(esClient.MultiGetCallCount()).To(Equal(1))
 
 			_, multiGetRequest := esClient.MultiGetArgsForCall(0)
-			Expect(multiGetRequest.Index).To(Equal(genericResourcesAlias))
-			Expect(multiGetRequest.DocumentIds).To(ConsistOf(expectedDockerGenericResourceVersionId))
+			Expect(multiGetRequest.Index).To(Equal(resourcesAlias))
+			Expect(multiGetRequest.DocumentIds).To(ConsistOf(expectedDockerResourceVersionId))
 		})
 
-		It("should create the generic resource version in elasticsearch", func() {
+		It("should create the resource version in elasticsearch", func() {
 			Expect(esClient.BulkCallCount()).To(Equal(1))
 
 			_, bulkRequest := esClient.BulkArgsForCall(0)
-			Expect(bulkRequest.Index).To(Equal(genericResourcesAlias))
+			Expect(bulkRequest.Index).To(Equal(resourcesAlias))
 
 			Expect(bulkRequest.Items).To(HaveLen(1))
 			item := bulkRequest.Items[0]
 			Expect(item.Operation).To(Equal(esutil.BULK_INDEX))
-			Expect(item.DocumentId).To(Equal(expectedDockerGenericResourceVersionId))
-			Expect(item.Join.Field).To(Equal(genericResourceDocumentJoinField))
-			Expect(item.Join.Name).To(Equal(genericResourceVersionRelationName))
-			Expect(item.Join.Parent).To(Equal(expectedDockerGenericResourceId))
+			Expect(item.DocumentId).To(Equal(expectedDockerResourceVersionId))
+			Expect(item.Join.Field).To(Equal(resourceDocumentJoinField))
+			Expect(item.Join.Name).To(Equal(resourceVersionRelationName))
+			Expect(item.Join.Parent).To(Equal(expectedDockerResourceId))
 
-			message := item.Message.(*pb.GenericResourceVersion)
+			message := item.Message.(*pb.ResourceVersion)
 			Expect(message.Names).To(BeEmpty())
 			Expect(message.Created).ToNot(BeNil())
 			Expect(message.Version).To(Equal(expectedDockerResourceUri))
@@ -377,19 +377,19 @@ var _ = Describe("resource manager", func() {
 				})
 			})
 
-			It("should only query for one generic resource version", func() {
+			It("should only query for one resource version", func() {
 				Expect(esClient.MultiGetCallCount()).To(Equal(1))
 
 				_, multiGetRequest := esClient.MultiGetArgsForCall(0)
-				Expect(multiGetRequest.Index).To(Equal(genericResourcesAlias))
-				Expect(multiGetRequest.DocumentIds).To(ConsistOf(expectedDockerGenericResourceVersionId))
+				Expect(multiGetRequest.Index).To(Equal(resourcesAlias))
+				Expect(multiGetRequest.DocumentIds).To(ConsistOf(expectedDockerResourceVersionId))
 			})
 
-			It("should only create one generic resource version", func() {
+			It("should only create one resource version", func() {
 				Expect(esClient.BulkCallCount()).To(Equal(1))
 
 				_, bulkRequest := esClient.BulkArgsForCall(0)
-				Expect(bulkRequest.Index).To(Equal(genericResourcesAlias))
+				Expect(bulkRequest.Index).To(Equal(resourcesAlias))
 
 				Expect(bulkRequest.Items).To(HaveLen(1))
 			})
@@ -409,7 +409,7 @@ var _ = Describe("resource manager", func() {
 			})
 		})
 
-		When("the generic resource version already exists", func() {
+		When("the resource version already exists", func() {
 			BeforeEach(func() {
 				expectedMultiGetResponse.Docs[0].Found = true
 			})
@@ -429,7 +429,7 @@ var _ = Describe("resource manager", func() {
 			})
 		})
 
-		When("creating the generic resource fails", func() {
+		When("creating the resource fails", func() {
 			BeforeEach(func() {
 				expectedBulkResponse.Items[0].Index.Error = &esutil.EsIndexDocError{
 					Type:   fake.LetterN(10),
@@ -444,14 +444,14 @@ var _ = Describe("resource manager", func() {
 
 		When("a build occurrence exists with an artifact", func() {
 			var (
-				expectedGitResourceName             string
-				expectedGitResourceVersion          string
-				expectedGitResourceUri              string
-				expectedGitGenericResourceVersionId string
-				expectedGitGenericResourceId        string
+				expectedGitResourceName      string
+				expectedGitResourceVersion   string
+				expectedGitResourceUri       string
+				expectedGitResourceVersionId string
+				expectedGitResourceId        string
 
-				expectedDockerGenericResourceVersionName string
-				expectedCreateTime                       *timestamppb.Timestamp
+				expectedDockerResourceVersionName string
+				expectedCreateTime                *timestamppb.Timestamp
 			)
 
 			BeforeEach(func() {
@@ -459,10 +459,10 @@ var _ = Describe("resource manager", func() {
 				expectedGitResourceName = strings.Split(fake.URL(), "://")[1]
 				expectedGitResourceVersion = fake.LetterN(20)
 				expectedGitResourceUri = fmt.Sprintf("git://%s@%s", expectedGitResourceName, expectedGitResourceVersion)
-				expectedGitGenericResourceVersionId = expectedGitResourceUri
-				expectedGitGenericResourceId = fmt.Sprintf("git://%s", expectedGitResourceName)
+				expectedGitResourceVersionId = expectedGitResourceUri
+				expectedGitResourceId = fmt.Sprintf("git://%s", expectedGitResourceName)
 
-				expectedDockerGenericResourceVersionName = fake.LetterN(10)
+				expectedDockerResourceVersionName = fake.LetterN(10)
 				expectedCreateTime = timestamppb.New(time.Now().Add(time.Duration(fake.Int64())))
 
 				expectedOccurrences = append(expectedOccurrences, &grafeas_go_proto.Occurrence{
@@ -477,7 +477,7 @@ var _ = Describe("resource manager", func() {
 								BuiltArtifacts: []*provenance_go_proto.Artifact{
 									{
 										Id:    expectedDockerResourceUri,
-										Names: []string{expectedDockerGenericResourceVersionName},
+										Names: []string{expectedDockerResourceVersionName},
 									},
 								},
 							},
@@ -493,48 +493,48 @@ var _ = Describe("resource manager", func() {
 				})
 			})
 
-			It("should query for both generic resource versions (docker and git)", func() {
+			It("should query for both resource versions (docker and git)", func() {
 				Expect(esClient.MultiGetCallCount()).To(Equal(1))
 
 				_, multiGetRequest := esClient.MultiGetArgsForCall(0)
-				Expect(multiGetRequest.Index).To(Equal(genericResourcesAlias))
-				Expect(multiGetRequest.DocumentIds).To(ConsistOf(expectedDockerGenericResourceVersionId, expectedGitGenericResourceVersionId))
+				Expect(multiGetRequest.Index).To(Equal(resourcesAlias))
+				Expect(multiGetRequest.DocumentIds).To(ConsistOf(expectedDockerResourceVersionId, expectedGitResourceVersionId))
 			})
 
-			It("should create two generic resource versions, using associated names and timestamp for the docker resource", func() {
+			It("should create two resource versions, using associated names and timestamp for the docker resource", func() {
 				Expect(esClient.BulkCallCount()).To(Equal(1))
 
 				_, bulkRequest := esClient.BulkArgsForCall(0)
-				Expect(bulkRequest.Index).To(Equal(genericResourcesAlias))
+				Expect(bulkRequest.Index).To(Equal(resourcesAlias))
 
 				Expect(bulkRequest.Items).To(HaveLen(2))
 
 				dockerItem := bulkRequest.Items[0]
 				Expect(dockerItem.Operation).To(Equal(esutil.BULK_INDEX))
-				Expect(dockerItem.DocumentId).To(Equal(expectedDockerGenericResourceVersionId))
-				Expect(dockerItem.Join.Field).To(Equal(genericResourceDocumentJoinField))
-				Expect(dockerItem.Join.Name).To(Equal(genericResourceVersionRelationName))
-				Expect(dockerItem.Join.Parent).To(Equal(expectedDockerGenericResourceId))
+				Expect(dockerItem.DocumentId).To(Equal(expectedDockerResourceVersionId))
+				Expect(dockerItem.Join.Field).To(Equal(resourceDocumentJoinField))
+				Expect(dockerItem.Join.Name).To(Equal(resourceVersionRelationName))
+				Expect(dockerItem.Join.Parent).To(Equal(expectedDockerResourceId))
 
-				dockerMessage := dockerItem.Message.(*pb.GenericResourceVersion)
-				Expect(dockerMessage.Names).To(ConsistOf(expectedDockerGenericResourceVersionName))
+				dockerMessage := dockerItem.Message.(*pb.ResourceVersion)
+				Expect(dockerMessage.Names).To(ConsistOf(expectedDockerResourceVersionName))
 				Expect(dockerMessage.Created).To(Equal(expectedCreateTime))
 				Expect(dockerMessage.Version).To(Equal(expectedDockerResourceUri))
 
 				gitItem := bulkRequest.Items[1]
 				Expect(gitItem.Operation).To(Equal(esutil.BULK_INDEX))
-				Expect(gitItem.DocumentId).To(Equal(expectedGitGenericResourceVersionId))
-				Expect(gitItem.Join.Field).To(Equal(genericResourceDocumentJoinField))
-				Expect(gitItem.Join.Name).To(Equal(genericResourceVersionRelationName))
-				Expect(gitItem.Join.Parent).To(Equal(expectedGitGenericResourceId))
+				Expect(gitItem.DocumentId).To(Equal(expectedGitResourceVersionId))
+				Expect(gitItem.Join.Field).To(Equal(resourceDocumentJoinField))
+				Expect(gitItem.Join.Name).To(Equal(resourceVersionRelationName))
+				Expect(gitItem.Join.Parent).To(Equal(expectedGitResourceId))
 
-				gitMessage := gitItem.Message.(*pb.GenericResourceVersion)
+				gitMessage := gitItem.Message.(*pb.ResourceVersion)
 				Expect(gitMessage.Names).To(BeEmpty())
 				Expect(gitMessage.Created).ToNot(BeNil())
 				Expect(gitMessage.Version).To(Equal(expectedGitResourceUri))
 			})
 
-			When("the docker generic resource version already exists", func() {
+			When("the docker resource version already exists", func() {
 				BeforeEach(func() {
 					expectedMultiGetResponse.Docs[0].Found = true
 					expectedBulkResponse.Items[0].Index = &esutil.EsIndexDocResponse{
@@ -542,23 +542,23 @@ var _ = Describe("resource manager", func() {
 					}
 				})
 
-				It("should update the existing docker generic resource version names", func() {
+				It("should update the existing docker resource version names", func() {
 					Expect(esClient.BulkCallCount()).To(Equal(1))
 
 					_, bulkRequest := esClient.BulkArgsForCall(0)
-					Expect(bulkRequest.Index).To(Equal(genericResourcesAlias))
+					Expect(bulkRequest.Index).To(Equal(resourcesAlias))
 
 					Expect(bulkRequest.Items).To(HaveLen(2))
 
 					dockerItem := bulkRequest.Items[0]
 					Expect(dockerItem.Operation).To(Equal(esutil.BULK_INDEX))
-					Expect(dockerItem.DocumentId).To(Equal(expectedDockerGenericResourceVersionId))
-					Expect(dockerItem.Join.Field).To(Equal(genericResourceDocumentJoinField))
-					Expect(dockerItem.Join.Name).To(Equal(genericResourceVersionRelationName))
-					Expect(dockerItem.Join.Parent).To(Equal(expectedDockerGenericResourceId))
+					Expect(dockerItem.DocumentId).To(Equal(expectedDockerResourceVersionId))
+					Expect(dockerItem.Join.Field).To(Equal(resourceDocumentJoinField))
+					Expect(dockerItem.Join.Name).To(Equal(resourceVersionRelationName))
+					Expect(dockerItem.Join.Parent).To(Equal(expectedDockerResourceId))
 
-					dockerMessage := dockerItem.Message.(*pb.GenericResourceVersion)
-					Expect(dockerMessage.Names).To(ConsistOf(expectedDockerGenericResourceVersionName))
+					dockerMessage := dockerItem.Message.(*pb.ResourceVersion)
+					Expect(dockerMessage.Names).To(ConsistOf(expectedDockerResourceVersionName))
 					Expect(dockerMessage.Created).To(Equal(expectedCreateTime))
 					Expect(dockerMessage.Version).To(Equal(expectedDockerResourceUri))
 				})
@@ -579,39 +579,39 @@ var _ = Describe("resource manager", func() {
 		})
 	})
 
-	Context("ListGenericResources", func() {
+	Context("ListResources", func() {
 		var (
-			expectedListGenericResourcesRequest *pb.ListGenericResourcesRequest
+			expectedListResourcesRequest *pb.ListResourcesRequest
 
 			expectedSearchResponse *esutil.SearchResponse
 			expectedSearchError    error
 
-			expectedGenericResource   *pb.GenericResource
-			expectedGenericResourceId string
+			expectedResource   *pb.Resource
+			expectedResourceId string
 
 			expectedFilterQuery *filtering.Query
 			expectedFilterError error
 
-			actualListGenericResourcesResponse *pb.ListGenericResourcesResponse
-			actualError                        error
+			actualListResourcesResponse *pb.ListResourcesResponse
+			actualError                 error
 		)
 
 		BeforeEach(func() {
-			expectedListGenericResourcesRequest = &pb.ListGenericResourcesRequest{}
-			expectedGenericResourceId = fake.LetterN(10)
+			expectedListResourcesRequest = &pb.ListResourcesRequest{}
+			expectedResourceId = fake.LetterN(10)
 
-			expectedGenericResource = &pb.GenericResource{
+			expectedResource = &pb.Resource{
 				Name: fake.LetterN(10),
 				Type: pb.ResourceType(fake.Number(0, 6)),
-				Id:   expectedGenericResourceId,
+				Id:   expectedResourceId,
 			}
-			genericResourceJson, _ := protojson.Marshal(expectedGenericResource)
+			resourceJson, _ := protojson.Marshal(expectedResource)
 			expectedSearchResponse = &esutil.SearchResponse{
 				Hits: &esutil.EsSearchResponseHits{
 					Hits: []*esutil.EsSearchResponseHit{
 						{
-							Source: genericResourceJson,
-							ID:     expectedGenericResourceId,
+							Source: resourceJson,
+							ID:     expectedResourceId,
 						},
 					},
 				},
@@ -623,14 +623,14 @@ var _ = Describe("resource manager", func() {
 			mockFilterer.ParseExpressionReturns(expectedFilterQuery, expectedFilterError)
 			esClient.SearchReturns(expectedSearchResponse, expectedSearchError)
 
-			actualListGenericResourcesResponse, actualError = manager.ListGenericResources(ctx, expectedListGenericResourcesRequest)
+			actualListResourcesResponse, actualError = manager.ListResources(ctx, expectedListResourcesRequest)
 		})
 
 		It("should perform a search", func() {
 			Expect(esClient.SearchCallCount()).To(Equal(1))
 
 			_, searchRequest := esClient.SearchArgsForCall(0)
-			Expect(searchRequest.Index).To(Equal(genericResourcesAlias))
+			Expect(searchRequest.Index).To(Equal(resourcesAlias))
 
 			// no pagination options were specified
 			Expect(searchRequest.Pagination).To(BeNil())
@@ -640,23 +640,23 @@ var _ = Describe("resource manager", func() {
 
 			// the only query should specify the join field
 			query := (*searchRequest.Search.Query.Bool.Must)[0].(*filtering.Query)
-			Expect((*query.Term)[genericResourceDocumentJoinField]).To(Equal(genericResourceRelationName))
+			Expect((*query.Term)[resourceDocumentJoinField]).To(Equal(resourceRelationName))
 		})
 
 		It("should not attempt to parse a filter", func() {
 			Expect(mockFilterer.ParseExpressionCallCount()).To(Equal(0))
 		})
 
-		It("should return the generic resources and no error", func() {
-			Expect(actualListGenericResourcesResponse.GenericResources).To(HaveLen(1))
-			Expect(actualListGenericResourcesResponse.GenericResources[0]).To(Equal(expectedGenericResource))
+		It("should return the resources and no error", func() {
+			Expect(actualListResourcesResponse.Resources).To(HaveLen(1))
+			Expect(actualListResourcesResponse.Resources[0]).To(Equal(expectedResource))
 
 			Expect(actualError).ToNot(HaveOccurred())
 		})
 
 		When("a filter is specified", func() {
 			BeforeEach(func() {
-				expectedListGenericResourcesRequest.Filter = fake.LetterN(10)
+				expectedListResourcesRequest.Filter = fake.LetterN(10)
 
 				expectedFilterQuery = &filtering.Query{
 					Term: &filtering.Term{
@@ -670,7 +670,7 @@ var _ = Describe("resource manager", func() {
 				Expect(mockFilterer.ParseExpressionCallCount()).To(Equal(1))
 
 				filter := mockFilterer.ParseExpressionArgsForCall(0)
-				Expect(filter).To(Equal(expectedListGenericResourcesRequest.Filter))
+				Expect(filter).To(Equal(expectedListResourcesRequest.Filter))
 			})
 
 			It("should use the filter query when searching", func() {
@@ -694,7 +694,7 @@ var _ = Describe("resource manager", func() {
 				})
 
 				It("should return an error", func() {
-					Expect(actualListGenericResourcesResponse).To(BeNil())
+					Expect(actualListResourcesResponse).To(BeNil())
 					Expect(actualError).To(HaveOccurred())
 				})
 			})
@@ -702,8 +702,8 @@ var _ = Describe("resource manager", func() {
 
 		When("pagination is used", func() {
 			BeforeEach(func() {
-				expectedListGenericResourcesRequest.PageSize = int32(fake.Number(1, 10))
-				expectedListGenericResourcesRequest.PageToken = fake.LetterN(10)
+				expectedListResourcesRequest.PageSize = int32(fake.Number(1, 10))
+				expectedListResourcesRequest.PageToken = fake.LetterN(10)
 			})
 
 			It("should use pagination when searching", func() {
@@ -712,8 +712,8 @@ var _ = Describe("resource manager", func() {
 				_, searchRequest := esClient.SearchArgsForCall(0)
 
 				Expect(searchRequest.Pagination).ToNot(BeNil())
-				Expect(searchRequest.Pagination.Size).To(BeEquivalentTo(expectedListGenericResourcesRequest.PageSize))
-				Expect(searchRequest.Pagination.Token).To(Equal(expectedListGenericResourcesRequest.PageToken))
+				Expect(searchRequest.Pagination.Size).To(BeEquivalentTo(expectedListResourcesRequest.PageSize))
+				Expect(searchRequest.Pagination.Token).To(Equal(expectedListResourcesRequest.PageToken))
 			})
 		})
 
@@ -723,49 +723,49 @@ var _ = Describe("resource manager", func() {
 			})
 
 			It("should return an error", func() {
-				Expect(actualListGenericResourcesResponse).To(BeNil())
+				Expect(actualListResourcesResponse).To(BeNil())
 				Expect(actualError).To(HaveOccurred())
 			})
 		})
 	})
 
-	Context("ListGenericResourceVersions", func() {
+	Context("ListResourceVersions", func() {
 		var (
-			expectedListGenericResourceVersionsRequest *pb.ListGenericResourceVersionsRequest
+			expectedListResourceVersionsRequest *pb.ListResourceVersionsRequest
 
 			expectedSearchResponse *esutil.SearchResponse
 			expectedSearchError    error
 
-			expectedGenericResourceVersion   *pb.GenericResourceVersion
-			expectedGenericResourceVersionId string
-			expectedGenericResourceId        string
+			expectedResourceVersion   *pb.ResourceVersion
+			expectedResourceVersionId string
+			expectedResourceId        string
 
 			expectedFilterQuery *filtering.Query
 			expectedFilterError error
 
-			actualListGenericResourceVersionsResponse *pb.ListGenericResourceVersionsResponse
-			actualError                               error
+			actualListResourceVersionsResponse *pb.ListResourceVersionsResponse
+			actualError                        error
 		)
 
 		BeforeEach(func() {
-			expectedGenericResourceId = fake.LetterN(10)
-			expectedListGenericResourceVersionsRequest = &pb.ListGenericResourceVersionsRequest{
-				Id: expectedGenericResourceId,
+			expectedResourceId = fake.LetterN(10)
+			expectedListResourceVersionsRequest = &pb.ListResourceVersionsRequest{
+				Id: expectedResourceId,
 			}
-			expectedGenericResourceVersionId = fake.LetterN(10)
+			expectedResourceVersionId = fake.LetterN(10)
 
-			expectedGenericResourceVersion = &pb.GenericResourceVersion{
-				Version: expectedGenericResourceVersionId,
+			expectedResourceVersion = &pb.ResourceVersion{
+				Version: expectedResourceVersionId,
 				Names:   []string{fake.LetterN(10)},
 				Created: timestamppb.Now(),
 			}
-			genericResourceVersionJson, _ := protojson.Marshal(expectedGenericResourceVersion)
+			resourceVersionJson, _ := protojson.Marshal(expectedResourceVersion)
 			expectedSearchResponse = &esutil.SearchResponse{
 				Hits: &esutil.EsSearchResponseHits{
 					Hits: []*esutil.EsSearchResponseHit{
 						{
-							Source: genericResourceVersionJson,
-							ID:     expectedGenericResourceVersionId,
+							Source: resourceVersionJson,
+							ID:     expectedResourceVersionId,
 						},
 					},
 				},
@@ -777,14 +777,14 @@ var _ = Describe("resource manager", func() {
 			mockFilterer.ParseExpressionReturns(expectedFilterQuery, expectedFilterError)
 			esClient.SearchReturns(expectedSearchResponse, expectedSearchError)
 
-			actualListGenericResourceVersionsResponse, actualError = manager.ListGenericResourceVersions(ctx, expectedListGenericResourceVersionsRequest)
+			actualListResourceVersionsResponse, actualError = manager.ListResourceVersions(ctx, expectedListResourceVersionsRequest)
 		})
 
 		It("should perform a search", func() {
 			Expect(esClient.SearchCallCount()).To(Equal(1))
 
 			_, searchRequest := esClient.SearchArgsForCall(0)
-			Expect(searchRequest.Index).To(Equal(genericResourcesAlias))
+			Expect(searchRequest.Index).To(Equal(resourcesAlias))
 
 			// no pagination options were specified
 			Expect(searchRequest.Pagination).To(BeNil())
@@ -797,25 +797,25 @@ var _ = Describe("resource manager", func() {
 
 			// the only query should specify parent
 			hasParent := (*searchRequest.Search.Query.Bool.Must)[0].(*filtering.Query).HasParent
-			Expect(hasParent.ParentType).To(Equal(genericResourceRelationName))
+			Expect(hasParent.ParentType).To(Equal(resourceRelationName))
 
-			Expect((*hasParent.Query.Term)["_id"]).To(Equal(expectedGenericResourceId))
+			Expect((*hasParent.Query.Term)["_id"]).To(Equal(expectedResourceId))
 		})
 
 		It("should not attempt to parse a filter", func() {
 			Expect(mockFilterer.ParseExpressionCallCount()).To(Equal(0))
 		})
 
-		It("should return the generic resource versions and no error", func() {
-			Expect(actualListGenericResourceVersionsResponse.Versions).To(HaveLen(1))
-			Expect(actualListGenericResourceVersionsResponse.Versions[0]).To(Equal(expectedGenericResourceVersion))
+		It("should return the resource versions and no error", func() {
+			Expect(actualListResourceVersionsResponse.Versions).To(HaveLen(1))
+			Expect(actualListResourceVersionsResponse.Versions[0]).To(Equal(expectedResourceVersion))
 
 			Expect(actualError).ToNot(HaveOccurred())
 		})
 
 		When("a filter is specified", func() {
 			BeforeEach(func() {
-				expectedListGenericResourceVersionsRequest.Filter = fake.LetterN(10)
+				expectedListResourceVersionsRequest.Filter = fake.LetterN(10)
 
 				expectedFilterQuery = &filtering.Query{
 					Term: &filtering.Term{
@@ -829,7 +829,7 @@ var _ = Describe("resource manager", func() {
 				Expect(mockFilterer.ParseExpressionCallCount()).To(Equal(1))
 
 				filter := mockFilterer.ParseExpressionArgsForCall(0)
-				Expect(filter).To(Equal(expectedListGenericResourceVersionsRequest.Filter))
+				Expect(filter).To(Equal(expectedListResourceVersionsRequest.Filter))
 			})
 
 			It("should use the filter query when searching", func() {
@@ -853,7 +853,7 @@ var _ = Describe("resource manager", func() {
 				})
 
 				It("should return an error", func() {
-					Expect(actualListGenericResourceVersionsResponse).To(BeNil())
+					Expect(actualListResourceVersionsResponse).To(BeNil())
 					Expect(actualError).To(HaveOccurred())
 				})
 			})
@@ -865,15 +865,15 @@ var _ = Describe("resource manager", func() {
 			})
 
 			It("should return an error", func() {
-				Expect(actualListGenericResourceVersionsResponse).To(BeNil())
+				Expect(actualListResourceVersionsResponse).To(BeNil())
 				Expect(actualError).To(HaveOccurred())
 			})
 		})
 
 		When("pagination is used", func() {
 			BeforeEach(func() {
-				expectedListGenericResourceVersionsRequest.PageSize = int32(fake.Number(1, 10))
-				expectedListGenericResourceVersionsRequest.PageToken = fake.LetterN(10)
+				expectedListResourceVersionsRequest.PageSize = int32(fake.Number(1, 10))
+				expectedListResourceVersionsRequest.PageToken = fake.LetterN(10)
 			})
 
 			It("should use pagination when searching", func() {
@@ -882,19 +882,19 @@ var _ = Describe("resource manager", func() {
 				_, searchRequest := esClient.SearchArgsForCall(0)
 
 				Expect(searchRequest.Pagination).ToNot(BeNil())
-				Expect(searchRequest.Pagination.Size).To(BeEquivalentTo(expectedListGenericResourceVersionsRequest.PageSize))
-				Expect(searchRequest.Pagination.Token).To(Equal(expectedListGenericResourceVersionsRequest.PageToken))
+				Expect(searchRequest.Pagination.Size).To(BeEquivalentTo(expectedListResourceVersionsRequest.PageSize))
+				Expect(searchRequest.Pagination.Token).To(Equal(expectedListResourceVersionsRequest.PageToken))
 			})
 		})
 	})
 
-	Context("GetGenericResource", func() {
+	Context("GetResource", func() {
 		var (
-			actualGenericResource *pb.GenericResource
-			actualError           error
+			actualResource *pb.Resource
+			actualError    error
 
-			expectedResourceId      string
-			expectedGenericResource *pb.GenericResource
+			expectedResourceId string
+			expectedResource   *pb.Resource
 
 			expectedGetResponse *esutil.EsGetResponse
 			expectedGetError    error
@@ -902,16 +902,16 @@ var _ = Describe("resource manager", func() {
 
 		BeforeEach(func() {
 			expectedResourceId = fake.LetterN(10)
-			expectedGenericResource = &pb.GenericResource{
+			expectedResource = &pb.Resource{
 				Id:   expectedResourceId,
 				Name: fake.LetterN(10),
 				Type: pb.ResourceType(fake.Number(0, 7)),
 			}
 
-			genericResourceJson, _ := protojson.Marshal(expectedGenericResource)
+			resourceJson, _ := protojson.Marshal(expectedResource)
 			expectedGetResponse = &esutil.EsGetResponse{
 				Found:  true,
-				Source: genericResourceJson,
+				Source: resourceJson,
 			}
 			expectedGetError = nil
 		})
@@ -919,30 +919,30 @@ var _ = Describe("resource manager", func() {
 		JustBeforeEach(func() {
 			esClient.GetReturns(expectedGetResponse, expectedGetError)
 
-			actualGenericResource, actualError = manager.GetGenericResource(ctx, expectedResourceId)
+			actualResource, actualError = manager.GetResource(ctx, expectedResourceId)
 		})
 
-		It("should query elasticsearch for the generic resource", func() {
+		It("should query elasticsearch for the resource", func() {
 			Expect(esClient.GetCallCount()).To(Equal(1))
 
 			_, getRequest := esClient.GetArgsForCall(0)
 
 			Expect(getRequest.DocumentId).To(Equal(expectedResourceId))
-			Expect(getRequest.Index).To(Equal(genericResourcesAlias))
+			Expect(getRequest.Index).To(Equal(resourcesAlias))
 		})
 
-		It("should return the generic resource and no error", func() {
-			Expect(actualGenericResource).To(Equal(expectedGenericResource))
+		It("should return the resource and no error", func() {
+			Expect(actualResource).To(Equal(expectedResource))
 			Expect(actualError).ToNot(HaveOccurred())
 		})
 
-		When("the generic resource is not found", func() {
+		When("the resource is not found", func() {
 			BeforeEach(func() {
 				expectedGetResponse.Found = false
 			})
 
 			It("should return nil", func() {
-				Expect(actualGenericResource).To(BeNil())
+				Expect(actualResource).To(BeNil())
 				Expect(actualError).ToNot(HaveOccurred())
 			})
 		})
@@ -953,7 +953,7 @@ var _ = Describe("resource manager", func() {
 			})
 
 			It("should return an error", func() {
-				Expect(actualGenericResource).To(BeNil())
+				Expect(actualResource).To(BeNil())
 				Expect(actualError).To(HaveOccurred())
 			})
 		})

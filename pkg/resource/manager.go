@@ -32,20 +32,20 @@ import (
 //go:generate counterfeiter -generate
 
 const (
-	genericResourcesDocumentKind = "generic-resources"
+	resourcesDocumentKind = "resources"
 
-	genericResourceDocumentJoinField   = "join"
-	genericResourceRelationName        = "resource"
-	genericResourceVersionRelationName = "version"
+	resourceDocumentJoinField   = "join"
+	resourceRelationName        = "resource"
+	resourceVersionRelationName = "version"
 )
 
 //counterfeiter:generate . Manager
 type Manager interface {
-	BatchCreateGenericResources(ctx context.Context, occurrences []*grafeas_proto.Occurrence) error
-	BatchCreateGenericResourceVersions(ctx context.Context, occurrences []*grafeas_proto.Occurrence) error
-	ListGenericResources(ctx context.Context, request *pb.ListGenericResourcesRequest) (*pb.ListGenericResourcesResponse, error)
-	ListGenericResourceVersions(ctx context.Context, request *pb.ListGenericResourceVersionsRequest) (*pb.ListGenericResourceVersionsResponse, error)
-	GetGenericResource(ctx context.Context, resourceId string) (*pb.GenericResource, error)
+	BatchCreateResources(ctx context.Context, occurrences []*grafeas_proto.Occurrence) error
+	BatchCreateResourceVersions(ctx context.Context, occurrences []*grafeas_proto.Occurrence) error
+	ListResources(ctx context.Context, request *pb.ListResourcesRequest) (*pb.ListResourcesResponse, error)
+	ListResourceVersions(ctx context.Context, request *pb.ListResourceVersionsRequest) (*pb.ListResourceVersionsResponse, error)
+	GetResource(ctx context.Context, resourceId string) (*pb.Resource, error)
 }
 
 type manager struct {
@@ -66,12 +66,12 @@ func NewManager(logger *zap.Logger, esClient esutil.Client, esConfig *config.Ela
 	}
 }
 
-// BatchCreateGenericResources creates generic resources from a list of occurrences. This method is intended to be invoked
+// BatchCreateResources creates resources from a list of occurrences. This method is intended to be invoked
 // as a side effect of BatchCreateOccurrences.
-func (m *manager) BatchCreateGenericResources(ctx context.Context, occurrences []*grafeas_proto.Occurrence) error {
-	log := m.logger.Named("BatchCreateGenericResources")
+func (m *manager) BatchCreateResources(ctx context.Context, occurrences []*grafeas_proto.Occurrence) error {
+	log := m.logger.Named("BatchCreateResources")
 
-	genericResources := map[string]*pb.GenericResource{}
+	resources := map[string]*pb.Resource{}
 	var resourceIds []string
 	for _, occurrence := range occurrences {
 		uriParts, err := parseResourceUri(occurrence.Resource.Uri)
@@ -79,23 +79,23 @@ func (m *manager) BatchCreateGenericResources(ctx context.Context, occurrences [
 			return err
 		}
 
-		genericResource := &pb.GenericResource{
+		resource := &pb.Resource{
 			Name:    uriParts.name,
 			Type:    uriParts.resourceType,
 			Created: occurrence.CreateTime,
 		}
 		resourceId := uriParts.prefixedName
 
-		if _, ok := genericResources[resourceId]; ok {
+		if _, ok := resources[resourceId]; ok {
 			continue
 		}
-		genericResources[resourceId] = genericResource
+		resources[resourceId] = resource
 		resourceIds = append(resourceIds, resourceId)
 	}
 
 	multiGetResponse, err := m.esClient.MultiGet(ctx, &esutil.MultiGetRequest{
 		DocumentIds: resourceIds,
-		Index:       m.indexManager.AliasName(genericResourcesDocumentKind, ""),
+		Index:       m.indexManager.AliasName(resourcesDocumentKind, ""),
 	})
 	if err != nil {
 		return err
@@ -112,11 +112,11 @@ func (m *manager) BatchCreateGenericResources(ctx context.Context, occurrences [
 
 		bulkItems = append(bulkItems, &esutil.BulkRequestItem{
 			Operation:  esutil.BULK_INDEX,
-			Message:    genericResources[resourceId],
+			Message:    resources[resourceId],
 			DocumentId: resourceId,
 			Join: &esutil.EsJoin{
-				Field: genericResourceDocumentJoinField,
-				Name:  genericResourceRelationName,
+				Field: resourceDocumentJoinField,
+				Name:  resourceRelationName,
 			},
 		})
 	}
@@ -126,7 +126,7 @@ func (m *manager) BatchCreateGenericResources(ctx context.Context, occurrences [
 	}
 
 	bulkResponse, err := m.esClient.Bulk(ctx, &esutil.BulkRequest{
-		Index:   m.indexManager.AliasName(genericResourcesDocumentKind, ""),
+		Index:   m.indexManager.AliasName(resourcesDocumentKind, ""),
 		Refresh: m.esConfig.Refresh.String(),
 		Items:   bulkItems,
 	})
@@ -137,32 +137,32 @@ func (m *manager) BatchCreateGenericResources(ctx context.Context, occurrences [
 	var bulkItemErrors []error
 	for _, item := range bulkResponse.Items {
 		if item.Index.Error != nil {
-			bulkItemErrors = append(bulkItemErrors, fmt.Errorf("error creating generic resource [%d] %s: %s", item.Index.Status, item.Index.Error.Type, item.Index.Error.Reason))
+			bulkItemErrors = append(bulkItemErrors, fmt.Errorf("error creating resource [%d] %s: %s", item.Index.Status, item.Index.Error.Type, item.Index.Error.Reason))
 		}
 	}
 
 	if len(bulkItemErrors) > 0 {
-		return fmt.Errorf("failed to create all generic resources: %v", bulkItemErrors)
+		return fmt.Errorf("failed to create all resources: %v", bulkItemErrors)
 	}
 
 	return nil
 }
 
-// BatchCreateGenericResourceVersions creates generic resource versions from a list of occurrences. This method is intended
-// to be invoked as a side effect of BatchCreateOccurrences, after BatchCreateGenericResources
-func (m *manager) BatchCreateGenericResourceVersions(ctx context.Context, occurrences []*grafeas_proto.Occurrence) error {
-	log := m.logger.Named("BatchCreateGenericResourceVersions")
+// BatchCreateResourceVersions creates resource versions from a list of occurrences. This method is intended
+// to be invoked as a side effect of BatchCreateOccurrences, after BatchCreateResources
+func (m *manager) BatchCreateResourceVersions(ctx context.Context, occurrences []*grafeas_proto.Occurrence) error {
+	log := m.logger.Named("BatchCreateResourceVersions")
 
-	genericResourceVersions := map[string]*pb.GenericResourceVersion{}
+	resourceVersions := map[string]*pb.ResourceVersion{}
 	var versionIds []string
 
-	// build a list of generic resource versions from occurrences. these may or may not already exist
+	// build a list of resource versions from occurrences. these may or may not already exist
 	for _, occurrence := range occurrences {
-		newVersions := genericResourceVersionsFromOccurrence(occurrence)
+		newVersions := resourceVersionsFromOccurrence(occurrence)
 
 		// check if we already know about these versions
 		for versionId, newVersion := range newVersions {
-			if existingVersion, ok := genericResourceVersions[versionId]; ok {
+			if existingVersion, ok := resourceVersions[versionId]; ok {
 				// if we do, update the names and create time, if needed
 				if newVersion.Created != nil {
 					existingVersion.Created = newVersion.Created
@@ -172,16 +172,16 @@ func (m *manager) BatchCreateGenericResourceVersions(ctx context.Context, occurr
 					existingVersion.Names = newVersion.Names
 				}
 			} else {
-				genericResourceVersions[versionId] = newVersion
+				resourceVersions[versionId] = newVersion
 				versionIds = append(versionIds, versionId)
 			}
 		}
 	}
 
-	// check which generic resource versions already exist
+	// check which resource versions already exist
 	multiGetResponse, err := m.esClient.MultiGet(ctx, &esutil.MultiGetRequest{
 		DocumentIds: versionIds,
-		Index:       m.indexManager.AliasName(genericResourcesDocumentKind, ""),
+		Index:       m.indexManager.AliasName(resourcesDocumentKind, ""),
 	})
 	if err != nil {
 		return err
@@ -191,7 +191,7 @@ func (m *manager) BatchCreateGenericResourceVersions(ctx context.Context, occurr
 	// versions that do exist may need to be updated
 	var bulkItems []*esutil.BulkRequestItem
 	for i, versionId := range versionIds {
-		version := genericResourceVersions[versionId]
+		version := resourceVersions[versionId]
 		uriParts, err := parseResourceUri(versionId)
 		if err != nil {
 			return err
@@ -202,8 +202,8 @@ func (m *manager) BatchCreateGenericResourceVersions(ctx context.Context, occurr
 			Message:    version,
 			DocumentId: versionId,
 			Join: &esutil.EsJoin{
-				Field:  genericResourceDocumentJoinField,
-				Name:   genericResourceVersionRelationName,
+				Field:  resourceDocumentJoinField,
+				Name:   resourceVersionRelationName,
 				Parent: uriParts.prefixedName,
 			},
 		}
@@ -213,7 +213,7 @@ func (m *manager) BatchCreateGenericResourceVersions(ctx context.Context, occurr
 			// if we have a list of names, update the existing version with the new one
 			// otherwise, we have nothing to do here
 			if len(version.Names) != 0 {
-				log.Debug("updating generic resource version", zap.Any("version", version))
+				log.Debug("updating resource version", zap.Any("version", version))
 			} else {
 				bulkItem = nil
 			}
@@ -224,7 +224,7 @@ func (m *manager) BatchCreateGenericResourceVersions(ctx context.Context, occurr
 				version.Created = timestamppb.Now()
 			}
 
-			log.Debug("creating generic resource version", zap.Any("version", version))
+			log.Debug("creating resource version", zap.Any("version", version))
 		}
 
 		if bulkItem != nil {
@@ -236,7 +236,7 @@ func (m *manager) BatchCreateGenericResourceVersions(ctx context.Context, occurr
 	var bulkItemErrors []error
 	if len(bulkItems) != 0 {
 		bulkResponse, err := m.esClient.Bulk(ctx, &esutil.BulkRequest{
-			Index:   m.indexManager.AliasName(genericResourcesDocumentKind, ""),
+			Index:   m.indexManager.AliasName(resourcesDocumentKind, ""),
 			Refresh: m.esConfig.Refresh.String(),
 			Items:   bulkItems,
 		})
@@ -246,26 +246,26 @@ func (m *manager) BatchCreateGenericResourceVersions(ctx context.Context, occurr
 
 		for _, item := range bulkResponse.Items {
 			if item.Index.Error != nil {
-				bulkItemErrors = append(bulkItemErrors, fmt.Errorf("error indexing generic resource [%d] %s: %s", item.Index.Status, item.Index.Error.Type, item.Index.Error.Reason))
+				bulkItemErrors = append(bulkItemErrors, fmt.Errorf("error indexing resource [%d] %s: %s", item.Index.Status, item.Index.Error.Type, item.Index.Error.Reason))
 			}
 		}
 	}
 
 	if len(bulkItemErrors) > 0 {
-		return fmt.Errorf("failed to create/update some generic resource versions: %v", bulkItemErrors)
+		return fmt.Errorf("failed to create/update some resource versions: %v", bulkItemErrors)
 	}
 
 	return nil
 }
 
-func (m *manager) ListGenericResources(ctx context.Context, request *pb.ListGenericResourcesRequest) (*pb.ListGenericResourcesResponse, error) {
-	// generic resources and their versions are stored in the same index. we need to specify the join field
-	// in this query in order to only select generic resources. we use a "must" here so we can combine this query with
+func (m *manager) ListResources(ctx context.Context, request *pb.ListResourcesRequest) (*pb.ListResourcesResponse, error) {
+	// resources and their versions are stored in the same index. we need to specify the join field
+	// in this query in order to only select resources. we use a "must" here so we can combine this query with
 	// the one generated by the filter, if provided
 	queries := filtering.Must{
 		&filtering.Query{
 			Term: &filtering.Term{
-				genericResourceDocumentJoinField: genericResourceRelationName,
+				resourceDocumentJoinField: resourceRelationName,
 			},
 		},
 	}
@@ -280,7 +280,7 @@ func (m *manager) ListGenericResources(ctx context.Context, request *pb.ListGene
 	}
 
 	searchRequest := &esutil.SearchRequest{
-		Index: m.indexManager.AliasName(genericResourcesDocumentKind, ""),
+		Index: m.indexManager.AliasName(resourcesDocumentKind, ""),
 		Search: &esutil.EsSearch{
 			Query: &filtering.Query{
 				Bool: &filtering.Bool{
@@ -302,33 +302,33 @@ func (m *manager) ListGenericResources(ctx context.Context, request *pb.ListGene
 		return nil, err
 	}
 
-	var genericResources []*pb.GenericResource
+	var resources []*pb.Resource
 	for _, hit := range searchResponse.Hits.Hits {
-		var genericResource pb.GenericResource
-		err = protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(hit.Source, &genericResource)
+		var resource pb.Resource
+		err = protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(hit.Source, &resource)
 		if err != nil {
 			return nil, err
 		}
 
-		genericResource.Id = hit.ID
-		genericResources = append(genericResources, &genericResource)
+		resource.Id = hit.ID
+		resources = append(resources, &resource)
 	}
 
-	return &pb.ListGenericResourcesResponse{
-		GenericResources: genericResources,
-		NextPageToken:    searchResponse.NextPageToken,
+	return &pb.ListResourcesResponse{
+		Resources:     resources,
+		NextPageToken: searchResponse.NextPageToken,
 	}, nil
 }
 
-// ListGenericResourceVersions handles the main logic for fetching versions associated with a generic resource.
-func (m *manager) ListGenericResourceVersions(ctx context.Context, request *pb.ListGenericResourceVersionsRequest) (*pb.ListGenericResourceVersionsResponse, error) {
-	// generic resources and their versions are stored in the same index. we need to specify the "has_parent" field
-	// in this query in order to only select generic resource versions with the provided generic resource id as the parent.
+// ListResourceVersions handles the main logic for fetching versions associated with a resource.
+func (m *manager) ListResourceVersions(ctx context.Context, request *pb.ListResourceVersionsRequest) (*pb.ListResourceVersionsResponse, error) {
+	// resources and their versions are stored in the same index. we need to specify the "has_parent" field
+	// in this query in order to only select resource versions with the provided resource id as the parent.
 	// we use a "must" here so we can combine this query with the one generated by the filter, if provided
 	queries := filtering.Must{
 		&filtering.Query{
 			HasParent: &filtering.HasParent{
-				ParentType: genericResourceRelationName,
+				ParentType: resourceRelationName,
 				Query: &filtering.Query{
 					Term: &filtering.Term{
 						"_id": request.Id,
@@ -348,7 +348,7 @@ func (m *manager) ListGenericResourceVersions(ctx context.Context, request *pb.L
 	}
 
 	searchRequest := &esutil.SearchRequest{
-		Index: m.indexManager.AliasName(genericResourcesDocumentKind, ""),
+		Index: m.indexManager.AliasName(resourcesDocumentKind, ""),
 		Search: &esutil.EsSearch{
 			Query: &filtering.Query{
 				Bool: &filtering.Bool{
@@ -373,28 +373,28 @@ func (m *manager) ListGenericResourceVersions(ctx context.Context, request *pb.L
 		return nil, err
 	}
 
-	var genericResourceVersions []*pb.GenericResourceVersion
+	var resourceVersions []*pb.ResourceVersion
 	for _, hit := range searchResponse.Hits.Hits {
-		var genericResourceVersion pb.GenericResourceVersion
-		err = protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(hit.Source, &genericResourceVersion)
+		var resourceVersion pb.ResourceVersion
+		err = protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(hit.Source, &resourceVersion)
 		if err != nil {
 			return nil, err
 		}
 
-		genericResourceVersions = append(genericResourceVersions, &genericResourceVersion)
+		resourceVersions = append(resourceVersions, &resourceVersion)
 	}
 
-	return &pb.ListGenericResourceVersionsResponse{
-		Versions:      genericResourceVersions,
+	return &pb.ListResourceVersionsResponse{
+		Versions:      resourceVersions,
 		NextPageToken: searchResponse.NextPageToken,
 	}, nil
 }
 
-func (m *manager) GetGenericResource(ctx context.Context, resourceId string) (*pb.GenericResource, error) {
-	log := m.logger.Named("GetGenericResource").With(zap.String("resource", resourceId))
+func (m *manager) GetResource(ctx context.Context, resourceId string) (*pb.Resource, error) {
+	log := m.logger.Named("GetResource").With(zap.String("resource", resourceId))
 
 	response, err := m.esClient.Get(ctx, &esutil.GetRequest{
-		Index:      m.indexManager.AliasName(genericResourcesDocumentKind, ""),
+		Index:      m.indexManager.AliasName(resourcesDocumentKind, ""),
 		DocumentId: resourceId,
 	})
 	if err != nil {
@@ -402,12 +402,12 @@ func (m *manager) GetGenericResource(ctx context.Context, resourceId string) (*p
 	}
 
 	if !response.Found {
-		log.Debug("generic resource not found")
+		log.Debug("resource not found")
 
 		return nil, nil
 	}
 
-	var resource pb.GenericResource
+	var resource pb.Resource
 	err = protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(response.Source, &resource)
 	if err != nil {
 		return nil, err
@@ -416,12 +416,12 @@ func (m *manager) GetGenericResource(ctx context.Context, resourceId string) (*p
 	return &resource, nil
 }
 
-// genericResourceVersionsFromOccurrence will create a map of generic versions, keyed by their IDs, from an occurrence.
-// if the occurrence is a build occurrence, generic resource versions will also be created for each built artifact.
-func genericResourceVersionsFromOccurrence(o *grafeas_proto.Occurrence) map[string]*pb.GenericResourceVersion {
-	result := make(map[string]*pb.GenericResourceVersion)
+// resourceVersionsFromOccurrence will create a map of versions, keyed by their IDs, from an occurrence.
+// if the occurrence is a build occurrence, resource versions will also be created for each built artifact.
+func resourceVersionsFromOccurrence(o *grafeas_proto.Occurrence) map[string]*pb.ResourceVersion {
+	result := make(map[string]*pb.ResourceVersion)
 
-	result[o.Resource.Uri] = &pb.GenericResourceVersion{
+	result[o.Resource.Uri] = &pb.ResourceVersion{
 		Version: o.Resource.Uri,
 	}
 
@@ -429,7 +429,7 @@ func genericResourceVersionsFromOccurrence(o *grafeas_proto.Occurrence) map[stri
 		details := o.Details.(*grafeas_proto.Occurrence_Build)
 
 		for _, artifact := range details.Build.Provenance.BuiltArtifacts {
-			result[artifact.Id] = &pb.GenericResourceVersion{
+			result[artifact.Id] = &pb.ResourceVersion{
 				Version: artifact.Id,
 				Names:   artifact.Names,
 				Created: o.CreateTime,
