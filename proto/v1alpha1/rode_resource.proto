@@ -79,8 +79,8 @@ message ResourceEvaluation {
   // ResourceVersion represents the specific resource version that was evaluated in this request.
   ResourceVersion resource_version = 5;
 
-  // PolicyGroupId represents the ID of the policy group that was evaluated in this request.
-  string policy_group_id = 6;
+  // PolicyGroup represents the name of the policy group that was evaluated in this request.
+  string policy_group = 6;
 }
 
 message ResourceEvaluationSource {

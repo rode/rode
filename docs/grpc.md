@@ -701,7 +701,7 @@ ResourceEvaluation describes the result of a request to evaluate a particular re
 | source | [ResourceEvaluationSource](#rode.v1alpha1.ResourceEvaluationSource) |  | Source represents the source of the resource evaluation request. This should be set by the enforcer or entity performing the request. |
 | created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
 | resource_version | [ResourceVersion](#rode.v1alpha1.ResourceVersion) |  | ResourceVersion represents the specific resource version that was evaluated in this request. |
-| policy_group_id | [string](#string) |  | PolicyGroupId represents the ID of the policy group that was evaluated in this request. |
+| policy_group | [string](#string) |  | PolicyGroup represents the name of the policy group that was evaluated in this request. |
 
 
 
