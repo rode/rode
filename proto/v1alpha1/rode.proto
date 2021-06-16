@@ -22,10 +22,10 @@ import "google/api/annotations.proto";
 import "google/api/client.proto";
 import "google/api/field_behavior.proto";
 import "proto/v1alpha1/rode_policy.proto";
+import "proto/v1alpha1/rode_resource.proto";
 import "proto/v1beta1/grafeas.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/field_mask.proto";
-import "google/protobuf/timestamp.proto";
 
 service Rode {
   // Create occurrences
@@ -155,45 +155,6 @@ service Rode {
   };
 }
 
-enum ResourceType {
-  RESOURCE_TYPE_UNSPECIFIED = 0;
-  DOCKER = 1;
-  GIT = 2;
-  MAVEN = 3;
-  FILE = 4;
-  NPM = 5;
-  NUGET = 6;
-  PIP = 7;
-  DEBIAN = 8;
-  RPM = 9;
-}
-
-message Resource {
-  // Id represents the unique id of the resource. This is usually the resource prefix plus the name, except in the
-  // case of Docker images. The id is used as a parameter for the ListResourceVersions RPC.
-  string id = 1;
-
-  // Name represents the name of this resource as seen on the UI.
-  string name = 2;
-
-  // Type represents the resource type for this resource, such as "DOCKER" or "GIT"
-  ResourceType type = 3;
-
-  google.protobuf.Timestamp created = 4;
-}
-
-message ResourceVersion {
-  // Version represents the unique artifact version as a fully qualified URI.
-  // Example: a Docker image version might look like this: harbor.liatr.io/rode-demo/node-app@sha256:a235554754f9bf075ac1c1b70c224ef5997176b776f0c56e340aeb63f429ace8
-  string version = 1;
-
-  // Names represents related artifact names, if they exist. This information will be sourced from build occurrences.
-  // Example: a Docker image name might look like this: harbor.liatr.io/rode-demo/node-app:latest
-  repeated string names = 2;
-
-  google.protobuf.Timestamp created = 3;
-}
-
 // Request to create occurrences in batch.
 message BatchCreateOccurrencesRequest {
   // The occurrences to create.
@@ -204,17 +165,6 @@ message BatchCreateOccurrencesRequest {
 message BatchCreateOccurrencesResponse {
   // The occurrences that were created.
   repeated grafeas.v1beta1.Occurrence occurrences = 1;
-}
-
-message ListResourcesRequest {
-  string filter = 1;
-  int32 page_size = 2;
-  string page_token = 3;
-}
-
-message ListResourcesResponse {
-  repeated Resource resources = 1;
-  string next_page_token = 2;
 }
 
 message ListVersionedResourceOccurrencesRequest {
@@ -263,17 +213,4 @@ message RegisterCollectorResponse {
 message CreateNoteRequest {
   string note_id = 1 [(google.api.field_behavior) = REQUIRED];
   grafeas.v1beta1.Note note = 2 [(google.api.field_behavior) = REQUIRED];
-}
-
-message ListResourceVersionsRequest {
-  string id = 1 [(google.api.field_behavior) = REQUIRED];
-  string filter = 2;
-
-  int32 page_size = 3;
-  string page_token = 4;
-}
-
-message ListResourceVersionsResponse {
-  repeated ResourceVersion versions = 1;
-  string next_page_token = 2;
 }

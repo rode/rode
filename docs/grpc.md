@@ -9,21 +9,13 @@
     - [CreateNoteRequest](#rode.v1alpha1.CreateNoteRequest)
     - [ListOccurrencesRequest](#rode.v1alpha1.ListOccurrencesRequest)
     - [ListOccurrencesResponse](#rode.v1alpha1.ListOccurrencesResponse)
-    - [ListResourceVersionsRequest](#rode.v1alpha1.ListResourceVersionsRequest)
-    - [ListResourceVersionsResponse](#rode.v1alpha1.ListResourceVersionsResponse)
-    - [ListResourcesRequest](#rode.v1alpha1.ListResourcesRequest)
-    - [ListResourcesResponse](#rode.v1alpha1.ListResourcesResponse)
     - [ListVersionedResourceOccurrencesRequest](#rode.v1alpha1.ListVersionedResourceOccurrencesRequest)
     - [ListVersionedResourceOccurrencesResponse](#rode.v1alpha1.ListVersionedResourceOccurrencesResponse)
     - [ListVersionedResourceOccurrencesResponse.RelatedNotesEntry](#rode.v1alpha1.ListVersionedResourceOccurrencesResponse.RelatedNotesEntry)
     - [RegisterCollectorRequest](#rode.v1alpha1.RegisterCollectorRequest)
     - [RegisterCollectorResponse](#rode.v1alpha1.RegisterCollectorResponse)
     - [RegisterCollectorResponse.NotesEntry](#rode.v1alpha1.RegisterCollectorResponse.NotesEntry)
-    - [Resource](#rode.v1alpha1.Resource)
-    - [ResourceVersion](#rode.v1alpha1.ResourceVersion)
     - [UpdateOccurrenceRequest](#rode.v1alpha1.UpdateOccurrenceRequest)
-  
-    - [ResourceType](#rode.v1alpha1.ResourceType)
   
     - [Rode](#rode.v1alpha1.Rode)
   
@@ -44,10 +36,23 @@
     - [ListPolicyVersionsResponse](#rode.v1alpha1.ListPolicyVersionsResponse)
     - [Policy](#rode.v1alpha1.Policy)
     - [PolicyEntity](#rode.v1alpha1.PolicyEntity)
+    - [PolicyEvaluation](#rode.v1alpha1.PolicyEvaluation)
     - [PolicyGroup](#rode.v1alpha1.PolicyGroup)
     - [UpdatePolicyRequest](#rode.v1alpha1.UpdatePolicyRequest)
     - [ValidatePolicyRequest](#rode.v1alpha1.ValidatePolicyRequest)
     - [ValidatePolicyResponse](#rode.v1alpha1.ValidatePolicyResponse)
+  
+- [proto/v1alpha1/rode_resource.proto](#proto/v1alpha1/rode_resource.proto)
+    - [ListResourceVersionsRequest](#rode.v1alpha1.ListResourceVersionsRequest)
+    - [ListResourceVersionsResponse](#rode.v1alpha1.ListResourceVersionsResponse)
+    - [ListResourcesRequest](#rode.v1alpha1.ListResourcesRequest)
+    - [ListResourcesResponse](#rode.v1alpha1.ListResourcesResponse)
+    - [Resource](#rode.v1alpha1.Resource)
+    - [ResourceEvaluation](#rode.v1alpha1.ResourceEvaluation)
+    - [ResourceEvaluationSource](#rode.v1alpha1.ResourceEvaluationSource)
+    - [ResourceVersion](#rode.v1alpha1.ResourceVersion)
+  
+    - [ResourceType](#rode.v1alpha1.ResourceType)
   
 - [Scalar Value Types](#scalar-value-types)
 
@@ -132,73 +137,6 @@ Response for creating occurrences in batch.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | occurrences | [grafeas.v1beta1.Occurrence](#grafeas.v1beta1.Occurrence) | repeated |  |
-| next_page_token | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="rode.v1alpha1.ListResourceVersionsRequest"></a>
-
-### ListResourceVersionsRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| id | [string](#string) |  |  |
-| filter | [string](#string) |  |  |
-| page_size | [int32](#int32) |  |  |
-| page_token | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="rode.v1alpha1.ListResourceVersionsResponse"></a>
-
-### ListResourceVersionsResponse
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| versions | [ResourceVersion](#rode.v1alpha1.ResourceVersion) | repeated |  |
-| next_page_token | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="rode.v1alpha1.ListResourcesRequest"></a>
-
-### ListResourcesRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| filter | [string](#string) |  |  |
-| page_size | [int32](#int32) |  |  |
-| page_token | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="rode.v1alpha1.ListResourcesResponse"></a>
-
-### ListResourcesResponse
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| resources | [Resource](#rode.v1alpha1.Resource) | repeated |  |
 | next_page_token | [string](#string) |  |  |
 
 
@@ -304,41 +242,6 @@ Response for creating occurrences in batch.
 
 
 
-<a name="rode.v1alpha1.Resource"></a>
-
-### Resource
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| id | [string](#string) |  | Id represents the unique id of the resource. This is usually the resource prefix plus the name, except in the case of Docker images. The id is used as a parameter for the ListResourceVersions RPC. |
-| name | [string](#string) |  | Name represents the name of this resource as seen on the UI. |
-| type | [ResourceType](#rode.v1alpha1.ResourceType) |  | Type represents the resource type for this resource, such as &#34;DOCKER&#34; or &#34;GIT&#34; |
-| created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
-
-
-
-
-
-
-<a name="rode.v1alpha1.ResourceVersion"></a>
-
-### ResourceVersion
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| version | [string](#string) |  | Version represents the unique artifact version as a fully qualified URI. Example: a Docker image version might look like this: harbor.liatr.io/rode-demo/node-app@sha256:a235554754f9bf075ac1c1b70c224ef5997176b776f0c56e340aeb63f429ace8 |
-| names | [string](#string) | repeated | Names represents related artifact names, if they exist. This information will be sourced from build occurrences. Example: a Docker image name might look like this: harbor.liatr.io/rode-demo/node-app:latest |
-| created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
-
-
-
-
-
-
 <a name="rode.v1alpha1.UpdateOccurrenceRequest"></a>
 
 ### UpdateOccurrenceRequest
@@ -356,26 +259,6 @@ Response for creating occurrences in batch.
 
 
  
-
-
-<a name="rode.v1alpha1.ResourceType"></a>
-
-### ResourceType
-
-
-| Name | Number | Description |
-| ---- | ------ | ----------- |
-| RESOURCE_TYPE_UNSPECIFIED | 0 |  |
-| DOCKER | 1 |  |
-| GIT | 2 |  |
-| MAVEN | 3 |  |
-| FILE | 4 |  |
-| NPM | 5 |  |
-| NUGET | 6 |  |
-| PIP | 7 |  |
-| DEBIAN | 8 |  |
-| RPM | 9 |  |
-
 
  
 
@@ -693,6 +576,26 @@ EvaluatePolicyInput is used as the input when evaluating a policy in OPA.
 
 
 
+<a name="rode.v1alpha1.PolicyEvaluation"></a>
+
+### PolicyEvaluation
+PolicyEvaluation describes the result of a request to evaluate a particular resource version against a specific policy.
+This is a child of ResourceEvaluation.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  | Id represents the unique identifier (UUID) for this particular policy evaluation. |
+| resource_evaluation_id | [string](#string) |  | ResourceEvaluationId represents the unique identifier (UUID) of the resource evaluation that triggered this policy evaluation. |
+| pass | [bool](#bool) |  | Pass represents the overall status for this policy evaluation. |
+| policy_version_id | [string](#string) |  | PolicyVersionId represents the ID of the policy version that was evaluated. |
+| violations | [EvaluatePolicyViolation](#rode.v1alpha1.EvaluatePolicyViolation) | repeated | Violations is a list of rule results. Even if a rule passed, its output will be included in Violations. |
+
+
+
+
+
+
 <a name="rode.v1alpha1.PolicyGroup"></a>
 
 ### PolicyGroup
@@ -760,6 +663,180 @@ policies around a certain compliance framework (e.g., PCI).
 
 
  
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="proto/v1alpha1/rode_resource.proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## proto/v1alpha1/rode_resource.proto
+
+
+
+<a name="rode.v1alpha1.ListResourceVersionsRequest"></a>
+
+### ListResourceVersionsRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| filter | [string](#string) |  |  |
+| page_size | [int32](#int32) |  |  |
+| page_token | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ListResourceVersionsResponse"></a>
+
+### ListResourceVersionsResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| versions | [ResourceVersion](#rode.v1alpha1.ResourceVersion) | repeated |  |
+| next_page_token | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ListResourcesRequest"></a>
+
+### ListResourcesRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| filter | [string](#string) |  |  |
+| page_size | [int32](#int32) |  |  |
+| page_token | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ListResourcesResponse"></a>
+
+### ListResourcesResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| resources | [Resource](#rode.v1alpha1.Resource) | repeated |  |
+| next_page_token | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.Resource"></a>
+
+### Resource
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  | Id represents the unique id of the resource. This is usually the resource prefix plus the name, except in the case of Docker images. The id is used as a parameter for the ListResourceVersions RPC. |
+| name | [string](#string) |  | Name represents the name of this resource as seen on the UI. |
+| type | [ResourceType](#rode.v1alpha1.ResourceType) |  | Type represents the resource type for this resource, such as &#34;DOCKER&#34; or &#34;GIT&#34; |
+| created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ResourceEvaluation"></a>
+
+### ResourceEvaluation
+ResourceEvaluation describes the result of a request to evaluate a particular resource version against a group of policies.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  | Id represents the unique identifier (UUID) for this particular resource evaluation. |
+| pass | [bool](#bool) |  | Pass represents the overall status for this resource evaluation. This is determined by looking at each policy evaluation result and performing an AND on each one. If Pass is true, this means that the referenced resource version passed each policy within the policy group at the time that the evaluation was performed. |
+| source | [ResourceEvaluationSource](#rode.v1alpha1.ResourceEvaluationSource) |  | Source represents the source of the resource evaluation request. This should be set by the enforcer or entity performing the request. |
+| created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
+| resource_version | [ResourceVersion](#rode.v1alpha1.ResourceVersion) |  | ResourceVersion represents the specific resource version that was evaluated in this request. |
+| policy_group | [string](#string) |  | PolicyGroup represents the name of the policy group that was evaluated in this request. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ResourceEvaluationSource"></a>
+
+### ResourceEvaluationSource
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| name | [string](#string) |  |  |
+| url | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ResourceVersion"></a>
+
+### ResourceVersion
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| version | [string](#string) |  | Version represents the unique artifact version as a fully qualified URI. Example: a Docker image version might look like this: harbor.liatr.io/rode-demo/node-app@sha256:a235554754f9bf075ac1c1b70c224ef5997176b776f0c56e340aeb63f429ace8 |
+| names | [string](#string) | repeated | Names represents related artifact names, if they exist. This information will be sourced from build occurrences. Example: a Docker image name might look like this: harbor.liatr.io/rode-demo/node-app:latest |
+| created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
+
+
+
+
+
+ 
+
+
+<a name="rode.v1alpha1.ResourceType"></a>
+
+### ResourceType
+
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| RESOURCE_TYPE_UNSPECIFIED | 0 |  |
+| DOCKER | 1 |  |
+| GIT | 2 |  |
+| MAVEN | 3 |  |
+| FILE | 4 |  |
+| NPM | 5 |  |
+| NUGET | 6 |  |
+| PIP | 7 |  |
+| DEBIAN | 8 |  |
+| RPM | 9 |  |
+
 
  
 

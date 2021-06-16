@@ -205,3 +205,22 @@ message ListPolicyGroupsResponse {
   // NextPageToken can be used to retrieve the subsequent page of results by setting ListPolicyGroupsRequest.NextPageToken
   string next_page_token = 2;
 }
+
+// PolicyEvaluation describes the result of a request to evaluate a particular resource version against a specific policy.
+// This is a child of ResourceEvaluation.
+message PolicyEvaluation {
+  // Id represents the unique identifier (UUID) for this particular policy evaluation.
+  string id = 1;
+
+  // ResourceEvaluationId represents the unique identifier (UUID) of the resource evaluation that triggered this policy evaluation.
+  string resource_evaluation_id = 2;
+
+  // Pass represents the overall status for this policy evaluation.
+  bool pass = 3;
+
+  // PolicyVersionId represents the ID of the policy version that was evaluated.
+  string policy_version_id = 4;
+
+  // Violations is a list of rule results. Even if a rule passed, its output will be included in Violations.
+  repeated EvaluatePolicyViolation violations = 5;
+}
