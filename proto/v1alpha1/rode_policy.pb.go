@@ -1092,6 +1092,92 @@ func (x *PolicyEntity) GetCreated() *timestamp.Timestamp {
 	return nil
 }
 
+// PolicyEvaluation describes the result of a request to evaluate a particular resource version against a specific policy.
+// This is a child of ResourceEvaluation.
+type PolicyEvaluation struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// Id represents the unique identifier (UUID) for this particular policy evaluation.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// ResourceEvaluationId represents the unique identifier (UUID) of the resource evaluation that triggered this policy evaluation.
+	ResourceEvaluationId string `protobuf:"bytes,2,opt,name=resource_evaluation_id,json=resourceEvaluationId,proto3" json:"resource_evaluation_id,omitempty"`
+	// Pass represents the overall status for this policy evaluation.
+	Pass bool `protobuf:"varint,3,opt,name=pass,proto3" json:"pass,omitempty"`
+	// PolicyVersionId represents the ID of the policy version that was evaluated.
+	PolicyVersionId string `protobuf:"bytes,4,opt,name=policy_version_id,json=policyVersionId,proto3" json:"policy_version_id,omitempty"`
+	// Violations is a list of rule results. Even if a rule passed, its output will be included in Violations.
+	Violations []*EvaluatePolicyViolation `protobuf:"bytes,5,rep,name=violations,proto3" json:"violations,omitempty"`
+}
+
+func (x *PolicyEvaluation) Reset() {
+	*x = PolicyEvaluation{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[16]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *PolicyEvaluation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PolicyEvaluation) ProtoMessage() {}
+
+func (x *PolicyEvaluation) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[16]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PolicyEvaluation.ProtoReflect.Descriptor instead.
+func (*PolicyEvaluation) Descriptor() ([]byte, []int) {
+	return file_proto_v1alpha1_rode_policy_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *PolicyEvaluation) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *PolicyEvaluation) GetResourceEvaluationId() string {
+	if x != nil {
+		return x.ResourceEvaluationId
+	}
+	return ""
+}
+
+func (x *PolicyEvaluation) GetPass() bool {
+	if x != nil {
+		return x.Pass
+	}
+	return false
+}
+
+func (x *PolicyEvaluation) GetPolicyVersionId() string {
+	if x != nil {
+		return x.PolicyVersionId
+	}
+	return ""
+}
+
+func (x *PolicyEvaluation) GetViolations() []*EvaluatePolicyViolation {
+	if x != nil {
+		return x.Violations
+	}
+	return nil
+}
+
 var File_proto_v1alpha1_rode_policy_proto protoreflect.FileDescriptor
 
 var file_proto_v1alpha1_rode_policy_proto_rawDesc = []byte{
@@ -1223,10 +1309,24 @@ var file_proto_v1alpha1_rode_policy_proto_rawDesc = []byte{
 	0x74, 0x68, 0x12, 0x34, 0x0a, 0x07, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x18, 0x05, 0x20,
 	0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f,
 	0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52,
-	0x07, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x42, 0x25, 0x5a, 0x23, 0x67, 0x69, 0x74, 0x68,
-	0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x72, 0x6f, 0x64, 0x65, 0x2f, 0x72, 0x6f, 0x64, 0x65,
-	0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x62,
-	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x07, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x22, 0xe0, 0x01, 0x0a, 0x10, 0x50, 0x6f, 0x6c,
+	0x69, 0x63, 0x79, 0x45, 0x76, 0x61, 0x6c, 0x75, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x0e, 0x0a,
+	0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x34, 0x0a,
+	0x16, 0x72, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x5f, 0x65, 0x76, 0x61, 0x6c, 0x75, 0x61,
+	0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x14, 0x72,
+	0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65, 0x45, 0x76, 0x61, 0x6c, 0x75, 0x61, 0x74, 0x69, 0x6f,
+	0x6e, 0x49, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x61, 0x73, 0x73, 0x18, 0x03, 0x20, 0x01, 0x28,
+	0x08, 0x52, 0x04, 0x70, 0x61, 0x73, 0x73, 0x12, 0x2a, 0x0a, 0x11, 0x70, 0x6f, 0x6c, 0x69, 0x63,
+	0x79, 0x5f, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x5f, 0x69, 0x64, 0x18, 0x04, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x0f, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f,
+	0x6e, 0x49, 0x64, 0x12, 0x46, 0x0a, 0x0a, 0x76, 0x69, 0x6f, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e,
+	0x73, 0x18, 0x05, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x26, 0x2e, 0x72, 0x6f, 0x64, 0x65, 0x2e, 0x76,
+	0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x45, 0x76, 0x61, 0x6c, 0x75, 0x61, 0x74, 0x65,
+	0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x56, 0x69, 0x6f, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52,
+	0x0a, 0x76, 0x69, 0x6f, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x42, 0x25, 0x5a, 0x23, 0x67,
+	0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x72, 0x6f, 0x64, 0x65, 0x2f, 0x72,
+	0x6f, 0x64, 0x65, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68,
+	0x61, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -1241,7 +1341,7 @@ func file_proto_v1alpha1_rode_policy_proto_rawDescGZIP() []byte {
 	return file_proto_v1alpha1_rode_policy_proto_rawDescData
 }
 
-var file_proto_v1alpha1_rode_policy_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_proto_v1alpha1_rode_policy_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_proto_v1alpha1_rode_policy_proto_goTypes = []interface{}{
 	(*EvaluatePolicyRequest)(nil),       // 0: rode.v1alpha1.EvaluatePolicyRequest
 	(*EvaluatePolicyResponse)(nil),      // 1: rode.v1alpha1.EvaluatePolicyResponse
@@ -1259,26 +1359,28 @@ var file_proto_v1alpha1_rode_policy_proto_goTypes = []interface{}{
 	(*UpdatePolicyRequest)(nil),         // 13: rode.v1alpha1.UpdatePolicyRequest
 	(*Policy)(nil),                      // 14: rode.v1alpha1.Policy
 	(*PolicyEntity)(nil),                // 15: rode.v1alpha1.PolicyEntity
-	(*timestamp.Timestamp)(nil),         // 16: google.protobuf.Timestamp
-	(*grafeas_go_proto.Occurrence)(nil), // 17: grafeas.v1beta1.Occurrence
+	(*PolicyEvaluation)(nil),            // 16: rode.v1alpha1.PolicyEvaluation
+	(*timestamp.Timestamp)(nil),         // 17: google.protobuf.Timestamp
+	(*grafeas_go_proto.Occurrence)(nil), // 18: grafeas.v1beta1.Occurrence
 }
 var file_proto_v1alpha1_rode_policy_proto_depIdxs = []int32{
 	2,  // 0: rode.v1alpha1.EvaluatePolicyResponse.result:type_name -> rode.v1alpha1.EvaluatePolicyResult
-	16, // 1: rode.v1alpha1.EvaluatePolicyResult.created:type_name -> google.protobuf.Timestamp
+	17, // 1: rode.v1alpha1.EvaluatePolicyResult.created:type_name -> google.protobuf.Timestamp
 	3,  // 2: rode.v1alpha1.EvaluatePolicyResult.violations:type_name -> rode.v1alpha1.EvaluatePolicyViolation
-	17, // 3: rode.v1alpha1.EvaluatePolicyInput.occurrences:type_name -> grafeas.v1beta1.Occurrence
+	18, // 3: rode.v1alpha1.EvaluatePolicyInput.occurrences:type_name -> grafeas.v1beta1.Occurrence
 	14, // 4: rode.v1alpha1.ListPoliciesResponse.policies:type_name -> rode.v1alpha1.Policy
 	15, // 5: rode.v1alpha1.ListPolicyVersionsResponse.versions:type_name -> rode.v1alpha1.PolicyEntity
 	14, // 6: rode.v1alpha1.UpdatePolicyRequest.policy:type_name -> rode.v1alpha1.Policy
 	15, // 7: rode.v1alpha1.Policy.policy:type_name -> rode.v1alpha1.PolicyEntity
-	16, // 8: rode.v1alpha1.Policy.created:type_name -> google.protobuf.Timestamp
-	16, // 9: rode.v1alpha1.Policy.updated:type_name -> google.protobuf.Timestamp
-	16, // 10: rode.v1alpha1.PolicyEntity.created:type_name -> google.protobuf.Timestamp
-	11, // [11:11] is the sub-list for method output_type
-	11, // [11:11] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	17, // 8: rode.v1alpha1.Policy.created:type_name -> google.protobuf.Timestamp
+	17, // 9: rode.v1alpha1.Policy.updated:type_name -> google.protobuf.Timestamp
+	17, // 10: rode.v1alpha1.PolicyEntity.created:type_name -> google.protobuf.Timestamp
+	3,  // 11: rode.v1alpha1.PolicyEvaluation.violations:type_name -> rode.v1alpha1.EvaluatePolicyViolation
+	12, // [12:12] is the sub-list for method output_type
+	12, // [12:12] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_proto_v1alpha1_rode_policy_proto_init() }
@@ -1479,6 +1581,18 @@ func file_proto_v1alpha1_rode_policy_proto_init() {
 				return nil
 			}
 		}
+		file_proto_v1alpha1_rode_policy_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*PolicyEvaluation); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1486,7 +1600,7 @@ func file_proto_v1alpha1_rode_policy_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_proto_v1alpha1_rode_policy_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   16,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
