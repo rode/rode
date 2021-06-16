@@ -1092,7 +1092,7 @@ func (x *PolicyEntity) GetCreated() *timestamp.Timestamp {
 	return nil
 }
 
-// PolicyGroup, along with PolicyAssignments, can be used to bundle policies together to be used in a resource evaluation.
+// PolicyGroup is used to apply multiple policies in a single resource evaluation. It's linked to a policy via a PolicyAssignment.
 // A PolicyGroup is meant to be open-ended -- it can represent an environment (e.g., dev) or
 // policies around a certain compliance framework (e.g., PCI).
 type PolicyGroup struct {

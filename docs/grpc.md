@@ -696,7 +696,7 @@ EvaluatePolicyInput is used as the input when evaluating a policy in OPA.
 <a name="rode.v1alpha1.PolicyGroup"></a>
 
 ### PolicyGroup
-PolicyGroup, along with PolicyAssignments, can be used to bundle policies together to be used in a resource evaluation.
+PolicyGroup is used to apply multiple policies in a single resource evaluation. It&#39;s linked to a policy via a PolicyAssignment.
 A PolicyGroup is meant to be open-ended -- it can represent an environment (e.g., dev) or
 policies around a certain compliance framework (e.g., PCI).
 
