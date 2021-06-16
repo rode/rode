@@ -531,9 +531,9 @@ This is a child of ResourceEvaluation.
 | ----- | ---- | ----- | ----------- |
 | id | [string](#string) |  | Id represents the unique identifier (UUID) for this particular policy evaluation. |
 | resource_evaluation_id | [string](#string) |  | ResourceEvaluationId represents the unique identifier (UUID) of the resource evaluation that triggered this policy evaluation. |
-| pass | [bool](#bool) |  | Pass represents the overall status for this policy evaluation. This is determined by looking at the result of each rule within the policy and performing an AND on each one. |
+| pass | [bool](#bool) |  | Pass represents the overall status for this policy evaluation. |
 | policy_version_id | [string](#string) |  | PolicyVersionId represents the ID of the policy version that was evaluated. |
-| result | [EvaluatePolicyResult](#rode.v1alpha1.EvaluatePolicyResult) | repeated | Result is a list of evaluation outputs gathered by evaluating each rule within the policy. |
+| violations | [EvaluatePolicyViolation](#rode.v1alpha1.EvaluatePolicyViolation) | repeated | Violations is a list of rule results. Even if a rule passed, its output will be included in Violations. |
 
 
 
