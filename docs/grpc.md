@@ -530,7 +530,7 @@ EvaluatePolicyInput is used as the input when evaluating a policy in OPA.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| name | [string](#string) |  |  |
+| name | [string](#string) |  | Name is the unique identifier for the PolicyGroup. |
 
 
 
@@ -593,9 +593,9 @@ EvaluatePolicyInput is used as the input when evaluating a policy in OPA.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| filter | [string](#string) |  |  |
-| page_size | [int32](#int32) |  |  |
-| page_token | [string](#string) |  |  |
+| filter | [string](#string) |  | Filter is a CEL (common expression language) filter that works off the fields in the PolicyGroup. |
+| page_size | [int32](#int32) |  | PageSize is the maximum number of results. Use the ListPolicyGroupsResponse.NextPageToken to retrieve the next set. |
+| page_token | [string](#string) |  | PageToken can be used to retrieve a specific page of results. |
 
 
 
@@ -610,8 +610,8 @@ EvaluatePolicyInput is used as the input when evaluating a policy in OPA.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| policy_groups | [PolicyGroup](#rode.v1alpha1.PolicyGroup) | repeated |  |
-| next_page_token | [string](#string) |  |  |
+| policy_groups | [PolicyGroup](#rode.v1alpha1.PolicyGroup) | repeated | PolicyGroups is the list of results from applying ListPolicyGroupsRequest.Filter, with a maximum number set by ListPolicyGroupsRequest.PageSize |
+| next_page_token | [string](#string) |  | NextPageToken can be used to retrieve the subsequent page of results by setting ListPolicyGroupsRequest.NextPageToken |
 
 
 
@@ -696,13 +696,15 @@ EvaluatePolicyInput is used as the input when evaluating a policy in OPA.
 <a name="rode.v1alpha1.PolicyGroup"></a>
 
 ### PolicyGroup
-
+PolicyGroup, along with PolicyAssignments, can be used to bundle policies together to be used in a resource evaluation.
+A PolicyGroup is meant to be open-ended -- it can represent an environment (e.g., dev) or
+policies around a certain compliance framework (e.g., PCI).
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| name | [string](#string) |  |  |
-| description | [string](#string) |  |  |
+| name | [string](#string) |  | Name is the unique identifier for the PolicyGroup. It may only contain lowercase alphanumeric characters, dashes, and underscores. It cannot be changed after creation. |
+| description | [string](#string) |  | Description is a brief summary of the intended use for the PolicyGroup. |
 | created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
 | updated | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
 

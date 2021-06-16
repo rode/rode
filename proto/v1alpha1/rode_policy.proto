@@ -172,24 +172,36 @@ message PolicyEntity {
   google.protobuf.Timestamp created = 5;
 }
 
+// PolicyGroup, along with PolicyAssignments, can be used to bundle policies together to be used in a resource evaluation.
+// A PolicyGroup is meant to be open-ended -- it can represent an environment (e.g., dev) or
+// policies around a certain compliance framework (e.g., PCI).
 message PolicyGroup {
+  // Name is the unique identifier for the PolicyGroup. It may only contain lowercase alphanumeric characters, dashes, and underscores.
+  // It cannot be changed after creation.
   string name = 1;
+  // Description is a brief summary of the intended use for the PolicyGroup.
   string description = 2;
   google.protobuf.Timestamp created = 3;
   google.protobuf.Timestamp updated = 4;
 }
 
 message GetPolicyGroupRequest {
+  // Name is the unique identifier for the PolicyGroup.
   string name = 1;
 }
 
 message ListPolicyGroupsRequest {
+  // Filter is a CEL (common expression language) filter that works off the fields in the PolicyGroup.
   string filter = 1;
+  // PageSize is the maximum number of results. Use the ListPolicyGroupsResponse.NextPageToken to retrieve the next set.
   int32 page_size = 2;
+  // PageToken can be used to retrieve a specific page of results.
   string page_token = 3;
 }
 
 message ListPolicyGroupsResponse {
+  // PolicyGroups is the list of results from applying ListPolicyGroupsRequest.Filter, with a maximum number set by ListPolicyGroupsRequest.PageSize
   repeated PolicyGroup policy_groups = 1;
+  // NextPageToken can be used to retrieve the subsequent page of results by setting ListPolicyGroupsRequest.NextPageToken
   string next_page_token = 2;
 }

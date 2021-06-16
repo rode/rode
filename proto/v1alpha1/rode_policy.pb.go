@@ -1092,12 +1092,18 @@ func (x *PolicyEntity) GetCreated() *timestamp.Timestamp {
 	return nil
 }
 
+// PolicyGroup, along with PolicyAssignments, can be used to bundle policies together to be used in a resource evaluation.
+// A PolicyGroup is meant to be open-ended -- it can represent an environment (e.g., dev) or
+// policies around a certain compliance framework (e.g., PCI).
 type PolicyGroup struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Name        string               `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// Name is the unique identifier for the PolicyGroup. It may only contain lowercase alphanumeric characters, dashes, and underscores.
+	// It cannot be changed after creation.
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// Description is a brief summary of the intended use for the PolicyGroup.
 	Description string               `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
 	Created     *timestamp.Timestamp `protobuf:"bytes,3,opt,name=created,proto3" json:"created,omitempty"`
 	Updated     *timestamp.Timestamp `protobuf:"bytes,4,opt,name=updated,proto3" json:"updated,omitempty"`
@@ -1168,6 +1174,7 @@ type GetPolicyGroupRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// Name is the unique identifier for the PolicyGroup.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 }
 
@@ -1215,8 +1222,11 @@ type ListPolicyGroupsRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Filter    string `protobuf:"bytes,1,opt,name=filter,proto3" json:"filter,omitempty"`
-	PageSize  int32  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// Filter is a CEL (common expression language) filter that works off the fields in the PolicyGroup.
+	Filter string `protobuf:"bytes,1,opt,name=filter,proto3" json:"filter,omitempty"`
+	// PageSize is the maximum number of results. Use the ListPolicyGroupsResponse.NextPageToken to retrieve the next set.
+	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// PageToken can be used to retrieve a specific page of results.
 	PageToken string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 }
 
@@ -1278,8 +1288,10 @@ type ListPolicyGroupsResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	PolicyGroups  []*PolicyGroup `protobuf:"bytes,1,rep,name=policy_groups,json=policyGroups,proto3" json:"policy_groups,omitempty"`
-	NextPageToken string         `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	// PolicyGroups is the list of results from applying ListPolicyGroupsRequest.Filter, with a maximum number set by ListPolicyGroupsRequest.PageSize
+	PolicyGroups []*PolicyGroup `protobuf:"bytes,1,rep,name=policy_groups,json=policyGroups,proto3" json:"policy_groups,omitempty"`
+	// NextPageToken can be used to retrieve the subsequent page of results by setting ListPolicyGroupsRequest.NextPageToken
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 }
 
 func (x *ListPolicyGroupsResponse) Reset() {
