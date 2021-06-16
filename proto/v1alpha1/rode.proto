@@ -131,6 +131,28 @@ service Rode {
     };
     option (google.api.method_signature) = "note_id,note";
   };
+  rpc CreatePolicyGroup(PolicyGroup) returns (PolicyGroup) {
+    option (google.api.http) = {
+      post: "/v1alpha1/policy-groups"
+      body: "*"
+    };
+  };
+  rpc ListPolicyGroups(ListPolicyGroupsRequest) returns (ListPolicyGroupsResponse) {
+    option (google.api.http) = {
+      get: "/v1alpha1/policy-groups"
+    };
+  };
+  rpc GetPolicyGroup(GetPolicyGroupRequest) returns (PolicyGroup) {
+    option (google.api.http) = {
+      get: "/v1alpha1/policy-groups/{name}"
+    };
+  };
+  rpc UpdatePolicyGroup(PolicyGroup) returns (PolicyGroup) {
+    option (google.api.http) = {
+      patch: "/v1alpha1/policy-groups/{name}"
+      body: "*"
+    };
+  };
 }
 
 // Request to create occurrences in batch.

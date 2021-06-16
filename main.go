@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/rode/rode/pkg/grafeas"
 	"log"
 	"net"
 	"net/http"
@@ -26,6 +25,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/rode/rode/pkg/grafeas"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/rode/es-index-manager/indexmanager"
@@ -118,7 +119,17 @@ func main() {
 	grafeasExtensions := grafeas.NewExtensions(logger.Named("GrafeasExtensions"), grafeasClientCommon)
 	resourceManager := resource.NewManager(logger.Named("Resource Manager"), esutilClient, c.Elasticsearch, indexManager, filterer)
 	policyManager := policy.NewManager(logger.Named("PolicyManager"), esutilClient, c.Elasticsearch, indexManager, filterer, opaClient, grafeasExtensions)
-	rodeServer, err := server.NewRodeServer(logger.Named("rode"), grafeasClientCommon, grafeasClientProjects, grafeasExtensions, resourceManager, indexManager, policyManager)
+	policyGroupManager := policy.NewPolicyGroupManager(logger.Named("PolicyGroupManager"), esutilClient, c.Elasticsearch, indexManager, filterer)
+	rodeServer, err := server.NewRodeServer(
+		logger.Named("rode"),
+		grafeasClientCommon,
+		grafeasClientProjects,
+		grafeasExtensions,
+		resourceManager,
+		indexManager,
+		policyManager,
+		policyGroupManager,
+	)
 	if err != nil {
 		logger.Fatal("failed to create Rode server", zap.Error(err))
 	}

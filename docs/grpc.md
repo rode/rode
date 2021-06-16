@@ -26,14 +26,18 @@
     - [EvaluatePolicyResponse](#rode.v1alpha1.EvaluatePolicyResponse)
     - [EvaluatePolicyResult](#rode.v1alpha1.EvaluatePolicyResult)
     - [EvaluatePolicyViolation](#rode.v1alpha1.EvaluatePolicyViolation)
+    - [GetPolicyGroupRequest](#rode.v1alpha1.GetPolicyGroupRequest)
     - [GetPolicyRequest](#rode.v1alpha1.GetPolicyRequest)
     - [ListPoliciesRequest](#rode.v1alpha1.ListPoliciesRequest)
     - [ListPoliciesResponse](#rode.v1alpha1.ListPoliciesResponse)
+    - [ListPolicyGroupsRequest](#rode.v1alpha1.ListPolicyGroupsRequest)
+    - [ListPolicyGroupsResponse](#rode.v1alpha1.ListPolicyGroupsResponse)
     - [ListPolicyVersionsRequest](#rode.v1alpha1.ListPolicyVersionsRequest)
     - [ListPolicyVersionsResponse](#rode.v1alpha1.ListPolicyVersionsResponse)
     - [Policy](#rode.v1alpha1.Policy)
     - [PolicyEntity](#rode.v1alpha1.PolicyEntity)
     - [PolicyEvaluation](#rode.v1alpha1.PolicyEvaluation)
+    - [PolicyGroup](#rode.v1alpha1.PolicyGroup)
     - [UpdatePolicyRequest](#rode.v1alpha1.UpdatePolicyRequest)
     - [ValidatePolicyRequest](#rode.v1alpha1.ValidatePolicyRequest)
     - [ValidatePolicyResponse](#rode.v1alpha1.ValidatePolicyResponse)
@@ -284,6 +288,10 @@ Response for creating occurrences in batch.
 | UpdatePolicy | [UpdatePolicyRequest](#rode.v1alpha1.UpdatePolicyRequest) | [Policy](#rode.v1alpha1.Policy) |  |
 | RegisterCollector | [RegisterCollectorRequest](#rode.v1alpha1.RegisterCollectorRequest) | [RegisterCollectorResponse](#rode.v1alpha1.RegisterCollectorResponse) | RegisterCollector accepts a collector ID and a list of notes that this collector will reference when creating occurrences. The response will contain the notes with the fully qualified note name. This operation is idempotent, so any notes that already exist will not be re-created. Collectors are expected to invoke this RPC each time they start. |
 | CreateNote | [CreateNoteRequest](#rode.v1alpha1.CreateNoteRequest) | [.grafeas.v1beta1.Note](#grafeas.v1beta1.Note) | CreateNote acts as a simple proxy to the grafeas CreateNote rpc |
+| CreatePolicyGroup | [PolicyGroup](#rode.v1alpha1.PolicyGroup) | [PolicyGroup](#rode.v1alpha1.PolicyGroup) |  |
+| ListPolicyGroups | [ListPolicyGroupsRequest](#rode.v1alpha1.ListPolicyGroupsRequest) | [ListPolicyGroupsResponse](#rode.v1alpha1.ListPolicyGroupsResponse) |  |
+| GetPolicyGroup | [GetPolicyGroupRequest](#rode.v1alpha1.GetPolicyGroupRequest) | [PolicyGroup](#rode.v1alpha1.PolicyGroup) |  |
+| UpdatePolicyGroup | [PolicyGroup](#rode.v1alpha1.PolicyGroup) | [PolicyGroup](#rode.v1alpha1.PolicyGroup) |  |
 
  
 
@@ -397,6 +405,21 @@ EvaluatePolicyInput is used as the input when evaluating a policy in OPA.
 
 
 
+<a name="rode.v1alpha1.GetPolicyGroupRequest"></a>
+
+### GetPolicyGroupRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| name | [string](#string) |  | Name is the unique identifier for the PolicyGroup. |
+
+
+
+
+
+
 <a name="rode.v1alpha1.GetPolicyRequest"></a>
 
 ### GetPolicyRequest
@@ -439,6 +462,39 @@ EvaluatePolicyInput is used as the input when evaluating a policy in OPA.
 | ----- | ---- | ----- | ----------- |
 | policies | [Policy](#rode.v1alpha1.Policy) | repeated | Policies is the list of policies, with the number of results controlled by the ListPoliciesRequest.Filter and ListPoliciesRequest.PageSize. |
 | next_page_token | [string](#string) |  | NextPageToken can be used to retrieve the next page of results. It will be empty if the caller has reached the end of the result set. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ListPolicyGroupsRequest"></a>
+
+### ListPolicyGroupsRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| filter | [string](#string) |  | Filter is a CEL (common expression language) filter that works off the fields in the PolicyGroup. |
+| page_size | [int32](#int32) |  | PageSize is the maximum number of results. Use the ListPolicyGroupsResponse.NextPageToken to retrieve the next set. |
+| page_token | [string](#string) |  | PageToken can be used to retrieve a specific page of results. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ListPolicyGroupsResponse"></a>
+
+### ListPolicyGroupsResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| policy_groups | [PolicyGroup](#rode.v1alpha1.PolicyGroup) | repeated | PolicyGroups is the list of results from applying ListPolicyGroupsRequest.Filter, with a maximum number set by ListPolicyGroupsRequest.PageSize |
+| next_page_token | [string](#string) |  | NextPageToken can be used to retrieve the subsequent page of results by setting ListPolicyGroupsRequest.NextPageToken |
 
 
 
@@ -534,6 +590,26 @@ This is a child of ResourceEvaluation.
 | pass | [bool](#bool) |  | Pass represents the overall status for this policy evaluation. |
 | policy_version_id | [string](#string) |  | PolicyVersionId represents the ID of the policy version that was evaluated. |
 | violations | [EvaluatePolicyViolation](#rode.v1alpha1.EvaluatePolicyViolation) | repeated | Violations is a list of rule results. Even if a rule passed, its output will be included in Violations. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.PolicyGroup"></a>
+
+### PolicyGroup
+PolicyGroup is used to apply multiple policies in a single resource evaluation. It&#39;s linked to a policy via a PolicyAssignment.
+A PolicyGroup is meant to be open-ended -- it can represent an environment (e.g., dev) or
+policies around a certain compliance framework (e.g., PCI).
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| name | [string](#string) |  | Name is the unique identifier for the PolicyGroup. It may only contain lowercase alphanumeric characters, dashes, and underscores. It cannot be changed after creation. |
+| description | [string](#string) |  | Description is a brief summary of the intended use for the PolicyGroup. |
+| created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
+| updated | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
 
 
 

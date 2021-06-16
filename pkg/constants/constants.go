@@ -17,8 +17,9 @@ package constants
 const (
 	RodeProjectSlug = "projects/rode"
 
-	PoliciesDocumentKind  = "policies"
-	ResourcesDocumentKind = "resources"
+	PoliciesDocumentKind     = "policies"
+	PolicyGroupsDocumentKind = "policy-groups"
+	ResourcesDocumentKind    = "resources"
 
 	MaxPageSize = 1000
 )

@@ -18,9 +18,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/rode/rode/pkg/constants"
 	"github.com/rode/rode/pkg/grafeas/grafeasfakes"
-	"strings"
 
 	"github.com/rode/rode/pkg/policy/policyfakes"
 	"github.com/rode/rode/pkg/resource/resourcefakes"
@@ -49,13 +50,16 @@ var _ = Describe("rode server", func() {
 		grafeasExtensions     *grafeasfakes.FakeExtensions
 		resourceManager       *resourcefakes.FakeManager
 		policyManager         *policyfakes.FakeManager
+		policyGroupManager    *policyfakes.FakePolicyGroupManager
 		indexManager          *immocks.FakeIndexManager
 		ctx                   context.Context
 
-		expectedPoliciesIndex string
-		expectedPoliciesAlias string
-		expectedResourceIndex string
-		expectedResourceAlias string
+		expectedPoliciesIndex     string
+		expectedPoliciesAlias     string
+		expectedResourceIndex     string
+		expectedResourceAlias     string
+		expectedPolicyGroupsIndex string
+		expectedPolicyGroupsAlias string
 	)
 
 	BeforeEach(func() {
@@ -63,24 +67,29 @@ var _ = Describe("rode server", func() {
 		grafeasProjectsClient = &mocks.FakeProjectsClient{}
 		grafeasExtensions = &grafeasfakes.FakeExtensions{}
 		resourceManager = &resourcefakes.FakeManager{}
+		policyGroupManager = &policyfakes.FakePolicyGroupManager{}
 
 		expectedPoliciesIndex = gofakeit.LetterN(10)
 		expectedPoliciesAlias = gofakeit.LetterN(10)
+		expectedPolicyGroupsIndex = gofakeit.LetterN(10)
+		expectedPolicyGroupsAlias = gofakeit.LetterN(10)
 		expectedResourceIndex = gofakeit.LetterN(10)
 		expectedResourceAlias = gofakeit.LetterN(10)
 		indexManager = &immocks.FakeIndexManager{}
 
 		indexManager.AliasNameStub = func(documentKind, _ string) string {
 			return map[string]string{
-				constants.ResourcesDocumentKind: expectedResourceAlias,
-				constants.PoliciesDocumentKind:  expectedPoliciesAlias,
+				constants.PoliciesDocumentKind:     expectedPoliciesAlias,
+				constants.PolicyGroupsDocumentKind: expectedPolicyGroupsAlias,
+				constants.ResourcesDocumentKind:    expectedResourceAlias,
 			}[documentKind]
 		}
 
 		indexManager.IndexNameStub = func(documentKind, _ string) string {
 			return map[string]string{
-				constants.ResourcesDocumentKind: expectedResourceIndex,
-				constants.PoliciesDocumentKind:  expectedPoliciesIndex,
+				constants.PoliciesDocumentKind:     expectedPoliciesIndex,
+				constants.PolicyGroupsDocumentKind: expectedPolicyGroupsIndex,
+				constants.ResourcesDocumentKind:    expectedResourceIndex,
 			}[documentKind]
 		}
 
@@ -114,14 +123,13 @@ var _ = Describe("rode server", func() {
 			}
 			expectedGetProjectError = nil
 			expectedCreateProjectError = nil
-
 		})
 
 		JustBeforeEach(func() {
 			grafeasProjectsClient.GetProjectReturns(expectedProject, expectedGetProjectError)
 			grafeasProjectsClient.CreateProjectReturns(expectedProject, expectedCreateProjectError)
 
-			actualRodeServer, actualError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, grafeasExtensions, resourceManager, indexManager, policyManager)
+			actualRodeServer, actualError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, grafeasExtensions, resourceManager, indexManager, policyManager, policyGroupManager)
 		})
 
 		It("should check if the rode project exists", func() {
@@ -140,9 +148,11 @@ var _ = Describe("rode server", func() {
 			Expect(indexManager.InitializeCallCount()).To(Equal(1))
 		})
 
-		It("should create an index for policies", func() {
-			Expect(indexManager.CreateIndexCallCount()).To(Equal(2))
+		It("should create the application indices", func() {
+			Expect(indexManager.CreateIndexCallCount()).To(Equal(3))
+		})
 
+		It("should create an index for policies", func() {
 			_, actualIndexName, actualAliasName, documentKind := indexManager.CreateIndexArgsForCall(0)
 
 			Expect(actualIndexName).To(Equal(expectedPoliciesIndex))
@@ -151,13 +161,21 @@ var _ = Describe("rode server", func() {
 		})
 
 		It("should create an index for resources", func() {
-			Expect(indexManager.CreateIndexCallCount()).To(Equal(2))
+			Expect(indexManager.CreateIndexCallCount()).To(Equal(3))
 
 			_, actualIndexName, actualAliasName, documentKind := indexManager.CreateIndexArgsForCall(1)
 
 			Expect(actualIndexName).To(Equal(expectedResourceIndex))
 			Expect(actualAliasName).To(Equal(expectedResourceAlias))
 			Expect(documentKind).To(Equal(constants.ResourcesDocumentKind))
+		})
+
+		It("should create an index for policy groups", func() {
+			_, actualIndexName, actualAliasName, documentKind := indexManager.CreateIndexArgsForCall(2)
+
+			Expect(actualIndexName).To(Equal(expectedPolicyGroupsIndex))
+			Expect(actualAliasName).To(Equal(expectedPolicyGroupsAlias))
+			Expect(documentKind).To(Equal(constants.PolicyGroupsDocumentKind))
 		})
 
 		It("should return the initialized rode server", func() {
