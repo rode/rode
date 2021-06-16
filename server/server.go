@@ -47,7 +47,7 @@ func NewRodeServer(
 	resourceManager resource.Manager,
 	indexManager indexmanager.IndexManager,
 	policyManager policy.Manager,
-	environmentManager policy.PolicyGroupManager,
+	policyGroupManager policy.PolicyGroupManager,
 ) (pb.RodeServer, error) {
 	rodeServer := &rodeServer{
 		logger,
@@ -57,7 +57,7 @@ func NewRodeServer(
 		resourceManager,
 		indexManager,
 		policyManager,
-		environmentManager,
+		policyGroupManager,
 	}
 
 	if err := rodeServer.initialize(context.Background()); err != nil {

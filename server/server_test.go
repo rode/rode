@@ -58,8 +58,8 @@ var _ = Describe("rode server", func() {
 		expectedPoliciesAlias     string
 		expectedResourceIndex     string
 		expectedResourceAlias     string
-		expectedEnvironmentsIndex string
-		expectedEnvironmentsAlias string
+		expectedPolicyGroupsIndex string
+		expectedPolicyGroupsAlias string
 	)
 
 	BeforeEach(func() {
@@ -71,8 +71,8 @@ var _ = Describe("rode server", func() {
 
 		expectedPoliciesIndex = gofakeit.LetterN(10)
 		expectedPoliciesAlias = gofakeit.LetterN(10)
-		expectedEnvironmentsIndex = gofakeit.LetterN(10)
-		expectedEnvironmentsAlias = gofakeit.LetterN(10)
+		expectedPolicyGroupsIndex = gofakeit.LetterN(10)
+		expectedPolicyGroupsAlias = gofakeit.LetterN(10)
 		expectedResourceIndex = gofakeit.LetterN(10)
 		expectedResourceAlias = gofakeit.LetterN(10)
 		indexManager = &immocks.FakeIndexManager{}
@@ -80,7 +80,7 @@ var _ = Describe("rode server", func() {
 		indexManager.AliasNameStub = func(documentKind, _ string) string {
 			return map[string]string{
 				constants.PoliciesDocumentKind:     expectedPoliciesAlias,
-				constants.PolicyGroupsDocumentKind: expectedEnvironmentsAlias,
+				constants.PolicyGroupsDocumentKind: expectedPolicyGroupsAlias,
 				constants.ResourcesDocumentKind:    expectedResourceAlias,
 			}[documentKind]
 		}
@@ -88,7 +88,7 @@ var _ = Describe("rode server", func() {
 		indexManager.IndexNameStub = func(documentKind, _ string) string {
 			return map[string]string{
 				constants.PoliciesDocumentKind:     expectedPoliciesIndex,
-				constants.PolicyGroupsDocumentKind: expectedEnvironmentsIndex,
+				constants.PolicyGroupsDocumentKind: expectedPolicyGroupsIndex,
 				constants.ResourcesDocumentKind:    expectedResourceIndex,
 			}[documentKind]
 		}
@@ -170,11 +170,11 @@ var _ = Describe("rode server", func() {
 			Expect(documentKind).To(Equal(constants.ResourcesDocumentKind))
 		})
 
-		It("should create an index for environments", func() {
+		It("should create an index for policy groups", func() {
 			_, actualIndexName, actualAliasName, documentKind := indexManager.CreateIndexArgsForCall(2)
 
-			Expect(actualIndexName).To(Equal(expectedEnvironmentsIndex))
-			Expect(actualAliasName).To(Equal(expectedEnvironmentsAlias))
+			Expect(actualIndexName).To(Equal(expectedPolicyGroupsIndex))
+			Expect(actualAliasName).To(Equal(expectedPolicyGroupsAlias))
 			Expect(documentKind).To(Equal(constants.PolicyGroupsDocumentKind))
 		})
 
