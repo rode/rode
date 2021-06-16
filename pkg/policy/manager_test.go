@@ -19,9 +19,10 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"net/http"
+
 	"github.com/rode/rode/pkg/constants"
 	"github.com/rode/rode/pkg/grafeas/grafeasfakes"
-	"net/http"
 
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
@@ -38,7 +39,6 @@ import (
 	grafeas_common_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/common_go_proto"
 	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -64,7 +64,6 @@ var (
 			m := input.message
 			m == "world"
 		}`
-	invalidJson = []byte{'}'}
 )
 
 var _ = Describe("PolicyManager", func() {
@@ -1972,13 +1971,6 @@ func randomViolation() *opa.EvaluatePolicyViolation {
 		Message:     fake.Word(),
 		Pass:        fake.Bool(),
 	}
-}
-
-func getGRPCStatusFromError(err error) *status.Status {
-	s, ok := status.FromError(err)
-	Expect(ok).To(BeTrue(), "Expected error to be a gRPC status")
-
-	return s
 }
 
 func deepCopyPolicy(policy *pb.Policy) *pb.Policy {

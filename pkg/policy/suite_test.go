@@ -20,14 +20,23 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/status"
 )
 
 var (
-	logger = zap.NewNop()
-	fake   = gofakeit.New(0)
+	logger      = zap.NewNop()
+	fake        = gofakeit.New(0)
+	invalidJson = []byte{'}'}
 )
 
 func TestPolicy(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Policy Suite")
+}
+
+func getGRPCStatusFromError(err error) *status.Status {
+	s, ok := status.FromError(err)
+	Expect(ok).To(BeTrue(), "Expected error to be a gRPC status")
+
+	return s
 }

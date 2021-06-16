@@ -18,9 +18,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/rode/rode/pkg/constants"
 	"github.com/rode/rode/pkg/grafeas"
-	"strings"
 
 	"github.com/rode/rode/pkg/policy"
 	"github.com/rode/rode/pkg/resource"
@@ -46,6 +47,7 @@ func NewRodeServer(
 	resourceManager resource.Manager,
 	indexManager indexmanager.IndexManager,
 	policyManager policy.Manager,
+	environmentManager policy.PolicyGroupManager,
 ) (pb.RodeServer, error) {
 	rodeServer := &rodeServer{
 		logger,
@@ -55,6 +57,7 @@ func NewRodeServer(
 		resourceManager,
 		indexManager,
 		policyManager,
+		environmentManager,
 	}
 
 	if err := rodeServer.initialize(context.Background()); err != nil {
@@ -72,6 +75,7 @@ type rodeServer struct {
 	resourceManager   resource.Manager
 	indexManager      indexmanager.IndexManager
 	policy.Manager
+	policy.PolicyGroupManager
 }
 
 func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceRequest *pb.BatchCreateOccurrencesRequest) (*pb.BatchCreateOccurrencesResponse, error) {
@@ -165,9 +169,9 @@ func (r *rodeServer) initialize(ctx context.Context) error {
 			documentKind: constants.GenericResourcesDocumentKind,
 		},
 		{
-			indexName:    r.indexManager.IndexName(constants.EnvironmentsDocumentKind, ""),
-			aliasName:    r.indexManager.AliasName(constants.EnvironmentsDocumentKind, ""),
-			documentKind: constants.EnvironmentsDocumentKind,
+			indexName:    r.indexManager.IndexName(constants.PolicyGroupsDocumentKind, ""),
+			aliasName:    r.indexManager.AliasName(constants.PolicyGroupsDocumentKind, ""),
+			documentKind: constants.PolicyGroupsDocumentKind,
 		},
 	}
 

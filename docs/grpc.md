@@ -34,13 +34,17 @@
     - [EvaluatePolicyResponse](#rode.v1alpha1.EvaluatePolicyResponse)
     - [EvaluatePolicyResult](#rode.v1alpha1.EvaluatePolicyResult)
     - [EvaluatePolicyViolation](#rode.v1alpha1.EvaluatePolicyViolation)
+    - [GetPolicyGroupRequest](#rode.v1alpha1.GetPolicyGroupRequest)
     - [GetPolicyRequest](#rode.v1alpha1.GetPolicyRequest)
     - [ListPoliciesRequest](#rode.v1alpha1.ListPoliciesRequest)
     - [ListPoliciesResponse](#rode.v1alpha1.ListPoliciesResponse)
+    - [ListPolicyGroupsRequest](#rode.v1alpha1.ListPolicyGroupsRequest)
+    - [ListPolicyGroupsResponse](#rode.v1alpha1.ListPolicyGroupsResponse)
     - [ListPolicyVersionsRequest](#rode.v1alpha1.ListPolicyVersionsRequest)
     - [ListPolicyVersionsResponse](#rode.v1alpha1.ListPolicyVersionsResponse)
     - [Policy](#rode.v1alpha1.Policy)
     - [PolicyEntity](#rode.v1alpha1.PolicyEntity)
+    - [PolicyGroup](#rode.v1alpha1.PolicyGroup)
     - [UpdatePolicyRequest](#rode.v1alpha1.UpdatePolicyRequest)
     - [ValidatePolicyRequest](#rode.v1alpha1.ValidatePolicyRequest)
     - [ValidatePolicyResponse](#rode.v1alpha1.ValidatePolicyResponse)
@@ -401,6 +405,10 @@ Response for creating occurrences in batch.
 | UpdatePolicy | [UpdatePolicyRequest](#rode.v1alpha1.UpdatePolicyRequest) | [Policy](#rode.v1alpha1.Policy) |  |
 | RegisterCollector | [RegisterCollectorRequest](#rode.v1alpha1.RegisterCollectorRequest) | [RegisterCollectorResponse](#rode.v1alpha1.RegisterCollectorResponse) | RegisterCollector accepts a collector ID and a list of notes that this collector will reference when creating occurrences. The response will contain the notes with the fully qualified note name. This operation is idempotent, so any notes that already exist will not be re-created. Collectors are expected to invoke this RPC each time they start. |
 | CreateNote | [CreateNoteRequest](#rode.v1alpha1.CreateNoteRequest) | [.grafeas.v1beta1.Note](#grafeas.v1beta1.Note) | CreateNote acts as a simple proxy to the grafeas CreateNote rpc |
+| CreatePolicyGroup | [PolicyGroup](#rode.v1alpha1.PolicyGroup) | [PolicyGroup](#rode.v1alpha1.PolicyGroup) |  |
+| ListPolicyGroups | [ListPolicyGroupsRequest](#rode.v1alpha1.ListPolicyGroupsRequest) | [ListPolicyGroupsResponse](#rode.v1alpha1.ListPolicyGroupsResponse) |  |
+| GetPolicyGroup | [GetPolicyGroupRequest](#rode.v1alpha1.GetPolicyGroupRequest) | [PolicyGroup](#rode.v1alpha1.PolicyGroup) |  |
+| UpdatePolicyGroup | [PolicyGroup](#rode.v1alpha1.PolicyGroup) | [PolicyGroup](#rode.v1alpha1.PolicyGroup) |  |
 
  
 
@@ -514,6 +522,21 @@ EvaluatePolicyInput is used as the input when evaluating a policy in OPA.
 
 
 
+<a name="rode.v1alpha1.GetPolicyGroupRequest"></a>
+
+### GetPolicyGroupRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| name | [string](#string) |  |  |
+
+
+
+
+
+
 <a name="rode.v1alpha1.GetPolicyRequest"></a>
 
 ### GetPolicyRequest
@@ -556,6 +579,39 @@ EvaluatePolicyInput is used as the input when evaluating a policy in OPA.
 | ----- | ---- | ----- | ----------- |
 | policies | [Policy](#rode.v1alpha1.Policy) | repeated | Policies is the list of policies, with the number of results controlled by the ListPoliciesRequest.Filter and ListPoliciesRequest.PageSize. |
 | next_page_token | [string](#string) |  | NextPageToken can be used to retrieve the next page of results. It will be empty if the caller has reached the end of the result set. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ListPolicyGroupsRequest"></a>
+
+### ListPolicyGroupsRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| filter | [string](#string) |  |  |
+| page_size | [int32](#int32) |  |  |
+| page_token | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ListPolicyGroupsResponse"></a>
+
+### ListPolicyGroupsResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| policy_groups | [PolicyGroup](#rode.v1alpha1.PolicyGroup) | repeated |  |
+| next_page_token | [string](#string) |  |  |
 
 
 
@@ -631,6 +687,24 @@ EvaluatePolicyInput is used as the input when evaluating a policy in OPA.
 | rego_content | [string](#string) |  | RegoContent contains the Rego code for a given policy. Only one of RegoContent and SourcePath should be specified. |
 | source_path | [string](#string) |  | SourcePath is the location of the policy stored in source control. |
 | created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  | Created represents when this policy version was stored. Policy contents are immutable, so there is no corresponding Updated field. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.PolicyGroup"></a>
+
+### PolicyGroup
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| name | [string](#string) |  |  |
+| description | [string](#string) |  |  |
+| created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
+| updated | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
 
 
 

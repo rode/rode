@@ -50,6 +50,7 @@ var _ = Describe("rode server", func() {
 		grafeasExtensions     *grafeasfakes.FakeExtensions
 		resourceManager       *resourcefakes.FakeManager
 		policyManager         *policyfakes.FakeManager
+		policyGroupManager    *policyfakes.FakePolicyGroupManager
 		indexManager          *immocks.FakeIndexManager
 		ctx                   context.Context
 
@@ -66,6 +67,7 @@ var _ = Describe("rode server", func() {
 		grafeasProjectsClient = &mocks.FakeProjectsClient{}
 		grafeasExtensions = &grafeasfakes.FakeExtensions{}
 		resourceManager = &resourcefakes.FakeManager{}
+		policyGroupManager = &policyfakes.FakePolicyGroupManager{}
 
 		expectedPoliciesIndex = gofakeit.LetterN(10)
 		expectedPoliciesAlias = gofakeit.LetterN(10)
@@ -79,7 +81,7 @@ var _ = Describe("rode server", func() {
 			return map[string]string{
 				constants.GenericResourcesDocumentKind: expectedGenericResourceAlias,
 				constants.PoliciesDocumentKind:         expectedPoliciesAlias,
-				constants.EnvironmentsDocumentKind:     expectedEnvironmentsAlias,
+				constants.PolicyGroupsDocumentKind:     expectedEnvironmentsAlias,
 			}[documentKind]
 		}
 
@@ -87,7 +89,7 @@ var _ = Describe("rode server", func() {
 			return map[string]string{
 				constants.GenericResourcesDocumentKind: expectedGenericResourceIndex,
 				constants.PoliciesDocumentKind:         expectedPoliciesIndex,
-				constants.EnvironmentsDocumentKind:     expectedEnvironmentsIndex,
+				constants.PolicyGroupsDocumentKind:     expectedEnvironmentsIndex,
 			}[documentKind]
 		}
 
@@ -121,14 +123,13 @@ var _ = Describe("rode server", func() {
 			}
 			expectedGetProjectError = nil
 			expectedCreateProjectError = nil
-
 		})
 
 		JustBeforeEach(func() {
 			grafeasProjectsClient.GetProjectReturns(expectedProject, expectedGetProjectError)
 			grafeasProjectsClient.CreateProjectReturns(expectedProject, expectedCreateProjectError)
 
-			actualRodeServer, actualError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, grafeasExtensions, resourceManager, indexManager, policyManager)
+			actualRodeServer, actualError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, grafeasExtensions, resourceManager, indexManager, policyManager, policyGroupManager)
 		})
 
 		It("should check if the rode project exists", func() {
@@ -172,7 +173,7 @@ var _ = Describe("rode server", func() {
 
 			Expect(actualIndexName).To(Equal(expectedEnvironmentsIndex))
 			Expect(actualAliasName).To(Equal(expectedEnvironmentsAlias))
-			Expect(documentKind).To(Equal(constants.EnvironmentsDocumentKind))
+			Expect(documentKind).To(Equal(constants.PolicyGroupsDocumentKind))
 		})
 
 		It("should return the initialized rode server", func() {

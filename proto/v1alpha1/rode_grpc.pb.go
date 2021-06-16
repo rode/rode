@@ -46,6 +46,10 @@ type RodeClient interface {
 	RegisterCollector(ctx context.Context, in *RegisterCollectorRequest, opts ...grpc.CallOption) (*RegisterCollectorResponse, error)
 	// CreateNote acts as a simple proxy to the grafeas CreateNote rpc
 	CreateNote(ctx context.Context, in *CreateNoteRequest, opts ...grpc.CallOption) (*grafeas_go_proto.Note, error)
+	CreatePolicyGroup(ctx context.Context, in *PolicyGroup, opts ...grpc.CallOption) (*PolicyGroup, error)
+	ListPolicyGroups(ctx context.Context, in *ListPolicyGroupsRequest, opts ...grpc.CallOption) (*ListPolicyGroupsResponse, error)
+	GetPolicyGroup(ctx context.Context, in *GetPolicyGroupRequest, opts ...grpc.CallOption) (*PolicyGroup, error)
+	UpdatePolicyGroup(ctx context.Context, in *PolicyGroup, opts ...grpc.CallOption) (*PolicyGroup, error)
 }
 
 type rodeClient struct {
@@ -200,6 +204,42 @@ func (c *rodeClient) CreateNote(ctx context.Context, in *CreateNoteRequest, opts
 	return out, nil
 }
 
+func (c *rodeClient) CreatePolicyGroup(ctx context.Context, in *PolicyGroup, opts ...grpc.CallOption) (*PolicyGroup, error) {
+	out := new(PolicyGroup)
+	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/CreatePolicyGroup", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rodeClient) ListPolicyGroups(ctx context.Context, in *ListPolicyGroupsRequest, opts ...grpc.CallOption) (*ListPolicyGroupsResponse, error) {
+	out := new(ListPolicyGroupsResponse)
+	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/ListPolicyGroups", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rodeClient) GetPolicyGroup(ctx context.Context, in *GetPolicyGroupRequest, opts ...grpc.CallOption) (*PolicyGroup, error) {
+	out := new(PolicyGroup)
+	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/GetPolicyGroup", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rodeClient) UpdatePolicyGroup(ctx context.Context, in *PolicyGroup, opts ...grpc.CallOption) (*PolicyGroup, error) {
+	out := new(PolicyGroup)
+	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/UpdatePolicyGroup", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RodeServer is the server API for Rode service.
 // All implementations should embed UnimplementedRodeServer
 // for forward compatibility
@@ -230,6 +270,10 @@ type RodeServer interface {
 	RegisterCollector(context.Context, *RegisterCollectorRequest) (*RegisterCollectorResponse, error)
 	// CreateNote acts as a simple proxy to the grafeas CreateNote rpc
 	CreateNote(context.Context, *CreateNoteRequest) (*grafeas_go_proto.Note, error)
+	CreatePolicyGroup(context.Context, *PolicyGroup) (*PolicyGroup, error)
+	ListPolicyGroups(context.Context, *ListPolicyGroupsRequest) (*ListPolicyGroupsResponse, error)
+	GetPolicyGroup(context.Context, *GetPolicyGroupRequest) (*PolicyGroup, error)
+	UpdatePolicyGroup(context.Context, *PolicyGroup) (*PolicyGroup, error)
 }
 
 // UnimplementedRodeServer should be embedded to have forward compatible implementations.
@@ -283,6 +327,18 @@ func (UnimplementedRodeServer) RegisterCollector(context.Context, *RegisterColle
 }
 func (UnimplementedRodeServer) CreateNote(context.Context, *CreateNoteRequest) (*grafeas_go_proto.Note, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateNote not implemented")
+}
+func (UnimplementedRodeServer) CreatePolicyGroup(context.Context, *PolicyGroup) (*PolicyGroup, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreatePolicyGroup not implemented")
+}
+func (UnimplementedRodeServer) ListPolicyGroups(context.Context, *ListPolicyGroupsRequest) (*ListPolicyGroupsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListPolicyGroups not implemented")
+}
+func (UnimplementedRodeServer) GetPolicyGroup(context.Context, *GetPolicyGroupRequest) (*PolicyGroup, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPolicyGroup not implemented")
+}
+func (UnimplementedRodeServer) UpdatePolicyGroup(context.Context, *PolicyGroup) (*PolicyGroup, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdatePolicyGroup not implemented")
 }
 
 // UnsafeRodeServer may be embedded to opt out of forward compatibility for this service.
@@ -584,6 +640,78 @@ func _Rode_CreateNote_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Rode_CreatePolicyGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PolicyGroup)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RodeServer).CreatePolicyGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rode.v1alpha1.Rode/CreatePolicyGroup",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RodeServer).CreatePolicyGroup(ctx, req.(*PolicyGroup))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rode_ListPolicyGroups_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListPolicyGroupsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RodeServer).ListPolicyGroups(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rode.v1alpha1.Rode/ListPolicyGroups",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RodeServer).ListPolicyGroups(ctx, req.(*ListPolicyGroupsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rode_GetPolicyGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPolicyGroupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RodeServer).GetPolicyGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rode.v1alpha1.Rode/GetPolicyGroup",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RodeServer).GetPolicyGroup(ctx, req.(*GetPolicyGroupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rode_UpdatePolicyGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PolicyGroup)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RodeServer).UpdatePolicyGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rode.v1alpha1.Rode/UpdatePolicyGroup",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RodeServer).UpdatePolicyGroup(ctx, req.(*PolicyGroup))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Rode_ServiceDesc is the grpc.ServiceDesc for Rode service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -654,6 +782,22 @@ var Rode_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateNote",
 			Handler:    _Rode_CreateNote_Handler,
+		},
+		{
+			MethodName: "CreatePolicyGroup",
+			Handler:    _Rode_CreatePolicyGroup_Handler,
+		},
+		{
+			MethodName: "ListPolicyGroups",
+			Handler:    _Rode_ListPolicyGroups_Handler,
+		},
+		{
+			MethodName: "GetPolicyGroup",
+			Handler:    _Rode_GetPolicyGroup_Handler,
+		},
+		{
+			MethodName: "UpdatePolicyGroup",
+			Handler:    _Rode_UpdatePolicyGroup_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
