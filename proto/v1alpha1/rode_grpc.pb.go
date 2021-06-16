@@ -24,11 +24,11 @@ type RodeClient interface {
 	BatchCreateOccurrences(ctx context.Context, in *BatchCreateOccurrencesRequest, opts ...grpc.CallOption) (*BatchCreateOccurrencesResponse, error)
 	// Verify that an artifact satisfies a policy
 	EvaluatePolicy(ctx context.Context, in *EvaluatePolicyRequest, opts ...grpc.CallOption) (*EvaluatePolicyResponse, error)
-	ListGenericResources(ctx context.Context, in *ListGenericResourcesRequest, opts ...grpc.CallOption) (*ListGenericResourcesResponse, error)
-	// ListGenericResourceVersions can be used to list all known versions of a generic resource. Versions will always include
+	ListResources(ctx context.Context, in *ListResourcesRequest, opts ...grpc.CallOption) (*ListResourcesResponse, error)
+	// ListResourceVersions can be used to list all known versions of a resource. Versions will always include
 	// the unique identifier (in the case of Docker images, the sha256) and will optionally include any related names (in the
 	// case of Docker images, any associated tags for the image).
-	ListGenericResourceVersions(ctx context.Context, in *ListGenericResourceVersionsRequest, opts ...grpc.CallOption) (*ListGenericResourceVersionsResponse, error)
+	ListResourceVersions(ctx context.Context, in *ListResourceVersionsRequest, opts ...grpc.CallOption) (*ListResourceVersionsResponse, error)
 	ListVersionedResourceOccurrences(ctx context.Context, in *ListVersionedResourceOccurrencesRequest, opts ...grpc.CallOption) (*ListVersionedResourceOccurrencesResponse, error)
 	ListOccurrences(ctx context.Context, in *ListOccurrencesRequest, opts ...grpc.CallOption) (*ListOccurrencesResponse, error)
 	UpdateOccurrence(ctx context.Context, in *UpdateOccurrenceRequest, opts ...grpc.CallOption) (*grafeas_go_proto.Occurrence, error)
@@ -78,18 +78,18 @@ func (c *rodeClient) EvaluatePolicy(ctx context.Context, in *EvaluatePolicyReque
 	return out, nil
 }
 
-func (c *rodeClient) ListGenericResources(ctx context.Context, in *ListGenericResourcesRequest, opts ...grpc.CallOption) (*ListGenericResourcesResponse, error) {
-	out := new(ListGenericResourcesResponse)
-	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/ListGenericResources", in, out, opts...)
+func (c *rodeClient) ListResources(ctx context.Context, in *ListResourcesRequest, opts ...grpc.CallOption) (*ListResourcesResponse, error) {
+	out := new(ListResourcesResponse)
+	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/ListResources", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *rodeClient) ListGenericResourceVersions(ctx context.Context, in *ListGenericResourceVersionsRequest, opts ...grpc.CallOption) (*ListGenericResourceVersionsResponse, error) {
-	out := new(ListGenericResourceVersionsResponse)
-	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/ListGenericResourceVersions", in, out, opts...)
+func (c *rodeClient) ListResourceVersions(ctx context.Context, in *ListResourceVersionsRequest, opts ...grpc.CallOption) (*ListResourceVersionsResponse, error) {
+	out := new(ListResourceVersionsResponse)
+	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/ListResourceVersions", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -248,11 +248,11 @@ type RodeServer interface {
 	BatchCreateOccurrences(context.Context, *BatchCreateOccurrencesRequest) (*BatchCreateOccurrencesResponse, error)
 	// Verify that an artifact satisfies a policy
 	EvaluatePolicy(context.Context, *EvaluatePolicyRequest) (*EvaluatePolicyResponse, error)
-	ListGenericResources(context.Context, *ListGenericResourcesRequest) (*ListGenericResourcesResponse, error)
-	// ListGenericResourceVersions can be used to list all known versions of a generic resource. Versions will always include
+	ListResources(context.Context, *ListResourcesRequest) (*ListResourcesResponse, error)
+	// ListResourceVersions can be used to list all known versions of a resource. Versions will always include
 	// the unique identifier (in the case of Docker images, the sha256) and will optionally include any related names (in the
 	// case of Docker images, any associated tags for the image).
-	ListGenericResourceVersions(context.Context, *ListGenericResourceVersionsRequest) (*ListGenericResourceVersionsResponse, error)
+	ListResourceVersions(context.Context, *ListResourceVersionsRequest) (*ListResourceVersionsResponse, error)
 	ListVersionedResourceOccurrences(context.Context, *ListVersionedResourceOccurrencesRequest) (*ListVersionedResourceOccurrencesResponse, error)
 	ListOccurrences(context.Context, *ListOccurrencesRequest) (*ListOccurrencesResponse, error)
 	UpdateOccurrence(context.Context, *UpdateOccurrenceRequest) (*grafeas_go_proto.Occurrence, error)
@@ -286,11 +286,11 @@ func (UnimplementedRodeServer) BatchCreateOccurrences(context.Context, *BatchCre
 func (UnimplementedRodeServer) EvaluatePolicy(context.Context, *EvaluatePolicyRequest) (*EvaluatePolicyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method EvaluatePolicy not implemented")
 }
-func (UnimplementedRodeServer) ListGenericResources(context.Context, *ListGenericResourcesRequest) (*ListGenericResourcesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListGenericResources not implemented")
+func (UnimplementedRodeServer) ListResources(context.Context, *ListResourcesRequest) (*ListResourcesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListResources not implemented")
 }
-func (UnimplementedRodeServer) ListGenericResourceVersions(context.Context, *ListGenericResourceVersionsRequest) (*ListGenericResourceVersionsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListGenericResourceVersions not implemented")
+func (UnimplementedRodeServer) ListResourceVersions(context.Context, *ListResourceVersionsRequest) (*ListResourceVersionsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListResourceVersions not implemented")
 }
 func (UnimplementedRodeServer) ListVersionedResourceOccurrences(context.Context, *ListVersionedResourceOccurrencesRequest) (*ListVersionedResourceOccurrencesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListVersionedResourceOccurrences not implemented")
@@ -388,38 +388,38 @@ func _Rode_EvaluatePolicy_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Rode_ListGenericResources_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListGenericResourcesRequest)
+func _Rode_ListResources_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListResourcesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(RodeServer).ListGenericResources(ctx, in)
+		return srv.(RodeServer).ListResources(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/rode.v1alpha1.Rode/ListGenericResources",
+		FullMethod: "/rode.v1alpha1.Rode/ListResources",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RodeServer).ListGenericResources(ctx, req.(*ListGenericResourcesRequest))
+		return srv.(RodeServer).ListResources(ctx, req.(*ListResourcesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Rode_ListGenericResourceVersions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListGenericResourceVersionsRequest)
+func _Rode_ListResourceVersions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListResourceVersionsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(RodeServer).ListGenericResourceVersions(ctx, in)
+		return srv.(RodeServer).ListResourceVersions(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/rode.v1alpha1.Rode/ListGenericResourceVersions",
+		FullMethod: "/rode.v1alpha1.Rode/ListResourceVersions",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RodeServer).ListGenericResourceVersions(ctx, req.(*ListGenericResourceVersionsRequest))
+		return srv.(RodeServer).ListResourceVersions(ctx, req.(*ListResourceVersionsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -728,12 +728,12 @@ var Rode_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Rode_EvaluatePolicy_Handler,
 		},
 		{
-			MethodName: "ListGenericResources",
-			Handler:    _Rode_ListGenericResources_Handler,
+			MethodName: "ListResources",
+			Handler:    _Rode_ListResources_Handler,
 		},
 		{
-			MethodName: "ListGenericResourceVersions",
-			Handler:    _Rode_ListGenericResourceVersions_Handler,
+			MethodName: "ListResourceVersions",
+			Handler:    _Rode_ListResourceVersions_Handler,
 		},
 		{
 			MethodName: "ListVersionedResourceOccurrences",

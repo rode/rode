@@ -11,92 +11,92 @@ import (
 )
 
 type FakeManager struct {
-	BatchCreateGenericResourceVersionsStub        func(context.Context, []*grafeas_go_proto.Occurrence) error
-	batchCreateGenericResourceVersionsMutex       sync.RWMutex
-	batchCreateGenericResourceVersionsArgsForCall []struct {
+	BatchCreateResourceVersionsStub        func(context.Context, []*grafeas_go_proto.Occurrence) error
+	batchCreateResourceVersionsMutex       sync.RWMutex
+	batchCreateResourceVersionsArgsForCall []struct {
 		arg1 context.Context
 		arg2 []*grafeas_go_proto.Occurrence
 	}
-	batchCreateGenericResourceVersionsReturns struct {
+	batchCreateResourceVersionsReturns struct {
 		result1 error
 	}
-	batchCreateGenericResourceVersionsReturnsOnCall map[int]struct {
+	batchCreateResourceVersionsReturnsOnCall map[int]struct {
 		result1 error
 	}
-	BatchCreateGenericResourcesStub        func(context.Context, []*grafeas_go_proto.Occurrence) error
-	batchCreateGenericResourcesMutex       sync.RWMutex
-	batchCreateGenericResourcesArgsForCall []struct {
+	BatchCreateResourcesStub        func(context.Context, []*grafeas_go_proto.Occurrence) error
+	batchCreateResourcesMutex       sync.RWMutex
+	batchCreateResourcesArgsForCall []struct {
 		arg1 context.Context
 		arg2 []*grafeas_go_proto.Occurrence
 	}
-	batchCreateGenericResourcesReturns struct {
+	batchCreateResourcesReturns struct {
 		result1 error
 	}
-	batchCreateGenericResourcesReturnsOnCall map[int]struct {
+	batchCreateResourcesReturnsOnCall map[int]struct {
 		result1 error
 	}
-	GetGenericResourceStub        func(context.Context, string) (*v1alpha1.GenericResource, error)
-	getGenericResourceMutex       sync.RWMutex
-	getGenericResourceArgsForCall []struct {
+	GetResourceStub        func(context.Context, string) (*v1alpha1.Resource, error)
+	getResourceMutex       sync.RWMutex
+	getResourceArgsForCall []struct {
 		arg1 context.Context
 		arg2 string
 	}
-	getGenericResourceReturns struct {
-		result1 *v1alpha1.GenericResource
+	getResourceReturns struct {
+		result1 *v1alpha1.Resource
 		result2 error
 	}
-	getGenericResourceReturnsOnCall map[int]struct {
-		result1 *v1alpha1.GenericResource
+	getResourceReturnsOnCall map[int]struct {
+		result1 *v1alpha1.Resource
 		result2 error
 	}
-	ListGenericResourceVersionsStub        func(context.Context, *v1alpha1.ListGenericResourceVersionsRequest) (*v1alpha1.ListGenericResourceVersionsResponse, error)
-	listGenericResourceVersionsMutex       sync.RWMutex
-	listGenericResourceVersionsArgsForCall []struct {
+	ListResourceVersionsStub        func(context.Context, *v1alpha1.ListResourceVersionsRequest) (*v1alpha1.ListResourceVersionsResponse, error)
+	listResourceVersionsMutex       sync.RWMutex
+	listResourceVersionsArgsForCall []struct {
 		arg1 context.Context
-		arg2 *v1alpha1.ListGenericResourceVersionsRequest
+		arg2 *v1alpha1.ListResourceVersionsRequest
 	}
-	listGenericResourceVersionsReturns struct {
-		result1 *v1alpha1.ListGenericResourceVersionsResponse
+	listResourceVersionsReturns struct {
+		result1 *v1alpha1.ListResourceVersionsResponse
 		result2 error
 	}
-	listGenericResourceVersionsReturnsOnCall map[int]struct {
-		result1 *v1alpha1.ListGenericResourceVersionsResponse
+	listResourceVersionsReturnsOnCall map[int]struct {
+		result1 *v1alpha1.ListResourceVersionsResponse
 		result2 error
 	}
-	ListGenericResourcesStub        func(context.Context, *v1alpha1.ListGenericResourcesRequest) (*v1alpha1.ListGenericResourcesResponse, error)
-	listGenericResourcesMutex       sync.RWMutex
-	listGenericResourcesArgsForCall []struct {
+	ListResourcesStub        func(context.Context, *v1alpha1.ListResourcesRequest) (*v1alpha1.ListResourcesResponse, error)
+	listResourcesMutex       sync.RWMutex
+	listResourcesArgsForCall []struct {
 		arg1 context.Context
-		arg2 *v1alpha1.ListGenericResourcesRequest
+		arg2 *v1alpha1.ListResourcesRequest
 	}
-	listGenericResourcesReturns struct {
-		result1 *v1alpha1.ListGenericResourcesResponse
+	listResourcesReturns struct {
+		result1 *v1alpha1.ListResourcesResponse
 		result2 error
 	}
-	listGenericResourcesReturnsOnCall map[int]struct {
-		result1 *v1alpha1.ListGenericResourcesResponse
+	listResourcesReturnsOnCall map[int]struct {
+		result1 *v1alpha1.ListResourcesResponse
 		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeManager) BatchCreateGenericResourceVersions(arg1 context.Context, arg2 []*grafeas_go_proto.Occurrence) error {
+func (fake *FakeManager) BatchCreateResourceVersions(arg1 context.Context, arg2 []*grafeas_go_proto.Occurrence) error {
 	var arg2Copy []*grafeas_go_proto.Occurrence
 	if arg2 != nil {
 		arg2Copy = make([]*grafeas_go_proto.Occurrence, len(arg2))
 		copy(arg2Copy, arg2)
 	}
-	fake.batchCreateGenericResourceVersionsMutex.Lock()
-	ret, specificReturn := fake.batchCreateGenericResourceVersionsReturnsOnCall[len(fake.batchCreateGenericResourceVersionsArgsForCall)]
-	fake.batchCreateGenericResourceVersionsArgsForCall = append(fake.batchCreateGenericResourceVersionsArgsForCall, struct {
+	fake.batchCreateResourceVersionsMutex.Lock()
+	ret, specificReturn := fake.batchCreateResourceVersionsReturnsOnCall[len(fake.batchCreateResourceVersionsArgsForCall)]
+	fake.batchCreateResourceVersionsArgsForCall = append(fake.batchCreateResourceVersionsArgsForCall, struct {
 		arg1 context.Context
 		arg2 []*grafeas_go_proto.Occurrence
 	}{arg1, arg2Copy})
-	stub := fake.BatchCreateGenericResourceVersionsStub
-	fakeReturns := fake.batchCreateGenericResourceVersionsReturns
-	fake.recordInvocation("BatchCreateGenericResourceVersions", []interface{}{arg1, arg2Copy})
-	fake.batchCreateGenericResourceVersionsMutex.Unlock()
+	stub := fake.BatchCreateResourceVersionsStub
+	fakeReturns := fake.batchCreateResourceVersionsReturns
+	fake.recordInvocation("BatchCreateResourceVersions", []interface{}{arg1, arg2Copy})
+	fake.batchCreateResourceVersionsMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
 	}
@@ -106,64 +106,64 @@ func (fake *FakeManager) BatchCreateGenericResourceVersions(arg1 context.Context
 	return fakeReturns.result1
 }
 
-func (fake *FakeManager) BatchCreateGenericResourceVersionsCallCount() int {
-	fake.batchCreateGenericResourceVersionsMutex.RLock()
-	defer fake.batchCreateGenericResourceVersionsMutex.RUnlock()
-	return len(fake.batchCreateGenericResourceVersionsArgsForCall)
+func (fake *FakeManager) BatchCreateResourceVersionsCallCount() int {
+	fake.batchCreateResourceVersionsMutex.RLock()
+	defer fake.batchCreateResourceVersionsMutex.RUnlock()
+	return len(fake.batchCreateResourceVersionsArgsForCall)
 }
 
-func (fake *FakeManager) BatchCreateGenericResourceVersionsCalls(stub func(context.Context, []*grafeas_go_proto.Occurrence) error) {
-	fake.batchCreateGenericResourceVersionsMutex.Lock()
-	defer fake.batchCreateGenericResourceVersionsMutex.Unlock()
-	fake.BatchCreateGenericResourceVersionsStub = stub
+func (fake *FakeManager) BatchCreateResourceVersionsCalls(stub func(context.Context, []*grafeas_go_proto.Occurrence) error) {
+	fake.batchCreateResourceVersionsMutex.Lock()
+	defer fake.batchCreateResourceVersionsMutex.Unlock()
+	fake.BatchCreateResourceVersionsStub = stub
 }
 
-func (fake *FakeManager) BatchCreateGenericResourceVersionsArgsForCall(i int) (context.Context, []*grafeas_go_proto.Occurrence) {
-	fake.batchCreateGenericResourceVersionsMutex.RLock()
-	defer fake.batchCreateGenericResourceVersionsMutex.RUnlock()
-	argsForCall := fake.batchCreateGenericResourceVersionsArgsForCall[i]
+func (fake *FakeManager) BatchCreateResourceVersionsArgsForCall(i int) (context.Context, []*grafeas_go_proto.Occurrence) {
+	fake.batchCreateResourceVersionsMutex.RLock()
+	defer fake.batchCreateResourceVersionsMutex.RUnlock()
+	argsForCall := fake.batchCreateResourceVersionsArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeManager) BatchCreateGenericResourceVersionsReturns(result1 error) {
-	fake.batchCreateGenericResourceVersionsMutex.Lock()
-	defer fake.batchCreateGenericResourceVersionsMutex.Unlock()
-	fake.BatchCreateGenericResourceVersionsStub = nil
-	fake.batchCreateGenericResourceVersionsReturns = struct {
+func (fake *FakeManager) BatchCreateResourceVersionsReturns(result1 error) {
+	fake.batchCreateResourceVersionsMutex.Lock()
+	defer fake.batchCreateResourceVersionsMutex.Unlock()
+	fake.BatchCreateResourceVersionsStub = nil
+	fake.batchCreateResourceVersionsReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeManager) BatchCreateGenericResourceVersionsReturnsOnCall(i int, result1 error) {
-	fake.batchCreateGenericResourceVersionsMutex.Lock()
-	defer fake.batchCreateGenericResourceVersionsMutex.Unlock()
-	fake.BatchCreateGenericResourceVersionsStub = nil
-	if fake.batchCreateGenericResourceVersionsReturnsOnCall == nil {
-		fake.batchCreateGenericResourceVersionsReturnsOnCall = make(map[int]struct {
+func (fake *FakeManager) BatchCreateResourceVersionsReturnsOnCall(i int, result1 error) {
+	fake.batchCreateResourceVersionsMutex.Lock()
+	defer fake.batchCreateResourceVersionsMutex.Unlock()
+	fake.BatchCreateResourceVersionsStub = nil
+	if fake.batchCreateResourceVersionsReturnsOnCall == nil {
+		fake.batchCreateResourceVersionsReturnsOnCall = make(map[int]struct {
 			result1 error
 		})
 	}
-	fake.batchCreateGenericResourceVersionsReturnsOnCall[i] = struct {
+	fake.batchCreateResourceVersionsReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeManager) BatchCreateGenericResources(arg1 context.Context, arg2 []*grafeas_go_proto.Occurrence) error {
+func (fake *FakeManager) BatchCreateResources(arg1 context.Context, arg2 []*grafeas_go_proto.Occurrence) error {
 	var arg2Copy []*grafeas_go_proto.Occurrence
 	if arg2 != nil {
 		arg2Copy = make([]*grafeas_go_proto.Occurrence, len(arg2))
 		copy(arg2Copy, arg2)
 	}
-	fake.batchCreateGenericResourcesMutex.Lock()
-	ret, specificReturn := fake.batchCreateGenericResourcesReturnsOnCall[len(fake.batchCreateGenericResourcesArgsForCall)]
-	fake.batchCreateGenericResourcesArgsForCall = append(fake.batchCreateGenericResourcesArgsForCall, struct {
+	fake.batchCreateResourcesMutex.Lock()
+	ret, specificReturn := fake.batchCreateResourcesReturnsOnCall[len(fake.batchCreateResourcesArgsForCall)]
+	fake.batchCreateResourcesArgsForCall = append(fake.batchCreateResourcesArgsForCall, struct {
 		arg1 context.Context
 		arg2 []*grafeas_go_proto.Occurrence
 	}{arg1, arg2Copy})
-	stub := fake.BatchCreateGenericResourcesStub
-	fakeReturns := fake.batchCreateGenericResourcesReturns
-	fake.recordInvocation("BatchCreateGenericResources", []interface{}{arg1, arg2Copy})
-	fake.batchCreateGenericResourcesMutex.Unlock()
+	stub := fake.BatchCreateResourcesStub
+	fakeReturns := fake.batchCreateResourcesReturns
+	fake.recordInvocation("BatchCreateResources", []interface{}{arg1, arg2Copy})
+	fake.batchCreateResourcesMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
 	}
@@ -173,59 +173,59 @@ func (fake *FakeManager) BatchCreateGenericResources(arg1 context.Context, arg2 
 	return fakeReturns.result1
 }
 
-func (fake *FakeManager) BatchCreateGenericResourcesCallCount() int {
-	fake.batchCreateGenericResourcesMutex.RLock()
-	defer fake.batchCreateGenericResourcesMutex.RUnlock()
-	return len(fake.batchCreateGenericResourcesArgsForCall)
+func (fake *FakeManager) BatchCreateResourcesCallCount() int {
+	fake.batchCreateResourcesMutex.RLock()
+	defer fake.batchCreateResourcesMutex.RUnlock()
+	return len(fake.batchCreateResourcesArgsForCall)
 }
 
-func (fake *FakeManager) BatchCreateGenericResourcesCalls(stub func(context.Context, []*grafeas_go_proto.Occurrence) error) {
-	fake.batchCreateGenericResourcesMutex.Lock()
-	defer fake.batchCreateGenericResourcesMutex.Unlock()
-	fake.BatchCreateGenericResourcesStub = stub
+func (fake *FakeManager) BatchCreateResourcesCalls(stub func(context.Context, []*grafeas_go_proto.Occurrence) error) {
+	fake.batchCreateResourcesMutex.Lock()
+	defer fake.batchCreateResourcesMutex.Unlock()
+	fake.BatchCreateResourcesStub = stub
 }
 
-func (fake *FakeManager) BatchCreateGenericResourcesArgsForCall(i int) (context.Context, []*grafeas_go_proto.Occurrence) {
-	fake.batchCreateGenericResourcesMutex.RLock()
-	defer fake.batchCreateGenericResourcesMutex.RUnlock()
-	argsForCall := fake.batchCreateGenericResourcesArgsForCall[i]
+func (fake *FakeManager) BatchCreateResourcesArgsForCall(i int) (context.Context, []*grafeas_go_proto.Occurrence) {
+	fake.batchCreateResourcesMutex.RLock()
+	defer fake.batchCreateResourcesMutex.RUnlock()
+	argsForCall := fake.batchCreateResourcesArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeManager) BatchCreateGenericResourcesReturns(result1 error) {
-	fake.batchCreateGenericResourcesMutex.Lock()
-	defer fake.batchCreateGenericResourcesMutex.Unlock()
-	fake.BatchCreateGenericResourcesStub = nil
-	fake.batchCreateGenericResourcesReturns = struct {
+func (fake *FakeManager) BatchCreateResourcesReturns(result1 error) {
+	fake.batchCreateResourcesMutex.Lock()
+	defer fake.batchCreateResourcesMutex.Unlock()
+	fake.BatchCreateResourcesStub = nil
+	fake.batchCreateResourcesReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeManager) BatchCreateGenericResourcesReturnsOnCall(i int, result1 error) {
-	fake.batchCreateGenericResourcesMutex.Lock()
-	defer fake.batchCreateGenericResourcesMutex.Unlock()
-	fake.BatchCreateGenericResourcesStub = nil
-	if fake.batchCreateGenericResourcesReturnsOnCall == nil {
-		fake.batchCreateGenericResourcesReturnsOnCall = make(map[int]struct {
+func (fake *FakeManager) BatchCreateResourcesReturnsOnCall(i int, result1 error) {
+	fake.batchCreateResourcesMutex.Lock()
+	defer fake.batchCreateResourcesMutex.Unlock()
+	fake.BatchCreateResourcesStub = nil
+	if fake.batchCreateResourcesReturnsOnCall == nil {
+		fake.batchCreateResourcesReturnsOnCall = make(map[int]struct {
 			result1 error
 		})
 	}
-	fake.batchCreateGenericResourcesReturnsOnCall[i] = struct {
+	fake.batchCreateResourcesReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeManager) GetGenericResource(arg1 context.Context, arg2 string) (*v1alpha1.GenericResource, error) {
-	fake.getGenericResourceMutex.Lock()
-	ret, specificReturn := fake.getGenericResourceReturnsOnCall[len(fake.getGenericResourceArgsForCall)]
-	fake.getGenericResourceArgsForCall = append(fake.getGenericResourceArgsForCall, struct {
+func (fake *FakeManager) GetResource(arg1 context.Context, arg2 string) (*v1alpha1.Resource, error) {
+	fake.getResourceMutex.Lock()
+	ret, specificReturn := fake.getResourceReturnsOnCall[len(fake.getResourceArgsForCall)]
+	fake.getResourceArgsForCall = append(fake.getResourceArgsForCall, struct {
 		arg1 context.Context
 		arg2 string
 	}{arg1, arg2})
-	stub := fake.GetGenericResourceStub
-	fakeReturns := fake.getGenericResourceReturns
-	fake.recordInvocation("GetGenericResource", []interface{}{arg1, arg2})
-	fake.getGenericResourceMutex.Unlock()
+	stub := fake.GetResourceStub
+	fakeReturns := fake.getResourceReturns
+	fake.recordInvocation("GetResource", []interface{}{arg1, arg2})
+	fake.getResourceMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
 	}
@@ -235,62 +235,62 @@ func (fake *FakeManager) GetGenericResource(arg1 context.Context, arg2 string) (
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *FakeManager) GetGenericResourceCallCount() int {
-	fake.getGenericResourceMutex.RLock()
-	defer fake.getGenericResourceMutex.RUnlock()
-	return len(fake.getGenericResourceArgsForCall)
+func (fake *FakeManager) GetResourceCallCount() int {
+	fake.getResourceMutex.RLock()
+	defer fake.getResourceMutex.RUnlock()
+	return len(fake.getResourceArgsForCall)
 }
 
-func (fake *FakeManager) GetGenericResourceCalls(stub func(context.Context, string) (*v1alpha1.GenericResource, error)) {
-	fake.getGenericResourceMutex.Lock()
-	defer fake.getGenericResourceMutex.Unlock()
-	fake.GetGenericResourceStub = stub
+func (fake *FakeManager) GetResourceCalls(stub func(context.Context, string) (*v1alpha1.Resource, error)) {
+	fake.getResourceMutex.Lock()
+	defer fake.getResourceMutex.Unlock()
+	fake.GetResourceStub = stub
 }
 
-func (fake *FakeManager) GetGenericResourceArgsForCall(i int) (context.Context, string) {
-	fake.getGenericResourceMutex.RLock()
-	defer fake.getGenericResourceMutex.RUnlock()
-	argsForCall := fake.getGenericResourceArgsForCall[i]
+func (fake *FakeManager) GetResourceArgsForCall(i int) (context.Context, string) {
+	fake.getResourceMutex.RLock()
+	defer fake.getResourceMutex.RUnlock()
+	argsForCall := fake.getResourceArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeManager) GetGenericResourceReturns(result1 *v1alpha1.GenericResource, result2 error) {
-	fake.getGenericResourceMutex.Lock()
-	defer fake.getGenericResourceMutex.Unlock()
-	fake.GetGenericResourceStub = nil
-	fake.getGenericResourceReturns = struct {
-		result1 *v1alpha1.GenericResource
+func (fake *FakeManager) GetResourceReturns(result1 *v1alpha1.Resource, result2 error) {
+	fake.getResourceMutex.Lock()
+	defer fake.getResourceMutex.Unlock()
+	fake.GetResourceStub = nil
+	fake.getResourceReturns = struct {
+		result1 *v1alpha1.Resource
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeManager) GetGenericResourceReturnsOnCall(i int, result1 *v1alpha1.GenericResource, result2 error) {
-	fake.getGenericResourceMutex.Lock()
-	defer fake.getGenericResourceMutex.Unlock()
-	fake.GetGenericResourceStub = nil
-	if fake.getGenericResourceReturnsOnCall == nil {
-		fake.getGenericResourceReturnsOnCall = make(map[int]struct {
-			result1 *v1alpha1.GenericResource
+func (fake *FakeManager) GetResourceReturnsOnCall(i int, result1 *v1alpha1.Resource, result2 error) {
+	fake.getResourceMutex.Lock()
+	defer fake.getResourceMutex.Unlock()
+	fake.GetResourceStub = nil
+	if fake.getResourceReturnsOnCall == nil {
+		fake.getResourceReturnsOnCall = make(map[int]struct {
+			result1 *v1alpha1.Resource
 			result2 error
 		})
 	}
-	fake.getGenericResourceReturnsOnCall[i] = struct {
-		result1 *v1alpha1.GenericResource
+	fake.getResourceReturnsOnCall[i] = struct {
+		result1 *v1alpha1.Resource
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeManager) ListGenericResourceVersions(arg1 context.Context, arg2 *v1alpha1.ListGenericResourceVersionsRequest) (*v1alpha1.ListGenericResourceVersionsResponse, error) {
-	fake.listGenericResourceVersionsMutex.Lock()
-	ret, specificReturn := fake.listGenericResourceVersionsReturnsOnCall[len(fake.listGenericResourceVersionsArgsForCall)]
-	fake.listGenericResourceVersionsArgsForCall = append(fake.listGenericResourceVersionsArgsForCall, struct {
+func (fake *FakeManager) ListResourceVersions(arg1 context.Context, arg2 *v1alpha1.ListResourceVersionsRequest) (*v1alpha1.ListResourceVersionsResponse, error) {
+	fake.listResourceVersionsMutex.Lock()
+	ret, specificReturn := fake.listResourceVersionsReturnsOnCall[len(fake.listResourceVersionsArgsForCall)]
+	fake.listResourceVersionsArgsForCall = append(fake.listResourceVersionsArgsForCall, struct {
 		arg1 context.Context
-		arg2 *v1alpha1.ListGenericResourceVersionsRequest
+		arg2 *v1alpha1.ListResourceVersionsRequest
 	}{arg1, arg2})
-	stub := fake.ListGenericResourceVersionsStub
-	fakeReturns := fake.listGenericResourceVersionsReturns
-	fake.recordInvocation("ListGenericResourceVersions", []interface{}{arg1, arg2})
-	fake.listGenericResourceVersionsMutex.Unlock()
+	stub := fake.ListResourceVersionsStub
+	fakeReturns := fake.listResourceVersionsReturns
+	fake.recordInvocation("ListResourceVersions", []interface{}{arg1, arg2})
+	fake.listResourceVersionsMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
 	}
@@ -300,62 +300,62 @@ func (fake *FakeManager) ListGenericResourceVersions(arg1 context.Context, arg2 
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *FakeManager) ListGenericResourceVersionsCallCount() int {
-	fake.listGenericResourceVersionsMutex.RLock()
-	defer fake.listGenericResourceVersionsMutex.RUnlock()
-	return len(fake.listGenericResourceVersionsArgsForCall)
+func (fake *FakeManager) ListResourceVersionsCallCount() int {
+	fake.listResourceVersionsMutex.RLock()
+	defer fake.listResourceVersionsMutex.RUnlock()
+	return len(fake.listResourceVersionsArgsForCall)
 }
 
-func (fake *FakeManager) ListGenericResourceVersionsCalls(stub func(context.Context, *v1alpha1.ListGenericResourceVersionsRequest) (*v1alpha1.ListGenericResourceVersionsResponse, error)) {
-	fake.listGenericResourceVersionsMutex.Lock()
-	defer fake.listGenericResourceVersionsMutex.Unlock()
-	fake.ListGenericResourceVersionsStub = stub
+func (fake *FakeManager) ListResourceVersionsCalls(stub func(context.Context, *v1alpha1.ListResourceVersionsRequest) (*v1alpha1.ListResourceVersionsResponse, error)) {
+	fake.listResourceVersionsMutex.Lock()
+	defer fake.listResourceVersionsMutex.Unlock()
+	fake.ListResourceVersionsStub = stub
 }
 
-func (fake *FakeManager) ListGenericResourceVersionsArgsForCall(i int) (context.Context, *v1alpha1.ListGenericResourceVersionsRequest) {
-	fake.listGenericResourceVersionsMutex.RLock()
-	defer fake.listGenericResourceVersionsMutex.RUnlock()
-	argsForCall := fake.listGenericResourceVersionsArgsForCall[i]
+func (fake *FakeManager) ListResourceVersionsArgsForCall(i int) (context.Context, *v1alpha1.ListResourceVersionsRequest) {
+	fake.listResourceVersionsMutex.RLock()
+	defer fake.listResourceVersionsMutex.RUnlock()
+	argsForCall := fake.listResourceVersionsArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeManager) ListGenericResourceVersionsReturns(result1 *v1alpha1.ListGenericResourceVersionsResponse, result2 error) {
-	fake.listGenericResourceVersionsMutex.Lock()
-	defer fake.listGenericResourceVersionsMutex.Unlock()
-	fake.ListGenericResourceVersionsStub = nil
-	fake.listGenericResourceVersionsReturns = struct {
-		result1 *v1alpha1.ListGenericResourceVersionsResponse
+func (fake *FakeManager) ListResourceVersionsReturns(result1 *v1alpha1.ListResourceVersionsResponse, result2 error) {
+	fake.listResourceVersionsMutex.Lock()
+	defer fake.listResourceVersionsMutex.Unlock()
+	fake.ListResourceVersionsStub = nil
+	fake.listResourceVersionsReturns = struct {
+		result1 *v1alpha1.ListResourceVersionsResponse
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeManager) ListGenericResourceVersionsReturnsOnCall(i int, result1 *v1alpha1.ListGenericResourceVersionsResponse, result2 error) {
-	fake.listGenericResourceVersionsMutex.Lock()
-	defer fake.listGenericResourceVersionsMutex.Unlock()
-	fake.ListGenericResourceVersionsStub = nil
-	if fake.listGenericResourceVersionsReturnsOnCall == nil {
-		fake.listGenericResourceVersionsReturnsOnCall = make(map[int]struct {
-			result1 *v1alpha1.ListGenericResourceVersionsResponse
+func (fake *FakeManager) ListResourceVersionsReturnsOnCall(i int, result1 *v1alpha1.ListResourceVersionsResponse, result2 error) {
+	fake.listResourceVersionsMutex.Lock()
+	defer fake.listResourceVersionsMutex.Unlock()
+	fake.ListResourceVersionsStub = nil
+	if fake.listResourceVersionsReturnsOnCall == nil {
+		fake.listResourceVersionsReturnsOnCall = make(map[int]struct {
+			result1 *v1alpha1.ListResourceVersionsResponse
 			result2 error
 		})
 	}
-	fake.listGenericResourceVersionsReturnsOnCall[i] = struct {
-		result1 *v1alpha1.ListGenericResourceVersionsResponse
+	fake.listResourceVersionsReturnsOnCall[i] = struct {
+		result1 *v1alpha1.ListResourceVersionsResponse
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeManager) ListGenericResources(arg1 context.Context, arg2 *v1alpha1.ListGenericResourcesRequest) (*v1alpha1.ListGenericResourcesResponse, error) {
-	fake.listGenericResourcesMutex.Lock()
-	ret, specificReturn := fake.listGenericResourcesReturnsOnCall[len(fake.listGenericResourcesArgsForCall)]
-	fake.listGenericResourcesArgsForCall = append(fake.listGenericResourcesArgsForCall, struct {
+func (fake *FakeManager) ListResources(arg1 context.Context, arg2 *v1alpha1.ListResourcesRequest) (*v1alpha1.ListResourcesResponse, error) {
+	fake.listResourcesMutex.Lock()
+	ret, specificReturn := fake.listResourcesReturnsOnCall[len(fake.listResourcesArgsForCall)]
+	fake.listResourcesArgsForCall = append(fake.listResourcesArgsForCall, struct {
 		arg1 context.Context
-		arg2 *v1alpha1.ListGenericResourcesRequest
+		arg2 *v1alpha1.ListResourcesRequest
 	}{arg1, arg2})
-	stub := fake.ListGenericResourcesStub
-	fakeReturns := fake.listGenericResourcesReturns
-	fake.recordInvocation("ListGenericResources", []interface{}{arg1, arg2})
-	fake.listGenericResourcesMutex.Unlock()
+	stub := fake.ListResourcesStub
+	fakeReturns := fake.listResourcesReturns
+	fake.recordInvocation("ListResources", []interface{}{arg1, arg2})
+	fake.listResourcesMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
 	}
@@ -365,47 +365,47 @@ func (fake *FakeManager) ListGenericResources(arg1 context.Context, arg2 *v1alph
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *FakeManager) ListGenericResourcesCallCount() int {
-	fake.listGenericResourcesMutex.RLock()
-	defer fake.listGenericResourcesMutex.RUnlock()
-	return len(fake.listGenericResourcesArgsForCall)
+func (fake *FakeManager) ListResourcesCallCount() int {
+	fake.listResourcesMutex.RLock()
+	defer fake.listResourcesMutex.RUnlock()
+	return len(fake.listResourcesArgsForCall)
 }
 
-func (fake *FakeManager) ListGenericResourcesCalls(stub func(context.Context, *v1alpha1.ListGenericResourcesRequest) (*v1alpha1.ListGenericResourcesResponse, error)) {
-	fake.listGenericResourcesMutex.Lock()
-	defer fake.listGenericResourcesMutex.Unlock()
-	fake.ListGenericResourcesStub = stub
+func (fake *FakeManager) ListResourcesCalls(stub func(context.Context, *v1alpha1.ListResourcesRequest) (*v1alpha1.ListResourcesResponse, error)) {
+	fake.listResourcesMutex.Lock()
+	defer fake.listResourcesMutex.Unlock()
+	fake.ListResourcesStub = stub
 }
 
-func (fake *FakeManager) ListGenericResourcesArgsForCall(i int) (context.Context, *v1alpha1.ListGenericResourcesRequest) {
-	fake.listGenericResourcesMutex.RLock()
-	defer fake.listGenericResourcesMutex.RUnlock()
-	argsForCall := fake.listGenericResourcesArgsForCall[i]
+func (fake *FakeManager) ListResourcesArgsForCall(i int) (context.Context, *v1alpha1.ListResourcesRequest) {
+	fake.listResourcesMutex.RLock()
+	defer fake.listResourcesMutex.RUnlock()
+	argsForCall := fake.listResourcesArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeManager) ListGenericResourcesReturns(result1 *v1alpha1.ListGenericResourcesResponse, result2 error) {
-	fake.listGenericResourcesMutex.Lock()
-	defer fake.listGenericResourcesMutex.Unlock()
-	fake.ListGenericResourcesStub = nil
-	fake.listGenericResourcesReturns = struct {
-		result1 *v1alpha1.ListGenericResourcesResponse
+func (fake *FakeManager) ListResourcesReturns(result1 *v1alpha1.ListResourcesResponse, result2 error) {
+	fake.listResourcesMutex.Lock()
+	defer fake.listResourcesMutex.Unlock()
+	fake.ListResourcesStub = nil
+	fake.listResourcesReturns = struct {
+		result1 *v1alpha1.ListResourcesResponse
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeManager) ListGenericResourcesReturnsOnCall(i int, result1 *v1alpha1.ListGenericResourcesResponse, result2 error) {
-	fake.listGenericResourcesMutex.Lock()
-	defer fake.listGenericResourcesMutex.Unlock()
-	fake.ListGenericResourcesStub = nil
-	if fake.listGenericResourcesReturnsOnCall == nil {
-		fake.listGenericResourcesReturnsOnCall = make(map[int]struct {
-			result1 *v1alpha1.ListGenericResourcesResponse
+func (fake *FakeManager) ListResourcesReturnsOnCall(i int, result1 *v1alpha1.ListResourcesResponse, result2 error) {
+	fake.listResourcesMutex.Lock()
+	defer fake.listResourcesMutex.Unlock()
+	fake.ListResourcesStub = nil
+	if fake.listResourcesReturnsOnCall == nil {
+		fake.listResourcesReturnsOnCall = make(map[int]struct {
+			result1 *v1alpha1.ListResourcesResponse
 			result2 error
 		})
 	}
-	fake.listGenericResourcesReturnsOnCall[i] = struct {
-		result1 *v1alpha1.ListGenericResourcesResponse
+	fake.listResourcesReturnsOnCall[i] = struct {
+		result1 *v1alpha1.ListResourcesResponse
 		result2 error
 	}{result1, result2}
 }
@@ -413,16 +413,16 @@ func (fake *FakeManager) ListGenericResourcesReturnsOnCall(i int, result1 *v1alp
 func (fake *FakeManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.batchCreateGenericResourceVersionsMutex.RLock()
-	defer fake.batchCreateGenericResourceVersionsMutex.RUnlock()
-	fake.batchCreateGenericResourcesMutex.RLock()
-	defer fake.batchCreateGenericResourcesMutex.RUnlock()
-	fake.getGenericResourceMutex.RLock()
-	defer fake.getGenericResourceMutex.RUnlock()
-	fake.listGenericResourceVersionsMutex.RLock()
-	defer fake.listGenericResourceVersionsMutex.RUnlock()
-	fake.listGenericResourcesMutex.RLock()
-	defer fake.listGenericResourcesMutex.RUnlock()
+	fake.batchCreateResourceVersionsMutex.RLock()
+	defer fake.batchCreateResourceVersionsMutex.RUnlock()
+	fake.batchCreateResourcesMutex.RLock()
+	defer fake.batchCreateResourcesMutex.RUnlock()
+	fake.getResourceMutex.RLock()
+	defer fake.getResourceMutex.RUnlock()
+	fake.listResourceVersionsMutex.RLock()
+	defer fake.listResourceVersionsMutex.RUnlock()
+	fake.listResourcesMutex.RLock()
+	defer fake.listResourcesMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
