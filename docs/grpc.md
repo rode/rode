@@ -20,21 +20,26 @@
     - [Rode](#rode.v1alpha1.Rode)
   
 - [proto/v1alpha1/rode_policy.proto](#proto/v1alpha1/rode_policy.proto)
+    - [DeletePolicyAssignmentRequest](#rode.v1alpha1.DeletePolicyAssignmentRequest)
     - [DeletePolicyRequest](#rode.v1alpha1.DeletePolicyRequest)
     - [EvaluatePolicyInput](#rode.v1alpha1.EvaluatePolicyInput)
     - [EvaluatePolicyRequest](#rode.v1alpha1.EvaluatePolicyRequest)
     - [EvaluatePolicyResponse](#rode.v1alpha1.EvaluatePolicyResponse)
     - [EvaluatePolicyResult](#rode.v1alpha1.EvaluatePolicyResult)
     - [EvaluatePolicyViolation](#rode.v1alpha1.EvaluatePolicyViolation)
+    - [GetPolicyAssignmentRequest](#rode.v1alpha1.GetPolicyAssignmentRequest)
     - [GetPolicyGroupRequest](#rode.v1alpha1.GetPolicyGroupRequest)
     - [GetPolicyRequest](#rode.v1alpha1.GetPolicyRequest)
     - [ListPoliciesRequest](#rode.v1alpha1.ListPoliciesRequest)
     - [ListPoliciesResponse](#rode.v1alpha1.ListPoliciesResponse)
+    - [ListPolicyAssignmentsRequest](#rode.v1alpha1.ListPolicyAssignmentsRequest)
+    - [ListPolicyAssignmentsResponse](#rode.v1alpha1.ListPolicyAssignmentsResponse)
     - [ListPolicyGroupsRequest](#rode.v1alpha1.ListPolicyGroupsRequest)
     - [ListPolicyGroupsResponse](#rode.v1alpha1.ListPolicyGroupsResponse)
     - [ListPolicyVersionsRequest](#rode.v1alpha1.ListPolicyVersionsRequest)
     - [ListPolicyVersionsResponse](#rode.v1alpha1.ListPolicyVersionsResponse)
     - [Policy](#rode.v1alpha1.Policy)
+    - [PolicyAssignment](#rode.v1alpha1.PolicyAssignment)
     - [PolicyEntity](#rode.v1alpha1.PolicyEntity)
     - [PolicyEvaluation](#rode.v1alpha1.PolicyEvaluation)
     - [PolicyGroup](#rode.v1alpha1.PolicyGroup)
@@ -292,6 +297,11 @@ Response for creating occurrences in batch.
 | ListPolicyGroups | [ListPolicyGroupsRequest](#rode.v1alpha1.ListPolicyGroupsRequest) | [ListPolicyGroupsResponse](#rode.v1alpha1.ListPolicyGroupsResponse) |  |
 | GetPolicyGroup | [GetPolicyGroupRequest](#rode.v1alpha1.GetPolicyGroupRequest) | [PolicyGroup](#rode.v1alpha1.PolicyGroup) |  |
 | UpdatePolicyGroup | [PolicyGroup](#rode.v1alpha1.PolicyGroup) | [PolicyGroup](#rode.v1alpha1.PolicyGroup) |  |
+| CreatePolicyAssignment | [PolicyAssignment](#rode.v1alpha1.PolicyAssignment) | [PolicyAssignment](#rode.v1alpha1.PolicyAssignment) | TODO: alternate binding? &#34;/v1alpha1/policy-groups/{policy_group}/policy-assignments&#34; |
+| GetPolicyAssignment | [GetPolicyAssignmentRequest](#rode.v1alpha1.GetPolicyAssignmentRequest) | [PolicyAssignment](#rode.v1alpha1.PolicyAssignment) |  |
+| UpdatePolicyAssignment | [PolicyAssignment](#rode.v1alpha1.PolicyAssignment) | [PolicyAssignment](#rode.v1alpha1.PolicyAssignment) |  |
+| DeletePolicyAssignment | [DeletePolicyAssignmentRequest](#rode.v1alpha1.DeletePolicyAssignmentRequest) | [.google.protobuf.Empty](#google.protobuf.Empty) |  |
+| ListPolicyAssignments | [ListPolicyAssignmentsRequest](#rode.v1alpha1.ListPolicyAssignmentsRequest) | [ListPolicyAssignmentsResponse](#rode.v1alpha1.ListPolicyAssignmentsResponse) |  |
 
  
 
@@ -301,6 +311,21 @@ Response for creating occurrences in batch.
 <p align="right"><a href="#top">Top</a></p>
 
 ## proto/v1alpha1/rode_policy.proto
+
+
+
+<a name="rode.v1alpha1.DeletePolicyAssignmentRequest"></a>
+
+### DeletePolicyAssignmentRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  | string policy_version_id = 1; string policy_group = 2; |
+
+
+
 
 
 
@@ -405,6 +430,21 @@ EvaluatePolicyInput is used as the input when evaluating a policy in OPA.
 
 
 
+<a name="rode.v1alpha1.GetPolicyAssignmentRequest"></a>
+
+### GetPolicyAssignmentRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+
+
+
+
+
+
 <a name="rode.v1alpha1.GetPolicyGroupRequest"></a>
 
 ### GetPolicyGroupRequest
@@ -462,6 +502,41 @@ EvaluatePolicyInput is used as the input when evaluating a policy in OPA.
 | ----- | ---- | ----- | ----------- |
 | policies | [Policy](#rode.v1alpha1.Policy) | repeated | Policies is the list of policies, with the number of results controlled by the ListPoliciesRequest.Filter and ListPoliciesRequest.PageSize. |
 | next_page_token | [string](#string) |  | NextPageToken can be used to retrieve the next page of results. It will be empty if the caller has reached the end of the result set. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ListPolicyAssignmentsRequest"></a>
+
+### ListPolicyAssignmentsRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| filter | [string](#string) |  |  |
+| page_size | [int32](#int32) |  |  |
+| page_token | [string](#string) |  |  |
+| policy_version_id | [string](#string) |  |  |
+| policy_group | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ListPolicyAssignmentsResponse"></a>
+
+### ListPolicyAssignmentsResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| policy_assignments | [PolicyAssignment](#rode.v1alpha1.PolicyAssignment) | repeated |  |
+| next_page_token | [string](#string) |  |  |
 
 
 
@@ -551,6 +626,25 @@ EvaluatePolicyInput is used as the input when evaluating a policy in OPA.
 | created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  | Created is when the policy was first stored. |
 | updated | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  | Updated indicates when either an edit occurred on the policy itself or a new policy version was created. |
 | deleted | [bool](#bool) |  | Deleted is a flag controlling soft deletes. Deleted policies won&#39;t be returned by the ListPolicies RPC, but can still be retrieved and evaluated. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.PolicyAssignment"></a>
+
+### PolicyAssignment
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+| policy_version_id | [string](#string) |  |  |
+| policy_group | [string](#string) |  |  |
+| created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
+| updated | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
 
 
 

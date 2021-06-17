@@ -224,3 +224,35 @@ message PolicyEvaluation {
   // Violations is a list of rule results. Even if a rule passed, its output will be included in Violations.
   repeated EvaluatePolicyViolation violations = 5;
 }
+
+message PolicyAssignment {
+  string id = 1;
+  string policy_version_id = 2;
+  string policy_group = 3;
+  google.protobuf.Timestamp created = 4;
+  google.protobuf.Timestamp updated = 5;
+}
+
+message GetPolicyAssignmentRequest {
+  string id = 1;
+}
+
+message DeletePolicyAssignmentRequest {
+  string id = 1;
+//  string policy_version_id = 1;
+//  string policy_group = 2;
+}
+
+message ListPolicyAssignmentsRequest {
+  string filter = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+
+  string policy_version_id = 4;
+  string policy_group = 5;
+}
+
+message ListPolicyAssignmentsResponse {
+  repeated PolicyAssignment policy_assignments = 1;
+  string next_page_token = 2;
+}

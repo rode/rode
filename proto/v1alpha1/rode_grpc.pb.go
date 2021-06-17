@@ -50,6 +50,12 @@ type RodeClient interface {
 	ListPolicyGroups(ctx context.Context, in *ListPolicyGroupsRequest, opts ...grpc.CallOption) (*ListPolicyGroupsResponse, error)
 	GetPolicyGroup(ctx context.Context, in *GetPolicyGroupRequest, opts ...grpc.CallOption) (*PolicyGroup, error)
 	UpdatePolicyGroup(ctx context.Context, in *PolicyGroup, opts ...grpc.CallOption) (*PolicyGroup, error)
+	// TODO: alternate binding? "/v1alpha1/policy-groups/{policy_group}/policy-assignments"
+	CreatePolicyAssignment(ctx context.Context, in *PolicyAssignment, opts ...grpc.CallOption) (*PolicyAssignment, error)
+	GetPolicyAssignment(ctx context.Context, in *GetPolicyAssignmentRequest, opts ...grpc.CallOption) (*PolicyAssignment, error)
+	UpdatePolicyAssignment(ctx context.Context, in *PolicyAssignment, opts ...grpc.CallOption) (*PolicyAssignment, error)
+	DeletePolicyAssignment(ctx context.Context, in *DeletePolicyAssignmentRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	ListPolicyAssignments(ctx context.Context, in *ListPolicyAssignmentsRequest, opts ...grpc.CallOption) (*ListPolicyAssignmentsResponse, error)
 }
 
 type rodeClient struct {
@@ -240,6 +246,51 @@ func (c *rodeClient) UpdatePolicyGroup(ctx context.Context, in *PolicyGroup, opt
 	return out, nil
 }
 
+func (c *rodeClient) CreatePolicyAssignment(ctx context.Context, in *PolicyAssignment, opts ...grpc.CallOption) (*PolicyAssignment, error) {
+	out := new(PolicyAssignment)
+	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/CreatePolicyAssignment", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rodeClient) GetPolicyAssignment(ctx context.Context, in *GetPolicyAssignmentRequest, opts ...grpc.CallOption) (*PolicyAssignment, error) {
+	out := new(PolicyAssignment)
+	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/GetPolicyAssignment", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rodeClient) UpdatePolicyAssignment(ctx context.Context, in *PolicyAssignment, opts ...grpc.CallOption) (*PolicyAssignment, error) {
+	out := new(PolicyAssignment)
+	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/UpdatePolicyAssignment", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rodeClient) DeletePolicyAssignment(ctx context.Context, in *DeletePolicyAssignmentRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
+	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/DeletePolicyAssignment", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rodeClient) ListPolicyAssignments(ctx context.Context, in *ListPolicyAssignmentsRequest, opts ...grpc.CallOption) (*ListPolicyAssignmentsResponse, error) {
+	out := new(ListPolicyAssignmentsResponse)
+	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/ListPolicyAssignments", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RodeServer is the server API for Rode service.
 // All implementations should embed UnimplementedRodeServer
 // for forward compatibility
@@ -274,6 +325,12 @@ type RodeServer interface {
 	ListPolicyGroups(context.Context, *ListPolicyGroupsRequest) (*ListPolicyGroupsResponse, error)
 	GetPolicyGroup(context.Context, *GetPolicyGroupRequest) (*PolicyGroup, error)
 	UpdatePolicyGroup(context.Context, *PolicyGroup) (*PolicyGroup, error)
+	// TODO: alternate binding? "/v1alpha1/policy-groups/{policy_group}/policy-assignments"
+	CreatePolicyAssignment(context.Context, *PolicyAssignment) (*PolicyAssignment, error)
+	GetPolicyAssignment(context.Context, *GetPolicyAssignmentRequest) (*PolicyAssignment, error)
+	UpdatePolicyAssignment(context.Context, *PolicyAssignment) (*PolicyAssignment, error)
+	DeletePolicyAssignment(context.Context, *DeletePolicyAssignmentRequest) (*empty.Empty, error)
+	ListPolicyAssignments(context.Context, *ListPolicyAssignmentsRequest) (*ListPolicyAssignmentsResponse, error)
 }
 
 // UnimplementedRodeServer should be embedded to have forward compatible implementations.
@@ -339,6 +396,21 @@ func (UnimplementedRodeServer) GetPolicyGroup(context.Context, *GetPolicyGroupRe
 }
 func (UnimplementedRodeServer) UpdatePolicyGroup(context.Context, *PolicyGroup) (*PolicyGroup, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdatePolicyGroup not implemented")
+}
+func (UnimplementedRodeServer) CreatePolicyAssignment(context.Context, *PolicyAssignment) (*PolicyAssignment, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreatePolicyAssignment not implemented")
+}
+func (UnimplementedRodeServer) GetPolicyAssignment(context.Context, *GetPolicyAssignmentRequest) (*PolicyAssignment, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPolicyAssignment not implemented")
+}
+func (UnimplementedRodeServer) UpdatePolicyAssignment(context.Context, *PolicyAssignment) (*PolicyAssignment, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdatePolicyAssignment not implemented")
+}
+func (UnimplementedRodeServer) DeletePolicyAssignment(context.Context, *DeletePolicyAssignmentRequest) (*empty.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeletePolicyAssignment not implemented")
+}
+func (UnimplementedRodeServer) ListPolicyAssignments(context.Context, *ListPolicyAssignmentsRequest) (*ListPolicyAssignmentsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListPolicyAssignments not implemented")
 }
 
 // UnsafeRodeServer may be embedded to opt out of forward compatibility for this service.
@@ -712,6 +784,96 @@ func _Rode_UpdatePolicyGroup_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Rode_CreatePolicyAssignment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PolicyAssignment)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RodeServer).CreatePolicyAssignment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rode.v1alpha1.Rode/CreatePolicyAssignment",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RodeServer).CreatePolicyAssignment(ctx, req.(*PolicyAssignment))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rode_GetPolicyAssignment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPolicyAssignmentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RodeServer).GetPolicyAssignment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rode.v1alpha1.Rode/GetPolicyAssignment",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RodeServer).GetPolicyAssignment(ctx, req.(*GetPolicyAssignmentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rode_UpdatePolicyAssignment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PolicyAssignment)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RodeServer).UpdatePolicyAssignment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rode.v1alpha1.Rode/UpdatePolicyAssignment",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RodeServer).UpdatePolicyAssignment(ctx, req.(*PolicyAssignment))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rode_DeletePolicyAssignment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeletePolicyAssignmentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RodeServer).DeletePolicyAssignment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rode.v1alpha1.Rode/DeletePolicyAssignment",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RodeServer).DeletePolicyAssignment(ctx, req.(*DeletePolicyAssignmentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rode_ListPolicyAssignments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListPolicyAssignmentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RodeServer).ListPolicyAssignments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rode.v1alpha1.Rode/ListPolicyAssignments",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RodeServer).ListPolicyAssignments(ctx, req.(*ListPolicyAssignmentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Rode_ServiceDesc is the grpc.ServiceDesc for Rode service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -798,6 +960,26 @@ var Rode_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdatePolicyGroup",
 			Handler:    _Rode_UpdatePolicyGroup_Handler,
+		},
+		{
+			MethodName: "CreatePolicyAssignment",
+			Handler:    _Rode_CreatePolicyAssignment_Handler,
+		},
+		{
+			MethodName: "GetPolicyAssignment",
+			Handler:    _Rode_GetPolicyAssignment_Handler,
+		},
+		{
+			MethodName: "UpdatePolicyAssignment",
+			Handler:    _Rode_UpdatePolicyAssignment_Handler,
+		},
+		{
+			MethodName: "DeletePolicyAssignment",
+			Handler:    _Rode_DeletePolicyAssignment_Handler,
+		},
+		{
+			MethodName: "ListPolicyAssignments",
+			Handler:    _Rode_ListPolicyAssignments_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
