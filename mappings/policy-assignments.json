@@ -1,0 +1,24 @@
+{
+  "version": "v1alpha1",
+  "mappings": {
+    "_meta": {
+      "type": "rode"
+    },
+    "properties": {
+      "created": {
+        "type": "date"
+      }
+    },
+    "dynamic_templates": [
+      {
+        "strings_as_keywords": {
+          "match_mapping_type": "string",
+          "mapping": {
+            "type": "keyword",
+            "norms": false
+          }
+        }
+      }
+    ]
+  }
+}

@@ -48,6 +48,7 @@ func NewRodeServer(
 	indexManager indexmanager.IndexManager,
 	policyManager policy.Manager,
 	policyGroupManager policy.PolicyGroupManager,
+	policyAssignmentManager policy.AssignmentManager,
 ) (pb.RodeServer, error) {
 	rodeServer := &rodeServer{
 		logger,
@@ -58,6 +59,7 @@ func NewRodeServer(
 		indexManager,
 		policyManager,
 		policyGroupManager,
+		policyAssignmentManager,
 	}
 
 	if err := rodeServer.initialize(context.Background()); err != nil {
@@ -76,6 +78,7 @@ type rodeServer struct {
 	indexManager      indexmanager.IndexManager
 	policy.Manager
 	policy.PolicyGroupManager
+	policy.AssignmentManager
 }
 
 func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceRequest *pb.BatchCreateOccurrencesRequest) (*pb.BatchCreateOccurrencesResponse, error) {
@@ -172,6 +175,11 @@ func (r *rodeServer) initialize(ctx context.Context) error {
 			indexName:    r.indexManager.IndexName(constants.PolicyGroupsDocumentKind, ""),
 			aliasName:    r.indexManager.AliasName(constants.PolicyGroupsDocumentKind, ""),
 			documentKind: constants.PolicyGroupsDocumentKind,
+		},
+		{
+			indexName:    r.indexManager.IndexName(constants.PolicyAssignmentsDocumentKind, ""),
+			aliasName:    r.indexManager.AliasName(constants.PolicyAssignmentsDocumentKind, ""),
+			documentKind: constants.PolicyAssignmentsDocumentKind,
 		},
 	}
 
