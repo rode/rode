@@ -112,9 +112,12 @@ func (m *assignmentManager) CreatePolicyAssignment(ctx context.Context, assignme
 		return nil, createError(log, "error retrieving policy version and group", err)
 	}
 
-	for i, resource := range []string{"policy version", "policy group"} {
+	for i, message := range []string{
+		fmt.Sprintf("policy version with id %s not found", assignment.PolicyVersionId),
+		fmt.Sprintf("policy group named %s not found", assignment.PolicyGroup),
+	} {
 		if !response.Docs[i].Found {
-			return nil, createErrorWithCode(log, fmt.Sprintf("%s does not exist", resource), nil, codes.FailedPrecondition)
+			return nil, createErrorWithCode(log, message, nil, codes.FailedPrecondition)
 		}
 	}
 
