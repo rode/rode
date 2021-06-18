@@ -19,6 +19,7 @@ import (
 	"github.com/brianvoe/gofakeit/v6"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/rode/rode/config"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/status"
 )
@@ -39,4 +40,10 @@ func getGRPCStatusFromError(err error) *status.Status {
 	Expect(ok).To(BeTrue(), "Expected error to be a gRPC status")
 
 	return s
+}
+
+func randomEsConfig() *config.ElasticsearchConfig {
+	return &config.ElasticsearchConfig{
+		Refresh: config.RefreshOption(fake.RandomString([]string{config.RefreshTrue, config.RefreshFalse, config.RefreshWaitFor})),
+	}
 }

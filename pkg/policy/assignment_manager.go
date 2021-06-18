@@ -12,11 +12,13 @@ import (
 	pb "github.com/rode/rode/proto/v1alpha1"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+//counterfeiter:generate . AssignmentManager
 type AssignmentManager interface {
 	CreatePolicyAssignment(context.Context, *pb.PolicyAssignment) (*pb.PolicyAssignment, error)
 	GetPolicyAssignment(context.Context, *pb.GetPolicyAssignmentRequest) (*pb.PolicyAssignment, error)
@@ -68,9 +70,40 @@ func (m *assignmentManager) CreatePolicyAssignment(ctx context.Context, assignme
 		return nil, createErrorWithCode(log, "Assignments must use policy version ids", nil, codes.InvalidArgument)
 	}
 
-	// TODO: check if already exists
-	// TODO: check that policy group and policy exist
 	assignmentId := policyAssignmentId(policyId, assignment.PolicyGroup)
+	existingAssignment, err := m.GetPolicyAssignment(ctx, &pb.GetPolicyAssignmentRequest{Id: assignmentId})
+	if existingAssignment != nil {
+		return nil, createErrorWithCode(log, "assignment already exists", nil, codes.AlreadyExists)
+	}
+
+	if err != nil && status.Convert(err).Code() != codes.NotFound {
+		return nil, err
+	}
+
+	response, err := m.esClient.MultiGet(ctx, &esutil.MultiGetRequest{
+		Items: []*esutil.EsMultiGetItem{
+			{
+				Id:      assignment.PolicyVersionId,
+				Index:   m.indexManager.AliasName(constants.PoliciesDocumentKind, ""),
+				Routing: policyId,
+			},
+			{
+				Id:    assignment.PolicyGroup,
+				Index: m.indexManager.AliasName(constants.PolicyGroupsDocumentKind, ""),
+			},
+		},
+	})
+
+	if err != nil {
+		return nil, createError(log, "error retrieving policy version and group", err)
+	}
+
+	for i, resource := range []string{"policy version", "policy group"} {
+		if !response.Docs[i].Found {
+			return nil, createErrorWithCode(log, fmt.Sprintf("%s does not exist", resource), nil, codes.FailedPrecondition)
+		}
+	}
+
 	currentTime := timestamppb.Now()
 	assignment.Created = currentTime
 	assignment.Updated = currentTime
@@ -122,7 +155,35 @@ func (m *assignmentManager) UpdatePolicyAssignment(ctx context.Context, assignme
 	}
 
 	if currentAssignment.PolicyGroup != assignment.PolicyGroup {
-		return nil, createErrorWithCode(log, "Updating policy group is not allowed", nil, codes.InvalidArgument)
+		return nil, createErrorWithCode(log, "Updating policy group is forbidden", nil, codes.InvalidArgument)
+	}
+
+	policyId, version, err := parsePolicyVersionId(assignment.PolicyVersionId)
+	if err != nil {
+		return nil, createError(log, "error parsing policy version id", err)
+	}
+
+	if version == 0 {
+		return nil, createErrorWithCode(log, "Assignments must use policy version ids", nil, codes.InvalidArgument)
+	}
+
+	currentPolicyId, _, _ := parsePolicyVersionId(currentAssignment.PolicyVersionId)
+	if currentPolicyId != policyId {
+		return nil, createErrorWithCode(log, "Updates may only change policy version, not policy", nil, codes.InvalidArgument)
+	}
+
+	response, err := m.esClient.Get(ctx, &esutil.GetRequest{
+		Index:      m.indexManager.AliasName(constants.PoliciesDocumentKind, ""),
+		DocumentId: assignment.PolicyVersionId,
+		Routing:    policyId,
+	})
+
+	if err != nil {
+		return nil, createError(log, "error retrieving policy version", err)
+	}
+
+	if !response.Found {
+		return nil, createErrorWithCode(log, "policy version does not exist", nil, codes.FailedPrecondition)
 	}
 
 	currentAssignment.PolicyVersionId = assignment.PolicyVersionId
@@ -144,7 +205,12 @@ func (m *assignmentManager) DeletePolicyAssignment(ctx context.Context, request 
 	log := m.logger.Named("DeletePolicyAssignment").With(zap.String("id", request.Id))
 	log.Debug("received request")
 
-	err := m.esClient.Delete(ctx, &esutil.DeleteRequest{
+	// check that assignment exists
+	if _, err := m.GetPolicyAssignment(ctx, &pb.GetPolicyAssignmentRequest{Id: request.Id}); err != nil {
+		return nil, err
+	}
+
+	if err := m.esClient.Delete(ctx, &esutil.DeleteRequest{
 		Index: m.policyAssignmentsAlias(),
 		Search: &esutil.EsSearch{
 			Query: &filtering.Query{
@@ -154,9 +220,7 @@ func (m *assignmentManager) DeletePolicyAssignment(ctx context.Context, request 
 			},
 		},
 		Refresh: m.esConfig.Refresh.String(),
-	})
-
-	if err != nil {
+	}); err != nil {
 		return nil, createError(log, "error deleting assignment", err)
 	}
 
@@ -177,10 +241,10 @@ func (m *assignmentManager) ListPolicyAssignments(ctx context.Context, request *
 		})
 	}
 
-	if request.PolicyVersionId != "" {
+	if request.PolicyId != "" {
 		queries = append(queries, &filtering.Query{
 			Prefix: &filtering.Term{
-				"policyVersionId": request.PolicyVersionId + ".",
+				"policyVersionId": request.PolicyId + ".",
 			},
 		})
 	}
@@ -201,6 +265,9 @@ func (m *assignmentManager) ListPolicyAssignments(ctx context.Context, request *
 				Bool: &filtering.Bool{
 					Must: &queries,
 				},
+			},
+			Sort: map[string]esutil.EsSortOrder{
+				"created": esutil.EsSortOrderDescending,
 			},
 		},
 	}
@@ -240,10 +307,3 @@ func (m *assignmentManager) policyAssignmentsAlias() string {
 func policyAssignmentId(policyId, policyGroupName string) string {
 	return fmt.Sprintf("policies/%s/assignments/%s", policyId, policyGroupName)
 }
-
-// /policies/{policyId}/assignments/{policyGroupId} -- fine for GetPolicyAssignment, weird for CreatePolicyAssignment -- we want policyVersionId, not policyId
-// /policy-assignments/{assignmentId} -- id is `/policies/{policyId}/assignments/{policyGroupId}`, making this path look strange
-
-// CreatePolicyAssignment: /policy-groups/{policyGroupId}:assign
-// ListPolicyAssignments: /policy-groups/{policyGroupId}/assignments, /policies/{policyId}/assignments
-// GetPolicyAssignment/UpdatePolicyAssignment/DeletePolicyAssignment: /policy-groups/{policyGroupId}/assignments/{policyId}
