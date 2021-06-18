@@ -123,7 +123,7 @@ func (m *assignmentManager) CreatePolicyAssignment(ctx context.Context, assignme
 	assignment.Updated = currentTime
 	assignment.Id = assignmentId
 
-	if _, err := m.esClient.Create(ctx, &esutil.CreateRequest{
+	if _, err = m.esClient.Create(ctx, &esutil.CreateRequest{
 		Index:      m.policyAssignmentsAlias(),
 		Refresh:    m.esConfig.Refresh.String(),
 		Message:    assignment,
@@ -152,7 +152,7 @@ func (m *assignmentManager) GetPolicyAssignment(ctx context.Context, request *pb
 		return nil, createErrorWithCode(log, "assignment not found", nil, codes.NotFound)
 	}
 	var assignment pb.PolicyAssignment
-	if err := protojson.Unmarshal(response.Source, &assignment); err != nil {
+	if err = protojson.Unmarshal(response.Source, &assignment); err != nil {
 		return nil, createError(log, "error unmarshalling assignment", err)
 	}
 
@@ -203,7 +203,7 @@ func (m *assignmentManager) UpdatePolicyAssignment(ctx context.Context, assignme
 	currentAssignment.PolicyVersionId = assignment.PolicyVersionId
 	currentAssignment.Updated = timestamppb.Now()
 
-	if _, err := m.esClient.Update(ctx, &esutil.UpdateRequest{
+	if _, err = m.esClient.Update(ctx, &esutil.UpdateRequest{
 		Index:      m.policyAssignmentsAlias(),
 		DocumentId: assignmentId,
 		Refresh:    m.esConfig.Refresh.String(),
@@ -304,7 +304,7 @@ func (m *assignmentManager) ListPolicyAssignments(ctx context.Context, request *
 	for _, hit := range searchResponse.Hits.Hits {
 		var assignment pb.PolicyAssignment
 
-		if err := protojson.Unmarshal(hit.Source, &assignment); err != nil {
+		if err = protojson.Unmarshal(hit.Source, &assignment); err != nil {
 			return nil, createError(log, "error unmarshalling assignment", err)
 		}
 
