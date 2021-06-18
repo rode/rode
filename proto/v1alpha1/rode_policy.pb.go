@@ -1426,16 +1426,21 @@ func (x *PolicyEvaluation) GetViolations() []*EvaluatePolicyViolation {
 	return nil
 }
 
+// PolicyAssignment represents a link between a policy and a policy group. Assignments can only be done against policy versions, to allow
+// for a safe rollout of new changes.
 type PolicyAssignment struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id              string               `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	PolicyVersionId string               `protobuf:"bytes,2,opt,name=policy_version_id,json=policyVersionId,proto3" json:"policy_version_id,omitempty"`
-	PolicyGroup     string               `protobuf:"bytes,3,opt,name=policy_group,json=policyGroup,proto3" json:"policy_group,omitempty"`
-	Created         *timestamp.Timestamp `protobuf:"bytes,4,opt,name=created,proto3" json:"created,omitempty"`
-	Updated         *timestamp.Timestamp `protobuf:"bytes,5,opt,name=updated,proto3" json:"updated,omitempty"`
+	// Id uniquely identifies the policy assignment. It is also a path that can be used to retrieve, update or delete the assignment.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// PolicyVersionId is the unique identifier (UUID) of a PolicyEntity. The version must exist at the time of assignment.
+	PolicyVersionId string `protobuf:"bytes,2,opt,name=policy_version_id,json=policyVersionId,proto3" json:"policy_version_id,omitempty"`
+	// PolicyGroup is corresponds to PolicyGroup.Name. The group must exist at the time of creation.
+	PolicyGroup string               `protobuf:"bytes,3,opt,name=policy_group,json=policyGroup,proto3" json:"policy_group,omitempty"`
+	Created     *timestamp.Timestamp `protobuf:"bytes,4,opt,name=created,proto3" json:"created,omitempty"`
+	Updated     *timestamp.Timestamp `protobuf:"bytes,5,opt,name=updated,proto3" json:"updated,omitempty"`
 }
 
 func (x *PolicyAssignment) Reset() {

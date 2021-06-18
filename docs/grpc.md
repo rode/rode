@@ -635,14 +635,15 @@ EvaluatePolicyInput is used as the input when evaluating a policy in OPA.
 <a name="rode.v1alpha1.PolicyAssignment"></a>
 
 ### PolicyAssignment
-
+PolicyAssignment represents a link between a policy and a policy group. Assignments can only be done against policy versions, to allow
+for a safe rollout of new changes.
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| id | [string](#string) |  |  |
-| policy_version_id | [string](#string) |  |  |
-| policy_group | [string](#string) |  |  |
+| id | [string](#string) |  | Id uniquely identifies the policy assignment. It is also a path that can be used to retrieve, update or delete the assignment. |
+| policy_version_id | [string](#string) |  | PolicyVersionId is the unique identifier (UUID) of a PolicyEntity. The version must exist at the time of assignment. |
+| policy_group | [string](#string) |  | PolicyGroup is corresponds to PolicyGroup.Name. The group must exist at the time of creation. |
 | created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
 | updated | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
 
