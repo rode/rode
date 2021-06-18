@@ -44,22 +44,28 @@ import (
 
 var _ = Describe("rode server", func() {
 	var (
-		server                pb.RodeServer
-		grafeasClient         *mocks.FakeGrafeasV1Beta1Client
-		grafeasProjectsClient *mocks.FakeProjectsClient
-		grafeasExtensions     *grafeasfakes.FakeExtensions
-		resourceManager       *resourcefakes.FakeManager
-		policyManager         *policyfakes.FakeManager
-		policyGroupManager    *policyfakes.FakePolicyGroupManager
-		indexManager          *immocks.FakeIndexManager
-		ctx                   context.Context
+		server                  pb.RodeServer
+		grafeasClient           *mocks.FakeGrafeasV1Beta1Client
+		grafeasProjectsClient   *mocks.FakeProjectsClient
+		grafeasExtensions       *grafeasfakes.FakeExtensions
+		resourceManager         *resourcefakes.FakeManager
+		policyManager           *policyfakes.FakeManager
+		policyGroupManager      *policyfakes.FakePolicyGroupManager
+		policyAssignmentManager *policyfakes.FakeAssignmentManager
+		indexManager            *immocks.FakeIndexManager
+		ctx                     context.Context
 
-		expectedPoliciesIndex     string
-		expectedPoliciesAlias     string
-		expectedResourceIndex     string
-		expectedResourceAlias     string
+		expectedPoliciesIndex string
+		expectedPoliciesAlias string
+
+		expectedResourceIndex string
+		expectedResourceAlias string
+
 		expectedPolicyGroupsIndex string
 		expectedPolicyGroupsAlias string
+
+		expectedPolicyAssignmentsIndex string
+		expectedPolicyAssignmentsAlias string
 	)
 
 	BeforeEach(func() {
@@ -68,28 +74,37 @@ var _ = Describe("rode server", func() {
 		grafeasExtensions = &grafeasfakes.FakeExtensions{}
 		resourceManager = &resourcefakes.FakeManager{}
 		policyGroupManager = &policyfakes.FakePolicyGroupManager{}
+		policyAssignmentManager = &policyfakes.FakeAssignmentManager{}
 
 		expectedPoliciesIndex = gofakeit.LetterN(10)
 		expectedPoliciesAlias = gofakeit.LetterN(10)
+
 		expectedPolicyGroupsIndex = gofakeit.LetterN(10)
 		expectedPolicyGroupsAlias = gofakeit.LetterN(10)
+
+		expectedPolicyAssignmentsIndex = gofakeit.LetterN(10)
+		expectedPolicyAssignmentsAlias = gofakeit.LetterN(10)
+
 		expectedResourceIndex = gofakeit.LetterN(10)
 		expectedResourceAlias = gofakeit.LetterN(10)
+
 		indexManager = &immocks.FakeIndexManager{}
 
 		indexManager.AliasNameStub = func(documentKind, _ string) string {
 			return map[string]string{
-				constants.PoliciesDocumentKind:     expectedPoliciesAlias,
-				constants.PolicyGroupsDocumentKind: expectedPolicyGroupsAlias,
-				constants.ResourcesDocumentKind:    expectedResourceAlias,
+				constants.PoliciesDocumentKind:          expectedPoliciesAlias,
+				constants.PolicyGroupsDocumentKind:      expectedPolicyGroupsAlias,
+				constants.PolicyAssignmentsDocumentKind: expectedPolicyAssignmentsAlias,
+				constants.ResourcesDocumentKind:         expectedResourceAlias,
 			}[documentKind]
 		}
 
 		indexManager.IndexNameStub = func(documentKind, _ string) string {
 			return map[string]string{
-				constants.PoliciesDocumentKind:     expectedPoliciesIndex,
-				constants.PolicyGroupsDocumentKind: expectedPolicyGroupsIndex,
-				constants.ResourcesDocumentKind:    expectedResourceIndex,
+				constants.PoliciesDocumentKind:          expectedPoliciesIndex,
+				constants.PolicyGroupsDocumentKind:      expectedPolicyGroupsIndex,
+				constants.PolicyAssignmentsDocumentKind: expectedPolicyAssignmentsIndex,
+				constants.ResourcesDocumentKind:         expectedResourceIndex,
 			}[documentKind]
 		}
 
@@ -97,12 +112,15 @@ var _ = Describe("rode server", func() {
 
 		// not using the constructor as it has side effects. side effects are tested under the "initialize" context
 		server = &rodeServer{
-			logger:            logger,
-			grafeasCommon:     grafeasClient,
-			grafeasProjects:   grafeasProjectsClient,
-			grafeasExtensions: grafeasExtensions,
-			resourceManager:   resourceManager,
-			indexManager:      indexManager,
+			logger:             logger,
+			grafeasCommon:      grafeasClient,
+			grafeasProjects:    grafeasProjectsClient,
+			grafeasExtensions:  grafeasExtensions,
+			resourceManager:    resourceManager,
+			Manager:            policyManager,
+			AssignmentManager:  policyAssignmentManager,
+			PolicyGroupManager: policyGroupManager,
+			indexManager:       indexManager,
 		}
 	})
 
@@ -129,7 +147,7 @@ var _ = Describe("rode server", func() {
 			grafeasProjectsClient.GetProjectReturns(expectedProject, expectedGetProjectError)
 			grafeasProjectsClient.CreateProjectReturns(expectedProject, expectedCreateProjectError)
 
-			actualRodeServer, actualError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, grafeasExtensions, resourceManager, indexManager, policyManager, policyGroupManager)
+			actualRodeServer, actualError = NewRodeServer(logger, grafeasClient, grafeasProjectsClient, grafeasExtensions, resourceManager, indexManager, policyManager, policyGroupManager, policyAssignmentManager)
 		})
 
 		It("should check if the rode project exists", func() {
@@ -149,7 +167,7 @@ var _ = Describe("rode server", func() {
 		})
 
 		It("should create the application indices", func() {
-			Expect(indexManager.CreateIndexCallCount()).To(Equal(3))
+			Expect(indexManager.CreateIndexCallCount()).To(Equal(4))
 		})
 
 		It("should create an index for policies", func() {
@@ -161,7 +179,7 @@ var _ = Describe("rode server", func() {
 		})
 
 		It("should create an index for resources", func() {
-			Expect(indexManager.CreateIndexCallCount()).To(Equal(3))
+			Expect(indexManager.CreateIndexCallCount()).To(Equal(4))
 
 			_, actualIndexName, actualAliasName, documentKind := indexManager.CreateIndexArgsForCall(1)
 
@@ -176,6 +194,14 @@ var _ = Describe("rode server", func() {
 			Expect(actualIndexName).To(Equal(expectedPolicyGroupsIndex))
 			Expect(actualAliasName).To(Equal(expectedPolicyGroupsAlias))
 			Expect(documentKind).To(Equal(constants.PolicyGroupsDocumentKind))
+		})
+
+		It("should create an index for policy assignments", func() {
+			_, actualIndexName, actualAliasName, documentKind := indexManager.CreateIndexArgsForCall(3)
+
+			Expect(actualIndexName).To(Equal(expectedPolicyAssignmentsIndex))
+			Expect(actualAliasName).To(Equal(expectedPolicyAssignmentsAlias))
+			Expect(documentKind).To(Equal(constants.PolicyAssignmentsDocumentKind))
 		})
 
 		It("should return the initialized rode server", func() {
