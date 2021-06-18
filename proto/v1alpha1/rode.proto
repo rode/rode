@@ -153,6 +153,48 @@ service Rode {
       body: "*"
     };
   };
+
+  rpc CreatePolicyAssignment(PolicyAssignment) returns (PolicyAssignment) {
+    option (google.api.http) = {
+      post: "/v1alpha1/policies/{policy_version_id}/assignments/{policy_group}"
+      body: "*"
+    };
+    option (google.api.method_signature) = "policy_version_id,policy_group";
+  };
+
+  rpc GetPolicyAssignment(GetPolicyAssignmentRequest) returns (PolicyAssignment) {
+    option (google.api.http) = {
+      get: "/v1alpha1/{id=policies/*/assignments/*}"
+    };
+    option (google.api.method_signature) = "id";
+  };
+
+  rpc UpdatePolicyAssignment(PolicyAssignment) returns (PolicyAssignment) {
+    option (google.api.http) = {
+      patch: "/v1alpha1/{id=policies/*/assignments/*}"
+      body: "*"
+    };
+    option (google.api.method_signature) = "id";
+  };
+
+  rpc DeletePolicyAssignment(DeletePolicyAssignmentRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/v1alpha1/{id=policies/*/assignments/*}"
+    };
+    option (google.api.method_signature) = "id";
+  };
+
+  rpc ListPolicyAssignments(ListPolicyAssignmentsRequest) returns (ListPolicyAssignmentsResponse) {
+    option (google.api.http) = {
+      get: "/v1alpha1/policies/{policy_id}/assignments"
+      additional_bindings: [
+        {
+          get: "/v1alpha1/policy-groups/{policy_group}/assignments"
+        }
+      ]
+    };
+    option (google.api.method_signature) = "policy_id,policy_group";
+  };
 }
 
 // Request to create occurrences in batch.

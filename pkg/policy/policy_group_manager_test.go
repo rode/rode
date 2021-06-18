@@ -49,9 +49,7 @@ var _ = Describe("PolicyGroupManager", func() {
 
 	BeforeEach(func() {
 		esClient = &esutilfakes.FakeClient{}
-		esConfig = &config.ElasticsearchConfig{
-			Refresh: config.RefreshOption(fake.RandomString([]string{config.RefreshTrue, config.RefreshFalse, config.RefreshWaitFor})),
-		}
+		esConfig = randomEsConfig()
 		indexManager = &immocks.FakeIndexManager{}
 		filterer = &filteringfakes.FakeFilterer{}
 

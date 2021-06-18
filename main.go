@@ -120,6 +120,7 @@ func main() {
 	resourceManager := resource.NewManager(logger.Named("Resource Manager"), esutilClient, c.Elasticsearch, indexManager, filterer)
 	policyManager := policy.NewManager(logger.Named("PolicyManager"), esutilClient, c.Elasticsearch, indexManager, filterer, opaClient, grafeasExtensions)
 	policyGroupManager := policy.NewPolicyGroupManager(logger.Named("PolicyGroupManager"), esutilClient, c.Elasticsearch, indexManager, filterer)
+	policyAssignmentManager := policy.NewAssignmentManager(logger.Named("PolicyAssignmentManager"), esutilClient, c.Elasticsearch, indexManager, filterer)
 	rodeServer, err := server.NewRodeServer(
 		logger.Named("rode"),
 		grafeasClientCommon,
@@ -129,6 +130,7 @@ func main() {
 		indexManager,
 		policyManager,
 		policyGroupManager,
+		policyAssignmentManager,
 	)
 	if err != nil {
 		logger.Fatal("failed to create Rode server", zap.Error(err))

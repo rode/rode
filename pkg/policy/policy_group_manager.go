@@ -31,8 +31,6 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-//go:generate counterfeiter -generate
-
 //counterfeiter:generate . PolicyGroupManager
 type PolicyGroupManager interface {
 	CreatePolicyGroup(context.Context, *pb.PolicyGroup) (*pb.PolicyGroup, error)

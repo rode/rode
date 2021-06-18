@@ -1426,6 +1426,320 @@ func (x *PolicyEvaluation) GetViolations() []*EvaluatePolicyViolation {
 	return nil
 }
 
+// PolicyAssignment represents a link between a policy and a policy group. Assignments can only be done against policy versions, to allow
+// for a safe rollout of new changes.
+type PolicyAssignment struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// Id uniquely identifies the policy assignment. It is also a path that can be used to retrieve, update or delete the assignment. Output only.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// PolicyVersionId is the unique identifier (UUID) of a PolicyEntity. The version must exist at the time of assignment. Required.
+	PolicyVersionId string `protobuf:"bytes,2,opt,name=policy_version_id,json=policyVersionId,proto3" json:"policy_version_id,omitempty"`
+	// PolicyGroup corresponds to PolicyGroup.Name. The group must exist at the time of creation and cannot be updated. Required.
+	PolicyGroup string `protobuf:"bytes,3,opt,name=policy_group,json=policyGroup,proto3" json:"policy_group,omitempty"`
+	// Created is output only.
+	Created *timestamp.Timestamp `protobuf:"bytes,4,opt,name=created,proto3" json:"created,omitempty"`
+	// Updated is output only.
+	Updated *timestamp.Timestamp `protobuf:"bytes,5,opt,name=updated,proto3" json:"updated,omitempty"`
+}
+
+func (x *PolicyAssignment) Reset() {
+	*x = PolicyAssignment{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[21]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *PolicyAssignment) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PolicyAssignment) ProtoMessage() {}
+
+func (x *PolicyAssignment) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[21]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PolicyAssignment.ProtoReflect.Descriptor instead.
+func (*PolicyAssignment) Descriptor() ([]byte, []int) {
+	return file_proto_v1alpha1_rode_policy_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *PolicyAssignment) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *PolicyAssignment) GetPolicyVersionId() string {
+	if x != nil {
+		return x.PolicyVersionId
+	}
+	return ""
+}
+
+func (x *PolicyAssignment) GetPolicyGroup() string {
+	if x != nil {
+		return x.PolicyGroup
+	}
+	return ""
+}
+
+func (x *PolicyAssignment) GetCreated() *timestamp.Timestamp {
+	if x != nil {
+		return x.Created
+	}
+	return nil
+}
+
+func (x *PolicyAssignment) GetUpdated() *timestamp.Timestamp {
+	if x != nil {
+		return x.Updated
+	}
+	return nil
+}
+
+type GetPolicyAssignmentRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+}
+
+func (x *GetPolicyAssignmentRequest) Reset() {
+	*x = GetPolicyAssignmentRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[22]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetPolicyAssignmentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetPolicyAssignmentRequest) ProtoMessage() {}
+
+func (x *GetPolicyAssignmentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[22]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetPolicyAssignmentRequest.ProtoReflect.Descriptor instead.
+func (*GetPolicyAssignmentRequest) Descriptor() ([]byte, []int) {
+	return file_proto_v1alpha1_rode_policy_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *GetPolicyAssignmentRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type DeletePolicyAssignmentRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+}
+
+func (x *DeletePolicyAssignmentRequest) Reset() {
+	*x = DeletePolicyAssignmentRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[23]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *DeletePolicyAssignmentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeletePolicyAssignmentRequest) ProtoMessage() {}
+
+func (x *DeletePolicyAssignmentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[23]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeletePolicyAssignmentRequest.ProtoReflect.Descriptor instead.
+func (*DeletePolicyAssignmentRequest) Descriptor() ([]byte, []int) {
+	return file_proto_v1alpha1_rode_policy_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *DeletePolicyAssignmentRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type ListPolicyAssignmentsRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Filter      string `protobuf:"bytes,1,opt,name=filter,proto3" json:"filter,omitempty"`
+	PageSize    int32  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	PageToken   string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	PolicyId    string `protobuf:"bytes,4,opt,name=policy_id,json=policyId,proto3" json:"policy_id,omitempty"`
+	PolicyGroup string `protobuf:"bytes,5,opt,name=policy_group,json=policyGroup,proto3" json:"policy_group,omitempty"`
+}
+
+func (x *ListPolicyAssignmentsRequest) Reset() {
+	*x = ListPolicyAssignmentsRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[24]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ListPolicyAssignmentsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPolicyAssignmentsRequest) ProtoMessage() {}
+
+func (x *ListPolicyAssignmentsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[24]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPolicyAssignmentsRequest.ProtoReflect.Descriptor instead.
+func (*ListPolicyAssignmentsRequest) Descriptor() ([]byte, []int) {
+	return file_proto_v1alpha1_rode_policy_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *ListPolicyAssignmentsRequest) GetFilter() string {
+	if x != nil {
+		return x.Filter
+	}
+	return ""
+}
+
+func (x *ListPolicyAssignmentsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListPolicyAssignmentsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListPolicyAssignmentsRequest) GetPolicyId() string {
+	if x != nil {
+		return x.PolicyId
+	}
+	return ""
+}
+
+func (x *ListPolicyAssignmentsRequest) GetPolicyGroup() string {
+	if x != nil {
+		return x.PolicyGroup
+	}
+	return ""
+}
+
+type ListPolicyAssignmentsResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	PolicyAssignments []*PolicyAssignment `protobuf:"bytes,1,rep,name=policy_assignments,json=policyAssignments,proto3" json:"policy_assignments,omitempty"`
+	NextPageToken     string              `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+}
+
+func (x *ListPolicyAssignmentsResponse) Reset() {
+	*x = ListPolicyAssignmentsResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[25]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ListPolicyAssignmentsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListPolicyAssignmentsResponse) ProtoMessage() {}
+
+func (x *ListPolicyAssignmentsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_v1alpha1_rode_policy_proto_msgTypes[25]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListPolicyAssignmentsResponse.ProtoReflect.Descriptor instead.
+func (*ListPolicyAssignmentsResponse) Descriptor() ([]byte, []int) {
+	return file_proto_v1alpha1_rode_policy_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *ListPolicyAssignmentsResponse) GetPolicyAssignments() []*PolicyAssignment {
+	if x != nil {
+		return x.PolicyAssignments
+	}
+	return nil
+}
+
+func (x *ListPolicyAssignmentsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
 var File_proto_v1alpha1_rode_policy_proto protoreflect.FileDescriptor
 
 var file_proto_v1alpha1_rode_policy_proto_rawDesc = []byte{
@@ -1600,10 +1914,51 @@ var file_proto_v1alpha1_rode_policy_proto_rawDesc = []byte{
 	0x74, 0x69, 0x6f, 0x6e, 0x73, 0x18, 0x05, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x26, 0x2e, 0x72, 0x6f,
 	0x64, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x45, 0x76, 0x61, 0x6c,
 	0x75, 0x61, 0x74, 0x65, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x56, 0x69, 0x6f, 0x6c, 0x61, 0x74,
-	0x69, 0x6f, 0x6e, 0x52, 0x0a, 0x76, 0x69, 0x6f, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x42,
-	0x25, 0x5a, 0x23, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x72, 0x6f,
-	0x64, 0x65, 0x2f, 0x72, 0x6f, 0x64, 0x65, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x76, 0x31,
-	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x69, 0x6f, 0x6e, 0x52, 0x0a, 0x76, 0x69, 0x6f, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x22,
+	0xdd, 0x01, 0x0a, 0x10, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x41, 0x73, 0x73, 0x69, 0x67, 0x6e,
+	0x6d, 0x65, 0x6e, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x02, 0x69, 0x64, 0x12, 0x2a, 0x0a, 0x11, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x5f, 0x76,
+	0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x5f, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x0f, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x56, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x49, 0x64,
+	0x12, 0x21, 0x0a, 0x0c, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x5f, 0x67, 0x72, 0x6f, 0x75, 0x70,
+	0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x47, 0x72,
+	0x6f, 0x75, 0x70, 0x12, 0x34, 0x0a, 0x07, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x18, 0x04,
+	0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70,
+	0x52, 0x07, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64, 0x12, 0x34, 0x0a, 0x07, 0x75, 0x70, 0x64,
+	0x61, 0x74, 0x65, 0x64, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f,
+	0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x54, 0x69, 0x6d,
+	0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x52, 0x07, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x22,
+	0x2c, 0x0a, 0x1a, 0x47, 0x65, 0x74, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x41, 0x73, 0x73, 0x69,
+	0x67, 0x6e, 0x6d, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x0e, 0x0a,
+	0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x22, 0x2f, 0x0a,
+	0x1d, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x41, 0x73, 0x73,
+	0x69, 0x67, 0x6e, 0x6d, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x0e,
+	0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x22, 0xb2,
+	0x01, 0x0a, 0x1c, 0x4c, 0x69, 0x73, 0x74, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x41, 0x73, 0x73,
+	0x69, 0x67, 0x6e, 0x6d, 0x65, 0x6e, 0x74, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12,
+	0x16, 0x0a, 0x06, 0x66, 0x69, 0x6c, 0x74, 0x65, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x06, 0x66, 0x69, 0x6c, 0x74, 0x65, 0x72, 0x12, 0x1b, 0x0a, 0x09, 0x70, 0x61, 0x67, 0x65, 0x5f,
+	0x73, 0x69, 0x7a, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x08, 0x70, 0x61, 0x67, 0x65,
+	0x53, 0x69, 0x7a, 0x65, 0x12, 0x1d, 0x0a, 0x0a, 0x70, 0x61, 0x67, 0x65, 0x5f, 0x74, 0x6f, 0x6b,
+	0x65, 0x6e, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x70, 0x61, 0x67, 0x65, 0x54, 0x6f,
+	0x6b, 0x65, 0x6e, 0x12, 0x1b, 0x0a, 0x09, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x5f, 0x69, 0x64,
+	0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x49, 0x64,
+	0x12, 0x21, 0x0a, 0x0c, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x5f, 0x67, 0x72, 0x6f, 0x75, 0x70,
+	0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x47, 0x72,
+	0x6f, 0x75, 0x70, 0x22, 0x97, 0x01, 0x0a, 0x1d, 0x4c, 0x69, 0x73, 0x74, 0x50, 0x6f, 0x6c, 0x69,
+	0x63, 0x79, 0x41, 0x73, 0x73, 0x69, 0x67, 0x6e, 0x6d, 0x65, 0x6e, 0x74, 0x73, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x4e, 0x0a, 0x12, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x5f,
+	0x61, 0x73, 0x73, 0x69, 0x67, 0x6e, 0x6d, 0x65, 0x6e, 0x74, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28,
+	0x0b, 0x32, 0x1f, 0x2e, 0x72, 0x6f, 0x64, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61,
+	0x31, 0x2e, 0x50, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x41, 0x73, 0x73, 0x69, 0x67, 0x6e, 0x6d, 0x65,
+	0x6e, 0x74, 0x52, 0x11, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x41, 0x73, 0x73, 0x69, 0x67, 0x6e,
+	0x6d, 0x65, 0x6e, 0x74, 0x73, 0x12, 0x26, 0x0a, 0x0f, 0x6e, 0x65, 0x78, 0x74, 0x5f, 0x70, 0x61,
+	0x67, 0x65, 0x5f, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0d,
+	0x6e, 0x65, 0x78, 0x74, 0x50, 0x61, 0x67, 0x65, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x42, 0x25, 0x5a,
+	0x23, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x72, 0x6f, 0x64, 0x65,
+	0x2f, 0x72, 0x6f, 0x64, 0x65, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x76, 0x31, 0x61, 0x6c,
+	0x70, 0x68, 0x61, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -1618,53 +1973,61 @@ func file_proto_v1alpha1_rode_policy_proto_rawDescGZIP() []byte {
 	return file_proto_v1alpha1_rode_policy_proto_rawDescData
 }
 
-var file_proto_v1alpha1_rode_policy_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_proto_v1alpha1_rode_policy_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_proto_v1alpha1_rode_policy_proto_goTypes = []interface{}{
-	(*EvaluatePolicyRequest)(nil),       // 0: rode.v1alpha1.EvaluatePolicyRequest
-	(*EvaluatePolicyResponse)(nil),      // 1: rode.v1alpha1.EvaluatePolicyResponse
-	(*EvaluatePolicyResult)(nil),        // 2: rode.v1alpha1.EvaluatePolicyResult
-	(*EvaluatePolicyViolation)(nil),     // 3: rode.v1alpha1.EvaluatePolicyViolation
-	(*EvaluatePolicyInput)(nil),         // 4: rode.v1alpha1.EvaluatePolicyInput
-	(*ValidatePolicyRequest)(nil),       // 5: rode.v1alpha1.ValidatePolicyRequest
-	(*ValidatePolicyResponse)(nil),      // 6: rode.v1alpha1.ValidatePolicyResponse
-	(*GetPolicyRequest)(nil),            // 7: rode.v1alpha1.GetPolicyRequest
-	(*DeletePolicyRequest)(nil),         // 8: rode.v1alpha1.DeletePolicyRequest
-	(*ListPoliciesRequest)(nil),         // 9: rode.v1alpha1.ListPoliciesRequest
-	(*ListPoliciesResponse)(nil),        // 10: rode.v1alpha1.ListPoliciesResponse
-	(*ListPolicyVersionsRequest)(nil),   // 11: rode.v1alpha1.ListPolicyVersionsRequest
-	(*ListPolicyVersionsResponse)(nil),  // 12: rode.v1alpha1.ListPolicyVersionsResponse
-	(*UpdatePolicyRequest)(nil),         // 13: rode.v1alpha1.UpdatePolicyRequest
-	(*Policy)(nil),                      // 14: rode.v1alpha1.Policy
-	(*PolicyEntity)(nil),                // 15: rode.v1alpha1.PolicyEntity
-	(*PolicyGroup)(nil),                 // 16: rode.v1alpha1.PolicyGroup
-	(*GetPolicyGroupRequest)(nil),       // 17: rode.v1alpha1.GetPolicyGroupRequest
-	(*ListPolicyGroupsRequest)(nil),     // 18: rode.v1alpha1.ListPolicyGroupsRequest
-	(*ListPolicyGroupsResponse)(nil),    // 19: rode.v1alpha1.ListPolicyGroupsResponse
-	(*PolicyEvaluation)(nil),            // 20: rode.v1alpha1.PolicyEvaluation
-	(*timestamp.Timestamp)(nil),         // 21: google.protobuf.Timestamp
-	(*grafeas_go_proto.Occurrence)(nil), // 22: grafeas.v1beta1.Occurrence
+	(*EvaluatePolicyRequest)(nil),         // 0: rode.v1alpha1.EvaluatePolicyRequest
+	(*EvaluatePolicyResponse)(nil),        // 1: rode.v1alpha1.EvaluatePolicyResponse
+	(*EvaluatePolicyResult)(nil),          // 2: rode.v1alpha1.EvaluatePolicyResult
+	(*EvaluatePolicyViolation)(nil),       // 3: rode.v1alpha1.EvaluatePolicyViolation
+	(*EvaluatePolicyInput)(nil),           // 4: rode.v1alpha1.EvaluatePolicyInput
+	(*ValidatePolicyRequest)(nil),         // 5: rode.v1alpha1.ValidatePolicyRequest
+	(*ValidatePolicyResponse)(nil),        // 6: rode.v1alpha1.ValidatePolicyResponse
+	(*GetPolicyRequest)(nil),              // 7: rode.v1alpha1.GetPolicyRequest
+	(*DeletePolicyRequest)(nil),           // 8: rode.v1alpha1.DeletePolicyRequest
+	(*ListPoliciesRequest)(nil),           // 9: rode.v1alpha1.ListPoliciesRequest
+	(*ListPoliciesResponse)(nil),          // 10: rode.v1alpha1.ListPoliciesResponse
+	(*ListPolicyVersionsRequest)(nil),     // 11: rode.v1alpha1.ListPolicyVersionsRequest
+	(*ListPolicyVersionsResponse)(nil),    // 12: rode.v1alpha1.ListPolicyVersionsResponse
+	(*UpdatePolicyRequest)(nil),           // 13: rode.v1alpha1.UpdatePolicyRequest
+	(*Policy)(nil),                        // 14: rode.v1alpha1.Policy
+	(*PolicyEntity)(nil),                  // 15: rode.v1alpha1.PolicyEntity
+	(*PolicyGroup)(nil),                   // 16: rode.v1alpha1.PolicyGroup
+	(*GetPolicyGroupRequest)(nil),         // 17: rode.v1alpha1.GetPolicyGroupRequest
+	(*ListPolicyGroupsRequest)(nil),       // 18: rode.v1alpha1.ListPolicyGroupsRequest
+	(*ListPolicyGroupsResponse)(nil),      // 19: rode.v1alpha1.ListPolicyGroupsResponse
+	(*PolicyEvaluation)(nil),              // 20: rode.v1alpha1.PolicyEvaluation
+	(*PolicyAssignment)(nil),              // 21: rode.v1alpha1.PolicyAssignment
+	(*GetPolicyAssignmentRequest)(nil),    // 22: rode.v1alpha1.GetPolicyAssignmentRequest
+	(*DeletePolicyAssignmentRequest)(nil), // 23: rode.v1alpha1.DeletePolicyAssignmentRequest
+	(*ListPolicyAssignmentsRequest)(nil),  // 24: rode.v1alpha1.ListPolicyAssignmentsRequest
+	(*ListPolicyAssignmentsResponse)(nil), // 25: rode.v1alpha1.ListPolicyAssignmentsResponse
+	(*timestamp.Timestamp)(nil),           // 26: google.protobuf.Timestamp
+	(*grafeas_go_proto.Occurrence)(nil),   // 27: grafeas.v1beta1.Occurrence
 }
 var file_proto_v1alpha1_rode_policy_proto_depIdxs = []int32{
 	2,  // 0: rode.v1alpha1.EvaluatePolicyResponse.result:type_name -> rode.v1alpha1.EvaluatePolicyResult
-	21, // 1: rode.v1alpha1.EvaluatePolicyResult.created:type_name -> google.protobuf.Timestamp
+	26, // 1: rode.v1alpha1.EvaluatePolicyResult.created:type_name -> google.protobuf.Timestamp
 	3,  // 2: rode.v1alpha1.EvaluatePolicyResult.violations:type_name -> rode.v1alpha1.EvaluatePolicyViolation
-	22, // 3: rode.v1alpha1.EvaluatePolicyInput.occurrences:type_name -> grafeas.v1beta1.Occurrence
+	27, // 3: rode.v1alpha1.EvaluatePolicyInput.occurrences:type_name -> grafeas.v1beta1.Occurrence
 	14, // 4: rode.v1alpha1.ListPoliciesResponse.policies:type_name -> rode.v1alpha1.Policy
 	15, // 5: rode.v1alpha1.ListPolicyVersionsResponse.versions:type_name -> rode.v1alpha1.PolicyEntity
 	14, // 6: rode.v1alpha1.UpdatePolicyRequest.policy:type_name -> rode.v1alpha1.Policy
 	15, // 7: rode.v1alpha1.Policy.policy:type_name -> rode.v1alpha1.PolicyEntity
-	21, // 8: rode.v1alpha1.Policy.created:type_name -> google.protobuf.Timestamp
-	21, // 9: rode.v1alpha1.Policy.updated:type_name -> google.protobuf.Timestamp
-	21, // 10: rode.v1alpha1.PolicyEntity.created:type_name -> google.protobuf.Timestamp
-	21, // 11: rode.v1alpha1.PolicyGroup.created:type_name -> google.protobuf.Timestamp
-	21, // 12: rode.v1alpha1.PolicyGroup.updated:type_name -> google.protobuf.Timestamp
+	26, // 8: rode.v1alpha1.Policy.created:type_name -> google.protobuf.Timestamp
+	26, // 9: rode.v1alpha1.Policy.updated:type_name -> google.protobuf.Timestamp
+	26, // 10: rode.v1alpha1.PolicyEntity.created:type_name -> google.protobuf.Timestamp
+	26, // 11: rode.v1alpha1.PolicyGroup.created:type_name -> google.protobuf.Timestamp
+	26, // 12: rode.v1alpha1.PolicyGroup.updated:type_name -> google.protobuf.Timestamp
 	16, // 13: rode.v1alpha1.ListPolicyGroupsResponse.policy_groups:type_name -> rode.v1alpha1.PolicyGroup
 	3,  // 14: rode.v1alpha1.PolicyEvaluation.violations:type_name -> rode.v1alpha1.EvaluatePolicyViolation
-	15, // [15:15] is the sub-list for method output_type
-	15, // [15:15] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	26, // 15: rode.v1alpha1.PolicyAssignment.created:type_name -> google.protobuf.Timestamp
+	26, // 16: rode.v1alpha1.PolicyAssignment.updated:type_name -> google.protobuf.Timestamp
+	21, // 17: rode.v1alpha1.ListPolicyAssignmentsResponse.policy_assignments:type_name -> rode.v1alpha1.PolicyAssignment
+	18, // [18:18] is the sub-list for method output_type
+	18, // [18:18] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_proto_v1alpha1_rode_policy_proto_init() }
@@ -1925,6 +2288,66 @@ func file_proto_v1alpha1_rode_policy_proto_init() {
 				return nil
 			}
 		}
+		file_proto_v1alpha1_rode_policy_proto_msgTypes[21].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*PolicyAssignment); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_v1alpha1_rode_policy_proto_msgTypes[22].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetPolicyAssignmentRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_v1alpha1_rode_policy_proto_msgTypes[23].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*DeletePolicyAssignmentRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_v1alpha1_rode_policy_proto_msgTypes[24].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ListPolicyAssignmentsRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_proto_v1alpha1_rode_policy_proto_msgTypes[25].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ListPolicyAssignmentsResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1932,7 +2355,7 @@ func file_proto_v1alpha1_rode_policy_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_proto_v1alpha1_rode_policy_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   21,
+			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

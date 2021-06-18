@@ -224,3 +224,40 @@ message PolicyEvaluation {
   // Violations is a list of rule results. Even if a rule passed, its output will be included in Violations.
   repeated EvaluatePolicyViolation violations = 5;
 }
+
+// PolicyAssignment represents a link between a policy and a policy group. Assignments can only be done against policy versions, to allow
+// for a safe rollout of new changes.
+message PolicyAssignment {
+  // Id uniquely identifies the policy assignment. It is also a path that can be used to retrieve, update or delete the assignment. Output only.
+  string id = 1;
+  // PolicyVersionId is the unique identifier (UUID) of a PolicyEntity. The version must exist at the time of assignment. Required.
+  string policy_version_id = 2;
+  // PolicyGroup corresponds to PolicyGroup.Name. The group must exist at the time of creation and cannot be updated. Required.
+  string policy_group = 3;
+  // Created is output only.
+  google.protobuf.Timestamp created = 4;
+  // Updated is output only.
+  google.protobuf.Timestamp updated = 5;
+}
+
+message GetPolicyAssignmentRequest {
+  string id = 1;
+}
+
+message DeletePolicyAssignmentRequest {
+  string id = 1;
+}
+
+message ListPolicyAssignmentsRequest {
+  string filter = 1;
+  int32 page_size = 2;
+  string page_token = 3;
+
+  string policy_id = 4;
+  string policy_group = 5;
+}
+
+message ListPolicyAssignmentsResponse {
+  repeated PolicyAssignment policy_assignments = 1;
+  string next_page_token = 2;
+}

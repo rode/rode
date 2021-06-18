@@ -87,9 +87,7 @@ var _ = Describe("PolicyManager", func() {
 		indexManager = &immocks.FakeIndexManager{}
 		opaClient = &opafakes.FakeClient{}
 		filterer = &filteringfakes.FakeFilterer{}
-		esConfig = &config.ElasticsearchConfig{
-			Refresh: config.RefreshOption(fake.RandomString([]string{config.RefreshTrue, config.RefreshFalse, config.RefreshWaitFor})),
-		}
+		esConfig = randomEsConfig()
 
 		expectedPoliciesAlias = fake.LetterN(10)
 		indexManager.AliasNameReturns(expectedPoliciesAlias)
