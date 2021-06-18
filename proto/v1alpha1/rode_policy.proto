@@ -239,8 +239,6 @@ message GetPolicyAssignmentRequest {
 
 message DeletePolicyAssignmentRequest {
   string id = 1;
-//  string policy_version_id = 1;
-//  string policy_group = 2;
 }
 
 message ListPolicyAssignmentsRequest {
@@ -248,7 +246,7 @@ message ListPolicyAssignmentsRequest {
   int32 page_size = 2;
   string page_token = 3;
 
-  string policy_version_id = 4;
+  string policy_id = 4;
   string policy_group = 5;
 }
 

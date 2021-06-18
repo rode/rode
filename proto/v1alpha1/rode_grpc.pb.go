@@ -50,7 +50,6 @@ type RodeClient interface {
 	ListPolicyGroups(ctx context.Context, in *ListPolicyGroupsRequest, opts ...grpc.CallOption) (*ListPolicyGroupsResponse, error)
 	GetPolicyGroup(ctx context.Context, in *GetPolicyGroupRequest, opts ...grpc.CallOption) (*PolicyGroup, error)
 	UpdatePolicyGroup(ctx context.Context, in *PolicyGroup, opts ...grpc.CallOption) (*PolicyGroup, error)
-	// TODO: alternate binding? "/v1alpha1/policy-groups/{policy_group}/policy-assignments"
 	CreatePolicyAssignment(ctx context.Context, in *PolicyAssignment, opts ...grpc.CallOption) (*PolicyAssignment, error)
 	GetPolicyAssignment(ctx context.Context, in *GetPolicyAssignmentRequest, opts ...grpc.CallOption) (*PolicyAssignment, error)
 	UpdatePolicyAssignment(ctx context.Context, in *PolicyAssignment, opts ...grpc.CallOption) (*PolicyAssignment, error)
@@ -325,7 +324,6 @@ type RodeServer interface {
 	ListPolicyGroups(context.Context, *ListPolicyGroupsRequest) (*ListPolicyGroupsResponse, error)
 	GetPolicyGroup(context.Context, *GetPolicyGroupRequest) (*PolicyGroup, error)
 	UpdatePolicyGroup(context.Context, *PolicyGroup) (*PolicyGroup, error)
-	// TODO: alternate binding? "/v1alpha1/policy-groups/{policy_group}/policy-assignments"
 	CreatePolicyAssignment(context.Context, *PolicyAssignment) (*PolicyAssignment, error)
 	GetPolicyAssignment(context.Context, *GetPolicyAssignmentRequest) (*PolicyAssignment, error)
 	UpdatePolicyAssignment(context.Context, *PolicyAssignment) (*PolicyAssignment, error)

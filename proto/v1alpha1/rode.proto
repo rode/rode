@@ -154,10 +154,8 @@ service Rode {
     };
   };
 
-  // TODO: alternate binding? "/v1alpha1/policy-groups/{policy_group}/policy-assignments"
   rpc CreatePolicyAssignment(PolicyAssignment) returns (PolicyAssignment) {
     option (google.api.http) = {
-//      post: "/v1alpha1/policy-assignments"
       post: "/v1alpha1/policies/{policy_version_id}/assignments/{policy_group}"
       body: "*"
     };
@@ -166,7 +164,6 @@ service Rode {
 
   rpc GetPolicyAssignment(GetPolicyAssignmentRequest) returns (PolicyAssignment) {
     option (google.api.http) = {
-//      get: "/v1alpha1/policy-assignments/{id}"
       get: "/v1alpha1/{id=policies/*/assignments/*}"
     };
     option (google.api.method_signature) = "id";
@@ -174,8 +171,6 @@ service Rode {
 
   rpc UpdatePolicyAssignment(PolicyAssignment) returns (PolicyAssignment) {
     option (google.api.http) = {
-//      patch: "/v1alpha1/policy-assignments/{id}"
-//      patch: "/v1alpha1/policies/{policy_version_id}/assignments/{policy_group}"
       patch: "/v1alpha1/{id=policies/*/assignments/*}"
       body: "*"
     };
@@ -184,8 +179,6 @@ service Rode {
 
   rpc DeletePolicyAssignment(DeletePolicyAssignmentRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
-//      delete: "/v1alpha1/policy-assignments/{id}"
-//      delete: "/v1alpha1/policies/{policy_version_id}/assignments/{policy_group}"
       delete: "/v1alpha1/{id=policies/*/assignments/*}"
     };
     option (google.api.method_signature) = "id";
@@ -193,15 +186,14 @@ service Rode {
 
   rpc ListPolicyAssignments(ListPolicyAssignmentsRequest) returns (ListPolicyAssignmentsResponse) {
     option (google.api.http) = {
-//      get: "/v1alpha1/policy-assignments"
-      get: "/v1alpha1/policies/{policy_version_id}/assignments"
+      get: "/v1alpha1/policies/{policy_id}/assignments"
       additional_bindings: [
         {
           get: "/v1alpha1/policy-groups/{policy_group}/assignments"
         }
       ]
     };
-    option (google.api.method_signature) = "policy_version_id,policy_group";
+    option (google.api.method_signature) = "policy_id,policy_group";
   };
 }
 

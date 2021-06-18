@@ -297,7 +297,7 @@ Response for creating occurrences in batch.
 | ListPolicyGroups | [ListPolicyGroupsRequest](#rode.v1alpha1.ListPolicyGroupsRequest) | [ListPolicyGroupsResponse](#rode.v1alpha1.ListPolicyGroupsResponse) |  |
 | GetPolicyGroup | [GetPolicyGroupRequest](#rode.v1alpha1.GetPolicyGroupRequest) | [PolicyGroup](#rode.v1alpha1.PolicyGroup) |  |
 | UpdatePolicyGroup | [PolicyGroup](#rode.v1alpha1.PolicyGroup) | [PolicyGroup](#rode.v1alpha1.PolicyGroup) |  |
-| CreatePolicyAssignment | [PolicyAssignment](#rode.v1alpha1.PolicyAssignment) | [PolicyAssignment](#rode.v1alpha1.PolicyAssignment) | TODO: alternate binding? &#34;/v1alpha1/policy-groups/{policy_group}/policy-assignments&#34; |
+| CreatePolicyAssignment | [PolicyAssignment](#rode.v1alpha1.PolicyAssignment) | [PolicyAssignment](#rode.v1alpha1.PolicyAssignment) |  |
 | GetPolicyAssignment | [GetPolicyAssignmentRequest](#rode.v1alpha1.GetPolicyAssignmentRequest) | [PolicyAssignment](#rode.v1alpha1.PolicyAssignment) |  |
 | UpdatePolicyAssignment | [PolicyAssignment](#rode.v1alpha1.PolicyAssignment) | [PolicyAssignment](#rode.v1alpha1.PolicyAssignment) |  |
 | DeletePolicyAssignment | [DeletePolicyAssignmentRequest](#rode.v1alpha1.DeletePolicyAssignmentRequest) | [.google.protobuf.Empty](#google.protobuf.Empty) |  |
@@ -322,7 +322,7 @@ Response for creating occurrences in batch.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| id | [string](#string) |  | string policy_version_id = 1; string policy_group = 2; |
+| id | [string](#string) |  |  |
 
 
 
@@ -519,7 +519,7 @@ EvaluatePolicyInput is used as the input when evaluating a policy in OPA.
 | filter | [string](#string) |  |  |
 | page_size | [int32](#int32) |  |  |
 | page_token | [string](#string) |  |  |
-| policy_version_id | [string](#string) |  |  |
+| policy_id | [string](#string) |  |  |
 | policy_group | [string](#string) |  |  |
 
 
