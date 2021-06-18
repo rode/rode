@@ -228,13 +228,15 @@ message PolicyEvaluation {
 // PolicyAssignment represents a link between a policy and a policy group. Assignments can only be done against policy versions, to allow
 // for a safe rollout of new changes.
 message PolicyAssignment {
-  // Id uniquely identifies the policy assignment. It is also a path that can be used to retrieve, update or delete the assignment.
+  // Id uniquely identifies the policy assignment. It is also a path that can be used to retrieve, update or delete the assignment. Output only.
   string id = 1;
-  // PolicyVersionId is the unique identifier (UUID) of a PolicyEntity. The version must exist at the time of assignment.
+  // PolicyVersionId is the unique identifier (UUID) of a PolicyEntity. The version must exist at the time of assignment. Required.
   string policy_version_id = 2;
-  // PolicyGroup is corresponds to PolicyGroup.Name. The group must exist at the time of creation.
+  // PolicyGroup corresponds to PolicyGroup.Name. The group must exist at the time of creation and cannot be updated. Required.
   string policy_group = 3;
+  // Created is output only.
   google.protobuf.Timestamp created = 4;
+  // Updated is output only.
   google.protobuf.Timestamp updated = 5;
 }
 

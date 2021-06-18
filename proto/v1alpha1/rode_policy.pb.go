@@ -1433,14 +1433,16 @@ type PolicyAssignment struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	// Id uniquely identifies the policy assignment. It is also a path that can be used to retrieve, update or delete the assignment.
+	// Id uniquely identifies the policy assignment. It is also a path that can be used to retrieve, update or delete the assignment. Output only.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// PolicyVersionId is the unique identifier (UUID) of a PolicyEntity. The version must exist at the time of assignment.
+	// PolicyVersionId is the unique identifier (UUID) of a PolicyEntity. The version must exist at the time of assignment. Required.
 	PolicyVersionId string `protobuf:"bytes,2,opt,name=policy_version_id,json=policyVersionId,proto3" json:"policy_version_id,omitempty"`
-	// PolicyGroup is corresponds to PolicyGroup.Name. The group must exist at the time of creation.
-	PolicyGroup string               `protobuf:"bytes,3,opt,name=policy_group,json=policyGroup,proto3" json:"policy_group,omitempty"`
-	Created     *timestamp.Timestamp `protobuf:"bytes,4,opt,name=created,proto3" json:"created,omitempty"`
-	Updated     *timestamp.Timestamp `protobuf:"bytes,5,opt,name=updated,proto3" json:"updated,omitempty"`
+	// PolicyGroup corresponds to PolicyGroup.Name. The group must exist at the time of creation and cannot be updated. Required.
+	PolicyGroup string `protobuf:"bytes,3,opt,name=policy_group,json=policyGroup,proto3" json:"policy_group,omitempty"`
+	// Created is output only.
+	Created *timestamp.Timestamp `protobuf:"bytes,4,opt,name=created,proto3" json:"created,omitempty"`
+	// Updated is output only.
+	Updated *timestamp.Timestamp `protobuf:"bytes,5,opt,name=updated,proto3" json:"updated,omitempty"`
 }
 
 func (x *PolicyAssignment) Reset() {

@@ -641,11 +641,11 @@ for a safe rollout of new changes.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| id | [string](#string) |  | Id uniquely identifies the policy assignment. It is also a path that can be used to retrieve, update or delete the assignment. |
-| policy_version_id | [string](#string) |  | PolicyVersionId is the unique identifier (UUID) of a PolicyEntity. The version must exist at the time of assignment. |
-| policy_group | [string](#string) |  | PolicyGroup is corresponds to PolicyGroup.Name. The group must exist at the time of creation. |
-| created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
-| updated | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
+| id | [string](#string) |  | Id uniquely identifies the policy assignment. It is also a path that can be used to retrieve, update or delete the assignment. Output only. |
+| policy_version_id | [string](#string) |  | PolicyVersionId is the unique identifier (UUID) of a PolicyEntity. The version must exist at the time of assignment. Required. |
+| policy_group | [string](#string) |  | PolicyGroup corresponds to PolicyGroup.Name. The group must exist at the time of creation and cannot be updated. Required. |
+| created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  | Created is output only. |
+| updated | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  | Updated is output only. |
 
 
 
