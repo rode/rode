@@ -50,6 +50,7 @@ type RodeClient interface {
 	ListPolicyGroups(ctx context.Context, in *ListPolicyGroupsRequest, opts ...grpc.CallOption) (*ListPolicyGroupsResponse, error)
 	GetPolicyGroup(ctx context.Context, in *GetPolicyGroupRequest, opts ...grpc.CallOption) (*PolicyGroup, error)
 	UpdatePolicyGroup(ctx context.Context, in *PolicyGroup, opts ...grpc.CallOption) (*PolicyGroup, error)
+	DeletePolicyGroup(ctx context.Context, in *DeletePolicyGroupRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	CreatePolicyAssignment(ctx context.Context, in *PolicyAssignment, opts ...grpc.CallOption) (*PolicyAssignment, error)
 	GetPolicyAssignment(ctx context.Context, in *GetPolicyAssignmentRequest, opts ...grpc.CallOption) (*PolicyAssignment, error)
 	UpdatePolicyAssignment(ctx context.Context, in *PolicyAssignment, opts ...grpc.CallOption) (*PolicyAssignment, error)
@@ -245,6 +246,15 @@ func (c *rodeClient) UpdatePolicyGroup(ctx context.Context, in *PolicyGroup, opt
 	return out, nil
 }
 
+func (c *rodeClient) DeletePolicyGroup(ctx context.Context, in *DeletePolicyGroupRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
+	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/DeletePolicyGroup", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *rodeClient) CreatePolicyAssignment(ctx context.Context, in *PolicyAssignment, opts ...grpc.CallOption) (*PolicyAssignment, error) {
 	out := new(PolicyAssignment)
 	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/CreatePolicyAssignment", in, out, opts...)
@@ -324,6 +334,7 @@ type RodeServer interface {
 	ListPolicyGroups(context.Context, *ListPolicyGroupsRequest) (*ListPolicyGroupsResponse, error)
 	GetPolicyGroup(context.Context, *GetPolicyGroupRequest) (*PolicyGroup, error)
 	UpdatePolicyGroup(context.Context, *PolicyGroup) (*PolicyGroup, error)
+	DeletePolicyGroup(context.Context, *DeletePolicyGroupRequest) (*empty.Empty, error)
 	CreatePolicyAssignment(context.Context, *PolicyAssignment) (*PolicyAssignment, error)
 	GetPolicyAssignment(context.Context, *GetPolicyAssignmentRequest) (*PolicyAssignment, error)
 	UpdatePolicyAssignment(context.Context, *PolicyAssignment) (*PolicyAssignment, error)
@@ -394,6 +405,9 @@ func (UnimplementedRodeServer) GetPolicyGroup(context.Context, *GetPolicyGroupRe
 }
 func (UnimplementedRodeServer) UpdatePolicyGroup(context.Context, *PolicyGroup) (*PolicyGroup, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdatePolicyGroup not implemented")
+}
+func (UnimplementedRodeServer) DeletePolicyGroup(context.Context, *DeletePolicyGroupRequest) (*empty.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeletePolicyGroup not implemented")
 }
 func (UnimplementedRodeServer) CreatePolicyAssignment(context.Context, *PolicyAssignment) (*PolicyAssignment, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreatePolicyAssignment not implemented")
@@ -782,6 +796,24 @@ func _Rode_UpdatePolicyGroup_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Rode_DeletePolicyGroup_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeletePolicyGroupRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RodeServer).DeletePolicyGroup(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/rode.v1alpha1.Rode/DeletePolicyGroup",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RodeServer).DeletePolicyGroup(ctx, req.(*DeletePolicyGroupRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Rode_CreatePolicyAssignment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PolicyAssignment)
 	if err := dec(in); err != nil {
@@ -958,6 +990,10 @@ var Rode_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdatePolicyGroup",
 			Handler:    _Rode_UpdatePolicyGroup_Handler,
+		},
+		{
+			MethodName: "DeletePolicyGroup",
+			Handler:    _Rode_DeletePolicyGroup_Handler,
 		},
 		{
 			MethodName: "CreatePolicyAssignment",
