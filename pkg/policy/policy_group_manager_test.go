@@ -592,6 +592,23 @@ var _ = Describe("PolicyGroupManager", func() {
 				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
 			})
 		})
+
+		When("the policy group has been deleted", func() {
+			BeforeEach(func() {
+				existingPolicyGroup.Deleted = true
+				policyGroupJson, _ := protojson.Marshal(existingPolicyGroup)
+				getPolicyGroupResponse.Source = policyGroupJson
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.FailedPrecondition))
+			})
+
+			It("should not allow the update", func() {
+				Expect(esClient.UpdateCallCount()).To(Equal(0))
+			})
+		})
 	})
 
 	Context("DeletePolicyGroup", func() {

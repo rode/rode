@@ -198,6 +198,11 @@ func (m *policyGroupManager) UpdatePolicyGroup(ctx context.Context, policyGroup 
 	if err != nil {
 		return nil, err
 	}
+
+	if currentPolicyGroup.Deleted {
+		return nil, createErrorWithCode(log, "cannot update a deleted policy group", nil, codes.FailedPrecondition)
+	}
+
 	currentPolicyGroup.Description = policyGroup.Description // only description is editable
 	currentPolicyGroup.Updated = timestamppb.Now()
 
