@@ -210,6 +210,7 @@ var _ = Describe("PolicyManager", func() {
 				Expect(actualPolicy.Updated.IsValid()).To(BeTrue())
 
 				Expect(actualPolicy.Policy).NotTo(BeNil())
+				Expect(actualPolicy.Policy.Id).To(Equal(policyVersionId))
 				Expect(actualPolicy.Policy.RegoContent).To(Equal(policyEntity.RegoContent))
 				Expect(actualPolicy.Policy.SourcePath).To(Equal(policyEntity.SourcePath))
 				Expect(actualPolicy.Policy.Created).To(Equal(actualPolicy.Created))
@@ -384,6 +385,7 @@ var _ = Describe("PolicyManager", func() {
 			getPolicyError = nil
 
 			expectedPolicyEntity = createRandomPolicyEntity(goodPolicy, version)
+			expectedPolicyEntity.Id = policyVersionId
 			policyEntityJson, _ := protojson.Marshal(expectedPolicyEntity)
 			getPolicyEntityResponse = &esutil.EsGetResponse{
 				Id:     policyVersionId,
@@ -436,6 +438,7 @@ var _ = Describe("PolicyManager", func() {
 				Expect(actualPolicy.CurrentVersion).To(Equal(version))
 
 				Expect(actualPolicy.Policy).NotTo(BeNil())
+				Expect(actualPolicy.Policy.Id).To(Equal(policyVersionId))
 				Expect(actualPolicy.Policy.Version).To(Equal(version))
 				Expect(actualPolicy.Policy.RegoContent).To(Equal(goodPolicy))
 			})
@@ -894,11 +897,12 @@ var _ = Describe("PolicyManager", func() {
 			for i := 0; i < versionCount; i++ {
 				version := fake.Uint32()
 				policy := createRandomPolicyEntity(minimalPolicy, version)
+				policy.Id = fmt.Sprintf("%s.%d", policyId, version)
 
 				policyVersions = append(policyVersions, policy)
 				versionJson, _ := protojson.Marshal(policy)
 				searchResponse.Hits.Hits = append(searchResponse.Hits.Hits, &esutil.EsSearchResponseHit{
-					ID:     fmt.Sprintf("%s.%d", policyId, version),
+					ID:     policy.Id,
 					Source: versionJson,
 				})
 			}
@@ -1208,6 +1212,7 @@ var _ = Describe("PolicyManager", func() {
 			Expect(actualResponse.CurrentVersion).To(Equal(newVersion))
 			Expect(actualResponse.Updated).NotTo(Equal(currentPolicy.Updated))
 
+			Expect(actualResponse.Policy.Id).To(Equal(fmt.Sprintf("%s.%d", policyId, newVersion)))
 			Expect(actualResponse.Policy.Version).To(Equal(newVersion))
 			Expect(actualResponse.Policy.RegoContent).To(Equal(minimalPolicy))
 			Expect(actualResponse.Policy.Created.IsValid()).To(BeTrue())

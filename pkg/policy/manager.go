@@ -18,10 +18,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/rode/rode/pkg/constants"
-	"github.com/rode/rode/pkg/grafeas"
 	"strconv"
 	"strings"
+
+	"github.com/rode/rode/pkg/constants"
+	"github.com/rode/rode/pkg/grafeas"
 
 	"github.com/google/uuid"
 	"github.com/open-policy-agent/opa/ast"
@@ -40,7 +41,6 @@ import (
 )
 
 const (
-	policiesDocumentKind      = "policies"
 	policyDocumentJoinField   = "join"
 	policyRelationName        = "policy"
 	policyVersionRelationName = "version"
@@ -119,6 +119,7 @@ func (m *manager) CreatePolicy(ctx context.Context, policy *pb.Policy) (*pb.Poli
 
 	policyVersion := policy.Policy
 	policy.Policy = nil // remove current policy
+	policyVersion.Id = policyVersionId
 	policyVersion.Version = version
 	policyVersion.Message = "Initial policy creation"
 	policyVersion.Created = currentTime
@@ -217,7 +218,6 @@ func (m *manager) GetPolicy(ctx context.Context, request *pb.GetPolicyRequest) (
 	if err != nil {
 		return nil, createError(log, "error unmarshalling policy version", err)
 	}
-
 	policy.Policy = &policyEntity
 
 	return policy, nil
@@ -340,7 +340,6 @@ func (m *manager) ListPolicies(ctx context.Context, request *pb.ListPoliciesRequ
 		if err != nil {
 			return nil, createError(log, "error unmarshalling policy entity", err)
 		}
-
 		policies[i].Policy = &entity
 	}
 
@@ -410,7 +409,6 @@ func (m *manager) ListPolicyVersions(ctx context.Context, request *pb.ListPolicy
 		if err := (protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(hit.Source, &policyVersion)); err != nil {
 			return nil, createError(log, "error unmarshalling policy version", err)
 		}
-
 		policyVersions = append(policyVersions, &policyVersion)
 	}
 
@@ -469,6 +467,7 @@ func (m *manager) UpdatePolicy(ctx context.Context, request *pb.UpdatePolicyRequ
 		}
 
 		currentPolicy.CurrentVersion = newVersion
+		policyVersion.Id = policyVersionId(policyId, newVersion)
 		policyVersion.Created = currentTime
 		policyVersion.Version = newVersion
 
@@ -479,7 +478,7 @@ func (m *manager) UpdatePolicy(ctx context.Context, request *pb.UpdatePolicyRequ
 		bulkItems = append(bulkItems, &esutil.BulkRequestItem{
 			Operation:  esutil.BULK_CREATE,
 			Message:    policyVersion,
-			DocumentId: policyVersionId(policyId, newVersion),
+			DocumentId: policyVersion.Id,
 			Join: &esutil.EsJoin{
 				Parent: policyId,
 				Field:  policyDocumentJoinField,
@@ -702,7 +701,7 @@ func (m *manager) validatePolicy(ctx context.Context, log *zap.Logger, policy *p
 }
 
 func (m *manager) policiesAlias() string {
-	return m.indexManager.AliasName(policiesDocumentKind, "")
+	return m.indexManager.AliasName(constants.PoliciesDocumentKind, "")
 }
 
 func (m *manager) incrementPolicyVersion(ctx context.Context, log *zap.Logger, policyId string) (uint32, error) {
