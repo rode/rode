@@ -28,6 +28,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -37,6 +38,7 @@ type PolicyGroupManager interface {
 	ListPolicyGroups(context.Context, *pb.ListPolicyGroupsRequest) (*pb.ListPolicyGroupsResponse, error)
 	GetPolicyGroup(context.Context, *pb.GetPolicyGroupRequest) (*pb.PolicyGroup, error)
 	UpdatePolicyGroup(context.Context, *pb.PolicyGroup) (*pb.PolicyGroup, error)
+	DeletePolicyGroup(context.Context, *pb.DeletePolicyGroupRequest) (*emptypb.Empty, error)
 }
 
 var policyGroupNamePattern = regexp.MustCompile("^[a-z0-9-_]+$")
@@ -102,11 +104,10 @@ func (m *policyGroupManager) ListPolicyGroups(ctx context.Context, request *pb.L
 	log := m.logger.Named("ListPolicyGroups")
 	log.Debug("received request")
 
-	searchRequest := &esutil.SearchRequest{
-		Index: m.policyGroupsAlias(),
-		Search: &esutil.EsSearch{
-			Sort: map[string]esutil.EsSortOrder{
-				"created": esutil.EsSortOrderDescending,
+	queries := filtering.Must{
+		&filtering.Query{
+			Term: &filtering.Term{
+				"deleted": "false",
 			},
 		},
 	}
@@ -117,7 +118,21 @@ func (m *policyGroupManager) ListPolicyGroups(ctx context.Context, request *pb.L
 			return nil, createError(log, "error creating filter query", err)
 		}
 
-		searchRequest.Search.Query = query
+		queries = append(queries, query)
+	}
+
+	searchRequest := &esutil.SearchRequest{
+		Index: m.policyGroupsAlias(),
+		Search: &esutil.EsSearch{
+			Query: &filtering.Query{
+				Bool: &filtering.Bool{
+					Must: &queries,
+				},
+			},
+			Sort: map[string]esutil.EsSortOrder{
+				"created": esutil.EsSortOrderDescending,
+			},
+		},
 	}
 
 	if request.PageSize != 0 {
@@ -183,6 +198,11 @@ func (m *policyGroupManager) UpdatePolicyGroup(ctx context.Context, policyGroup 
 	if err != nil {
 		return nil, err
 	}
+
+	if currentPolicyGroup.Deleted {
+		return nil, createErrorWithCode(log, "cannot update a deleted policy group", nil, codes.FailedPrecondition)
+	}
+
 	currentPolicyGroup.Description = policyGroup.Description // only description is editable
 	currentPolicyGroup.Updated = timestamppb.Now()
 
@@ -196,6 +216,28 @@ func (m *policyGroupManager) UpdatePolicyGroup(ctx context.Context, policyGroup 
 	}
 
 	return currentPolicyGroup, nil
+}
+
+func (m *policyGroupManager) DeletePolicyGroup(ctx context.Context, request *pb.DeletePolicyGroupRequest) (*emptypb.Empty, error) {
+	log := m.logger.Named("DeletePolicyGroup").With(zap.String("name", request.Name))
+	log.Debug("received request")
+	currentPolicyGroup, err := m.GetPolicyGroup(ctx, &pb.GetPolicyGroupRequest{Name: request.Name})
+	if err != nil {
+		return nil, err
+	}
+
+	currentPolicyGroup.Deleted = true
+
+	if _, err = m.esClient.Update(ctx, &esutil.UpdateRequest{
+		Index:      m.policyGroupsAlias(),
+		DocumentId: request.Name,
+		Refresh:    m.esConfig.Refresh.String(),
+		Message:    currentPolicyGroup,
+	}); err != nil {
+		return nil, createError(log, "error marking policy group as deleted", err)
+	}
+
+	return &emptypb.Empty{}, nil
 }
 
 func (m *policyGroupManager) policyGroupsAlias() string {

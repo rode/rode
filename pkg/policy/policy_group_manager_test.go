@@ -239,7 +239,7 @@ var _ = Describe("PolicyGroupManager", func() {
 			actualResponse, actualError = manager.ListPolicyGroups(ctx, request)
 		})
 
-		It("should issue a search for all policy groups", func() {
+		It("should issue a search for all undeleted policy groups", func() {
 			Expect(filterer.ParseExpressionCallCount()).To(Equal(0))
 			Expect(esClient.SearchCallCount()).To(Equal(1))
 
@@ -247,8 +247,11 @@ var _ = Describe("PolicyGroupManager", func() {
 
 			Expect(actualRequest.Index).To(Equal(expectedPolicyGroupsAlias))
 			Expect(actualRequest.Pagination).To(BeNil())
-			Expect(actualRequest.Search.Query).To(BeNil())
 			Expect(actualRequest.Search.Sort["created"]).To(Equal(esutil.EsSortOrderDescending))
+			Expect(*actualRequest.Search.Query.Bool.Must).To(HaveLen(1))
+			actualQuery := (*actualRequest.Search.Query.Bool.Must)[0].(*filtering.Query)
+
+			Expect((*actualQuery.Term)["deleted"]).To(Equal("false"))
 		})
 
 		It("should return the policy groups", func() {
@@ -286,7 +289,8 @@ var _ = Describe("PolicyGroupManager", func() {
 
 				_, actualRequest := esClient.SearchArgsForCall(0)
 
-				Expect(actualRequest.Search.Query).To(Equal(expectedFilterQuery))
+				Expect(*actualRequest.Search.Query.Bool.Must).To(HaveLen(2))
+				Expect((*actualRequest.Search.Query.Bool.Must)[1]).To(Equal(expectedFilterQuery))
 			})
 
 			When("an error occurs parsing the filter expression", func() {
@@ -588,6 +592,108 @@ var _ = Describe("PolicyGroupManager", func() {
 				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
 			})
 		})
+
+		When("the policy group has been deleted", func() {
+			BeforeEach(func() {
+				existingPolicyGroup.Deleted = true
+				policyGroupJson, _ := protojson.Marshal(existingPolicyGroup)
+				getPolicyGroupResponse.Source = policyGroupJson
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.FailedPrecondition))
+			})
+
+			It("should not allow the update", func() {
+				Expect(esClient.UpdateCallCount()).To(Equal(0))
+			})
+		})
+	})
+
+	Context("DeletePolicyGroup", func() {
+		var (
+			policyGroupName     string
+			existingPolicyGroup *pb.PolicyGroup
+
+			actualError error
+
+			getPolicyGroupResponse *esutil.EsGetResponse
+			getPolicyGroupError    error
+			updatePolicyGroupError error
+		)
+
+		BeforeEach(func() {
+			policyGroupName = fake.Word()
+			existingPolicyGroup = randomPolicyGroup(policyGroupName)
+
+			policyGroupJson, _ := protojson.Marshal(existingPolicyGroup)
+			getPolicyGroupResponse = &esutil.EsGetResponse{
+				Id:     policyGroupName,
+				Found:  true,
+				Source: policyGroupJson,
+			}
+			getPolicyGroupError = nil
+			updatePolicyGroupError = nil
+		})
+
+		JustBeforeEach(func() {
+			esClient.GetReturns(getPolicyGroupResponse, getPolicyGroupError)
+			esClient.UpdateReturns(nil, updatePolicyGroupError)
+
+			_, actualError = manager.DeletePolicyGroup(ctx, &pb.DeletePolicyGroupRequest{Name: policyGroupName})
+		})
+
+		It("should find the current policy group", func() {
+			Expect(esClient.GetCallCount()).To(Equal(1))
+
+			_, actualRequest := esClient.GetArgsForCall(0)
+
+			Expect(actualRequest.DocumentId).To(Equal(policyGroupName))
+			Expect(actualRequest.Index).To(Equal(expectedPolicyGroupsAlias))
+		})
+
+		It("should set the deleted flag to true", func() {
+			existingPolicyGroup.Deleted = true
+			Expect(esClient.UpdateCallCount()).To(Equal(1))
+
+			_, actualRequest := esClient.UpdateArgsForCall(0)
+
+			Expect(actualRequest.Index).To(Equal(expectedPolicyGroupsAlias))
+			Expect(actualRequest.DocumentId).To(Equal(policyGroupName))
+			Expect(actualRequest.Refresh).To(Equal(esConfig.Refresh.String()))
+			Expect(actualRequest.Message).To(Equal(existingPolicyGroup))
+		})
+
+		It("should not return an error", func() {
+			Expect(actualError).NotTo(HaveOccurred())
+		})
+
+		When("an error occurs fetching the existing policy group", func() {
+			BeforeEach(func() {
+				getPolicyGroupError = errors.New("get error")
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+
+			It("should not delete the policy group", func() {
+				Expect(esClient.UpdateCallCount()).To(Equal(0))
+			})
+		})
+
+		When("an error occurs deleting the policy group", func() {
+			BeforeEach(func() {
+				updatePolicyGroupError = errors.New("update error")
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+		})
 	})
 })
 
@@ -595,6 +701,7 @@ func randomPolicyGroup(name string) *pb.PolicyGroup {
 	return &pb.PolicyGroup{
 		Name:        name,
 		Description: fake.Sentence(5),
+		Deleted:     false,
 		Created:     timestamppb.New(fake.Date()),
 		Updated:     timestamppb.New(fake.Date()),
 	}

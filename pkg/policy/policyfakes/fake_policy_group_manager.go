@@ -7,6 +7,7 @@ import (
 
 	"github.com/rode/rode/pkg/policy"
 	"github.com/rode/rode/proto/v1alpha1"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type FakePolicyGroupManager struct {
@@ -22,6 +23,20 @@ type FakePolicyGroupManager struct {
 	}
 	createPolicyGroupReturnsOnCall map[int]struct {
 		result1 *v1alpha1.PolicyGroup
+		result2 error
+	}
+	DeletePolicyGroupStub        func(context.Context, *v1alpha1.DeletePolicyGroupRequest) (*emptypb.Empty, error)
+	deletePolicyGroupMutex       sync.RWMutex
+	deletePolicyGroupArgsForCall []struct {
+		arg1 context.Context
+		arg2 *v1alpha1.DeletePolicyGroupRequest
+	}
+	deletePolicyGroupReturns struct {
+		result1 *emptypb.Empty
+		result2 error
+	}
+	deletePolicyGroupReturnsOnCall map[int]struct {
+		result1 *emptypb.Empty
 		result2 error
 	}
 	GetPolicyGroupStub        func(context.Context, *v1alpha1.GetPolicyGroupRequest) (*v1alpha1.PolicyGroup, error)
@@ -131,6 +146,71 @@ func (fake *FakePolicyGroupManager) CreatePolicyGroupReturnsOnCall(i int, result
 	}
 	fake.createPolicyGroupReturnsOnCall[i] = struct {
 		result1 *v1alpha1.PolicyGroup
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakePolicyGroupManager) DeletePolicyGroup(arg1 context.Context, arg2 *v1alpha1.DeletePolicyGroupRequest) (*emptypb.Empty, error) {
+	fake.deletePolicyGroupMutex.Lock()
+	ret, specificReturn := fake.deletePolicyGroupReturnsOnCall[len(fake.deletePolicyGroupArgsForCall)]
+	fake.deletePolicyGroupArgsForCall = append(fake.deletePolicyGroupArgsForCall, struct {
+		arg1 context.Context
+		arg2 *v1alpha1.DeletePolicyGroupRequest
+	}{arg1, arg2})
+	stub := fake.DeletePolicyGroupStub
+	fakeReturns := fake.deletePolicyGroupReturns
+	fake.recordInvocation("DeletePolicyGroup", []interface{}{arg1, arg2})
+	fake.deletePolicyGroupMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakePolicyGroupManager) DeletePolicyGroupCallCount() int {
+	fake.deletePolicyGroupMutex.RLock()
+	defer fake.deletePolicyGroupMutex.RUnlock()
+	return len(fake.deletePolicyGroupArgsForCall)
+}
+
+func (fake *FakePolicyGroupManager) DeletePolicyGroupCalls(stub func(context.Context, *v1alpha1.DeletePolicyGroupRequest) (*emptypb.Empty, error)) {
+	fake.deletePolicyGroupMutex.Lock()
+	defer fake.deletePolicyGroupMutex.Unlock()
+	fake.DeletePolicyGroupStub = stub
+}
+
+func (fake *FakePolicyGroupManager) DeletePolicyGroupArgsForCall(i int) (context.Context, *v1alpha1.DeletePolicyGroupRequest) {
+	fake.deletePolicyGroupMutex.RLock()
+	defer fake.deletePolicyGroupMutex.RUnlock()
+	argsForCall := fake.deletePolicyGroupArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakePolicyGroupManager) DeletePolicyGroupReturns(result1 *emptypb.Empty, result2 error) {
+	fake.deletePolicyGroupMutex.Lock()
+	defer fake.deletePolicyGroupMutex.Unlock()
+	fake.DeletePolicyGroupStub = nil
+	fake.deletePolicyGroupReturns = struct {
+		result1 *emptypb.Empty
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakePolicyGroupManager) DeletePolicyGroupReturnsOnCall(i int, result1 *emptypb.Empty, result2 error) {
+	fake.deletePolicyGroupMutex.Lock()
+	defer fake.deletePolicyGroupMutex.Unlock()
+	fake.DeletePolicyGroupStub = nil
+	if fake.deletePolicyGroupReturnsOnCall == nil {
+		fake.deletePolicyGroupReturnsOnCall = make(map[int]struct {
+			result1 *emptypb.Empty
+			result2 error
+		})
+	}
+	fake.deletePolicyGroupReturnsOnCall[i] = struct {
+		result1 *emptypb.Empty
 		result2 error
 	}{result1, result2}
 }
@@ -335,6 +415,8 @@ func (fake *FakePolicyGroupManager) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.createPolicyGroupMutex.RLock()
 	defer fake.createPolicyGroupMutex.RUnlock()
+	fake.deletePolicyGroupMutex.RLock()
+	defer fake.deletePolicyGroupMutex.RUnlock()
 	fake.getPolicyGroupMutex.RLock()
 	defer fake.getPolicyGroupMutex.RUnlock()
 	fake.listPolicyGroupsMutex.RLock()

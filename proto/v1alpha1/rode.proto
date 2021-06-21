@@ -154,6 +154,12 @@ service Rode {
     };
   };
 
+  rpc DeletePolicyGroup(DeletePolicyGroupRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/v1alpha1/policy-groups/{name}"
+    };
+  };
+
   rpc CreatePolicyAssignment(PolicyAssignment) returns (PolicyAssignment) {
     option (google.api.http) = {
       post: "/v1alpha1/policies/{policy_version_id}/assignments/{policy_group}"

@@ -186,9 +186,17 @@ message PolicyGroup {
   string description = 2;
   google.protobuf.Timestamp created = 3;
   google.protobuf.Timestamp updated = 4;
+  // Deleted is the flag for a soft delete. PolicyGroups aren't permanently deleted so that enforcement isn't adversely impacted.
+  // Output only, set by the DeletePolicyGroupRPC
+  bool deleted = 5;
 }
 
 message GetPolicyGroupRequest {
+  // Name is the unique identifier for the PolicyGroup.
+  string name = 1;
+}
+
+message DeletePolicyGroupRequest {
   // Name is the unique identifier for the PolicyGroup.
   string name = 1;
 }

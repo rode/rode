@@ -21,6 +21,7 @@
   
 - [proto/v1alpha1/rode_policy.proto](#proto/v1alpha1/rode_policy.proto)
     - [DeletePolicyAssignmentRequest](#rode.v1alpha1.DeletePolicyAssignmentRequest)
+    - [DeletePolicyGroupRequest](#rode.v1alpha1.DeletePolicyGroupRequest)
     - [DeletePolicyRequest](#rode.v1alpha1.DeletePolicyRequest)
     - [EvaluatePolicyInput](#rode.v1alpha1.EvaluatePolicyInput)
     - [EvaluatePolicyRequest](#rode.v1alpha1.EvaluatePolicyRequest)
@@ -297,6 +298,7 @@ Response for creating occurrences in batch.
 | ListPolicyGroups | [ListPolicyGroupsRequest](#rode.v1alpha1.ListPolicyGroupsRequest) | [ListPolicyGroupsResponse](#rode.v1alpha1.ListPolicyGroupsResponse) |  |
 | GetPolicyGroup | [GetPolicyGroupRequest](#rode.v1alpha1.GetPolicyGroupRequest) | [PolicyGroup](#rode.v1alpha1.PolicyGroup) |  |
 | UpdatePolicyGroup | [PolicyGroup](#rode.v1alpha1.PolicyGroup) | [PolicyGroup](#rode.v1alpha1.PolicyGroup) |  |
+| DeletePolicyGroup | [DeletePolicyGroupRequest](#rode.v1alpha1.DeletePolicyGroupRequest) | [.google.protobuf.Empty](#google.protobuf.Empty) |  |
 | CreatePolicyAssignment | [PolicyAssignment](#rode.v1alpha1.PolicyAssignment) | [PolicyAssignment](#rode.v1alpha1.PolicyAssignment) |  |
 | GetPolicyAssignment | [GetPolicyAssignmentRequest](#rode.v1alpha1.GetPolicyAssignmentRequest) | [PolicyAssignment](#rode.v1alpha1.PolicyAssignment) |  |
 | UpdatePolicyAssignment | [PolicyAssignment](#rode.v1alpha1.PolicyAssignment) | [PolicyAssignment](#rode.v1alpha1.PolicyAssignment) |  |
@@ -323,6 +325,21 @@ Response for creating occurrences in batch.
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | id | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.DeletePolicyGroupRequest"></a>
+
+### DeletePolicyGroupRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| name | [string](#string) |  | Name is the unique identifier for the PolicyGroup. |
 
 
 
@@ -706,6 +723,7 @@ policies around a certain compliance framework (e.g., PCI).
 | description | [string](#string) |  | Description is a brief summary of the intended use for the PolicyGroup. |
 | created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
 | updated | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
+| deleted | [bool](#bool) |  | Deleted is the flag for a soft delete. PolicyGroups aren&#39;t permanently deleted so that enforcement isn&#39;t adversely impacted. Output only, set by the DeletePolicyGroupRPC |
 
 
 
