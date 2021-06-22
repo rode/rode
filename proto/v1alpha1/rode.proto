@@ -23,6 +23,7 @@ import "google/api/client.proto";
 import "google/api/field_behavior.proto";
 import "proto/v1alpha1/rode_policy.proto";
 import "proto/v1alpha1/rode_resource.proto";
+import "proto/v1alpha1/rode_evaluation.proto";
 import "proto/v1beta1/grafeas.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/field_mask.proto";
@@ -201,6 +202,26 @@ service Rode {
     };
     option (google.api.method_signature) = "policy_id,policy_group";
   };
+
+  rpc EvaluateResource(EvaluateResourceRequest) returns (ResourceEvaluationResult) {
+    option (google.api.http) = {
+      post: "/v1alpha1/resource-evaluations"
+      body: "*"
+    };
+  }
+
+  rpc GetResourceEvaluation(GetResourceEvaluationRequest) returns (ResourceEvaluationResult) {
+    option (google.api.http) = {
+      get: "/v1alpha1/resource-evaluations/{id}"
+    };
+    option (google.api.method_signature) = "id";
+  }
+
+  rpc ListResourceEvaluations(ListResourceEvaluationsRequest) returns (ListResourceEvaluationsResponse) {
+    option (google.api.http) = {
+      get: "/v1alpha1/resource-evaluations"
+    };
+  }
 }
 
 // Request to create occurrences in batch.
