@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/rode/rode/pkg/evaluation"
 	"log"
 	"net"
 	"net/http"
@@ -118,9 +119,10 @@ func main() {
 
 	grafeasExtensions := grafeas.NewExtensions(logger.Named("GrafeasExtensions"), grafeasClientCommon)
 	resourceManager := resource.NewManager(logger.Named("Resource Manager"), esutilClient, c.Elasticsearch, indexManager, filterer)
-	policyManager := policy.NewManager(logger.Named("PolicyManager"), esutilClient, c.Elasticsearch, indexManager, filterer, opaClient, grafeasExtensions)
+	policyManager := policy.NewManager(logger.Named("PolicyManager"), esutilClient, c.Elasticsearch, indexManager, filterer)
 	policyGroupManager := policy.NewPolicyGroupManager(logger.Named("PolicyGroupManager"), esutilClient, c.Elasticsearch, indexManager, filterer)
 	policyAssignmentManager := policy.NewAssignmentManager(logger.Named("PolicyAssignmentManager"), esutilClient, c.Elasticsearch, indexManager, filterer)
+	evaluationManager := evaluation.NewManager(logger.Named("EvaluationManager"), esutilClient, policyManager, policyGroupManager, policyAssignmentManager, grafeasExtensions, opaClient, resourceManager)
 	rodeServer, err := server.NewRodeServer(
 		logger.Named("rode"),
 		grafeasClientCommon,
@@ -131,6 +133,7 @@ func main() {
 		policyManager,
 		policyGroupManager,
 		policyAssignmentManager,
+		evaluationManager,
 	)
 	if err != nil {
 		logger.Fatal("failed to create Rode server", zap.Error(err))

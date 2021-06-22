@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/rode/rode/pkg/evaluation"
 	"strings"
 
 	"github.com/rode/rode/pkg/constants"
@@ -49,6 +50,7 @@ func NewRodeServer(
 	policyManager policy.Manager,
 	policyGroupManager policy.PolicyGroupManager,
 	policyAssignmentManager policy.AssignmentManager,
+	evaluationManager evaluation.Manager,
 ) (pb.RodeServer, error) {
 	rodeServer := &rodeServer{
 		logger,
@@ -60,6 +62,7 @@ func NewRodeServer(
 		policyManager,
 		policyGroupManager,
 		policyAssignmentManager,
+		evaluationManager,
 	}
 
 	if err := rodeServer.initialize(context.Background()); err != nil {
@@ -79,6 +82,7 @@ type rodeServer struct {
 	policy.Manager
 	policy.PolicyGroupManager
 	policy.AssignmentManager
+	evaluation.EvaluationManager
 }
 
 func (r *rodeServer) BatchCreateOccurrences(ctx context.Context, occurrenceRequest *pb.BatchCreateOccurrencesRequest) (*pb.BatchCreateOccurrencesResponse, error) {

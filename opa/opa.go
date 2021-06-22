@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	pb "github.com/rode/rode/proto/v1alpha1"
 	"io"
 	"net/http"
 	"regexp"
@@ -57,18 +58,8 @@ type EvaluatePolicyResponse struct {
 
 // EvaluatePolicyResult OPA evaluate policy result
 type EvaluatePolicyResult struct {
-	Pass       bool                       `json:"pass"`
-	Violations []*EvaluatePolicyViolation `json:"violations"`
-}
-
-// EvaluatePolicyViolation OPA evaulate policy violation
-type EvaluatePolicyViolation struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Message     string `json:"message"`
-	Link        string `json:"link"`
-	Pass        bool   `json:"pass"`
+	Pass       bool                          `json:"pass"`
+	Violations []*pb.EvaluatePolicyViolation `json:"violations"`
 }
 
 // PolicyViolation Rego rule conditions
@@ -126,7 +117,7 @@ func (opa *client) loadPolicy(policy string, policyData string) error {
 	}
 	response, err := opa.httpClient.Do(req)
 	if err != nil {
-		log.Error("load policy error", zap.Error(err), zap.String("input", string(policyData)))
+		log.Error("load policy error", zap.Error(err), zap.String("input", policyData))
 		return fmt.Errorf("failed to load the policy in opa")
 	}
 
@@ -139,11 +130,11 @@ func (opa *client) loadPolicy(policy string, policyData string) error {
 	return nil
 }
 
-// EvaluatePolicy evalutes OPA policy agains provided input
+// EvaluatePolicy evaluates OPA policy against provided input
 func (opa *client) EvaluatePolicy(policy string, input []byte) (*EvaluatePolicyResponse, error) {
 	log := opa.logger.Named("Evalute Policy")
 
-	request, err := json.Marshal(&EvalutePolicyRequest{Input: json.RawMessage(input)})
+	request, err := json.Marshal(&EvalutePolicyRequest{Input: input})
 	if err != nil {
 		log.Error("failed to encode OPA input", zap.Error(err), zap.String("input", string(input)))
 		return nil, fmt.Errorf("failed to encode OPA input: %s", err)
