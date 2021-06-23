@@ -4,8 +4,31 @@ type Permission string
 type Role string
 
 var (
-	RoleAnonymous           Role = "Anonymous"
-	RolePolicyAdministrator Role = "Policy Administrator"
+	RoleAnonymous            Role = "Anonymous"
+	RoleEnforcer             Role = "Enforcer"
+	RoleCollector            Role = "Collector"
+	RoleApplicationDeveloper Role = "Application Developer"
+	RolePolicyDeveloper      Role = "Policy Developer"
+	RolePolicyAdministrator  Role = "Policy Administrator"
+	RoleAdministrator        Role = "Administrator"
+
+	PermissionCollectorRegister      Permission = "rode.collector.register"
+	PermissionEvaluationResultRead   Permission = "rode.evaluationResult.read"
+	PermissionOccurrenceRead         Permission = "rode.occurrence.read"
+	PermissionOccurrenceWrite        Permission = "rode.occurrence.write"
+	PermissionPolicyDelete           Permission = "rode.policy.delete"
+	PermissionPolicyEvaluate         Permission = "rode.policy.evaluate"
+	PermissionPolicyRead             Permission = "rode.policy.read"
+	PermissionPolicyValidate         Permission = "rode.policy.validate"
+	PermissionPolicyWrite            Permission = "rode.policy.write"
+	PermissionPolicyAssignmentDelete Permission = "rode.policyAssignment.delete"
+	PermissionPolicyAssignmentRead   Permission = "rode.policyAssignment.read"
+	PermissionPolicyAssignmentWrite  Permission = "rode.policyAssignment.write"
+	PermissionPolicyGroupDelete      Permission = "rode.policyGroup.delete"
+	PermissionPolicyGroupRead        Permission = "rode.policyGroup.read"
+	PermissionPolicyGroupWrite       Permission = "rode.policyGroup.write"
+	PermissionResourceEvaluate       Permission = "rode.resource.evaluate"
+	PermissionResourceRead           Permission = "rode.resource.read"
 )
 
 type RoleRegistry interface {
@@ -21,34 +44,79 @@ func NewRoleRegistry() RoleRegistry {
 	return &roleRegistry{
 		registry: map[Role][]Permission{
 			RoleAnonymous: {
-				"rode.occurrence.read",
-				"rode.resource.read",
-				"rode.policy.read",
-				"rode.policyGroup.read",
-				"rode.policyAssignment.read",
-				"rode.evaluationResult.read",
+				PermissionEvaluationResultRead,
+				PermissionOccurrenceRead,
+				PermissionPolicyAssignmentRead,
+				PermissionPolicyGroupRead,
+				PermissionPolicyRead,
+				PermissionResourceRead,
+			},
+			RoleEnforcer: {
+				PermissionEvaluationResultRead,
+				PermissionPolicyGroupRead,
+				PermissionResourceEvaluate,
+				PermissionResourceRead,
+			},
+			RoleCollector: {
+				PermissionCollectorRegister,
+				PermissionOccurrenceRead,
+				PermissionOccurrenceWrite,
+			},
+			RoleApplicationDeveloper: {
+				PermissionOccurrenceRead,
+				PermissionPolicyAssignmentRead,
+				PermissionPolicyEvaluate,
+				PermissionPolicyGroupRead,
+				PermissionPolicyRead,
+				PermissionPolicyValidate,
+				PermissionResourceRead,
+			},
+			RolePolicyDeveloper: {
+				PermissionEvaluationResultRead,
+				PermissionOccurrenceRead,
+				PermissionPolicyAssignmentRead,
+				PermissionPolicyEvaluate,
+				PermissionPolicyGroupRead,
+				PermissionPolicyRead,
+				PermissionPolicyValidate,
+				PermissionPolicyWrite,
+				PermissionResourceEvaluate,
+				PermissionResourceRead,
 			},
 			RolePolicyAdministrator: {
-				"rode.occurrence.read",
-
-				"rode.resource.read",
-				"rode.resource.evaluate",
-
-				"rode.policy.read",
-				"rode.policy.write",
-				"rode.policy.delete",
-				"rode.policy.evaluate",
-				"rode.policy.validate",
-
-				"rode.policyGroup.read",
-				"rode.policyGroup.write",
-				"rode.policyGroup.delete",
-
-				"rode.policyAssignment.read",
-				"rode.policyAssignment.write",
-				"rode.policyAssignment.delete",
-
-				"rode.evaluationResult.read",
+				PermissionEvaluationResultRead,
+				PermissionOccurrenceRead,
+				PermissionPolicyAssignmentDelete,
+				PermissionPolicyAssignmentRead,
+				PermissionPolicyAssignmentWrite,
+				PermissionPolicyDelete,
+				PermissionPolicyEvaluate,
+				PermissionPolicyGroupDelete,
+				PermissionPolicyGroupRead,
+				PermissionPolicyGroupWrite,
+				PermissionPolicyRead,
+				PermissionPolicyValidate,
+				PermissionPolicyWrite,
+				PermissionResourceEvaluate,
+				PermissionResourceRead,
+			},
+			RoleAdministrator: {
+				PermissionEvaluationResultRead,
+				PermissionOccurrenceRead,
+				PermissionPolicyAssignmentDelete,
+				PermissionPolicyAssignmentRead,
+				PermissionPolicyAssignmentWrite,
+				PermissionPolicyDelete,
+				PermissionPolicyEvaluate,
+				PermissionPolicyGroupDelete,
+				PermissionPolicyGroupRead,
+				PermissionPolicyGroupWrite,
+				PermissionPolicyRead,
+				PermissionPolicyValidate,
+				PermissionPolicyWrite,
+				PermissionResourceEvaluate,
+				PermissionResourceRead,
+				PermissionCollectorRegister,
 			},
 		},
 	}
