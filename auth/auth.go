@@ -95,7 +95,7 @@ func (a *authenticator) jwt(ctx context.Context) (context.Context, error) {
 	}
 	fmt.Printf("what we've got?: %T\n", gabs.Wrap(claims).Path("resource_access.rode.roles").Data())
 
-	allRoles, ok := gabs.Wrap(claims).Path("resource_access.rode.roles").Data().([]interface{})
+	allRoles, ok := gabs.Wrap(claims).Path(a.authConfig.JWT.RoleClaimPath).Data().([]interface{})
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "missing roles claim")
 	}
