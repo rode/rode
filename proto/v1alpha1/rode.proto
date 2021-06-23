@@ -23,6 +23,7 @@ import "google/api/client.proto";
 import "google/api/field_behavior.proto";
 import "proto/v1alpha1/rode_policy.proto";
 import "proto/v1alpha1/rode_resource.proto";
+import "proto/v1alpha1/auth.proto";
 import "proto/v1beta1/grafeas.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/field_mask.proto";
@@ -34,6 +35,10 @@ service Rode {
       post: "/v1alpha1/occurrences:batchCreate"
       body: "*"
     };
+
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.occurrence.write"]
+    };
   }
   // Verify that an artifact satisfies a policy
   rpc EvaluatePolicy(EvaluatePolicyRequest) returns (EvaluatePolicyResponse) {
@@ -41,10 +46,18 @@ service Rode {
       post: "/v1alpha1/policies/{policy}:attest"
       body: "*"
     };
+
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.policy.evaluate"]
+    };
   }
   rpc ListResources(ListResourcesRequest) returns (ListResourcesResponse) {
     option (google.api.http) = {
       get: "/v1alpha1/resources"
+    };
+
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.resource.read"]
     };
   }
   // ListResourceVersions can be used to list all known versions of a resource. Versions will always include
@@ -54,15 +67,27 @@ service Rode {
     option (google.api.http) = {
       get: "/v1alpha1/resource-versions"
     };
+
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.resource.read"]
+    };
   }
   rpc ListVersionedResourceOccurrences(ListVersionedResourceOccurrencesRequest) returns (ListVersionedResourceOccurrencesResponse) {
     option (google.api.http) = {
       get: "/v1alpha1/versioned-resource-occurrences"
     };
+
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.occurrence.read"]
+    };
   }
   rpc ListOccurrences(ListOccurrencesRequest) returns (ListOccurrencesResponse) {
     option (google.api.http) = {
       get: "/v1alpha1/occurrences"
+    };
+
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.occurrence.read"]
     };
   }
   rpc UpdateOccurrence(UpdateOccurrenceRequest) returns (grafeas.v1beta1.Occurrence) {
@@ -71,21 +96,33 @@ service Rode {
       body: "occurrence"
     };
     option (google.api.method_signature) = "name,occurrence,update_mask";
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.occurrence.write"]
+    };
   }
   rpc CreatePolicy(Policy) returns (Policy) {
     option (google.api.http) = {
       post: "/v1alpha1/policies"
       body: "*"
     };
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.policy.write"]
+    };
   }
   rpc GetPolicy(GetPolicyRequest) returns (Policy) {
     option (google.api.http) = {
       get: "/v1alpha1/policies/{id}"
     };
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.policy.read"]
+    };
   }
   rpc DeletePolicy(DeletePolicyRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       delete: "/v1alpha1/policies/{id}"
+    };
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.policy.delete"]
     };
   }
   rpc ListPolicies(ListPoliciesRequest) returns (ListPoliciesResponse) {
@@ -93,17 +130,26 @@ service Rode {
       get: "/v1alpha1/policies"
     };
     option (google.api.method_signature) = "filter";
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.policy.read"]
+    };
   }
   rpc ListPolicyVersions(ListPolicyVersionsRequest) returns (ListPolicyVersionsResponse) {
     option (google.api.http) = {
       get: "/v1alpha1/policies/{id}/versions"
     };
     option (google.api.method_signature) = "filter";
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.policy.read"]
+    };
   }
   rpc ValidatePolicy(ValidatePolicyRequest) returns (ValidatePolicyResponse) {
     option (google.api.http) = {
       post: "/v1alpha1/policies:validate"
       body: "*"
+    };
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.policy.validate"]
     };
   }
   rpc UpdatePolicy(UpdatePolicyRequest) returns (Policy) {
@@ -112,6 +158,9 @@ service Rode {
       body: "policy"
     };
     option (google.api.method_signature) = "policy";
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.policy.write"]
+    };
   }
   // RegisterCollector accepts a collector ID and a list of notes that this collector will reference when creating
   // occurrences. The response will contain the notes with the fully qualified note name. This operation is idempotent,
@@ -122,6 +171,9 @@ service Rode {
       post: "/v1alpha1/collectors/{id}:register"
       body: "*"
     };
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.collector.register"]
+    };
   }
   // CreateNote acts as a simple proxy to the grafeas CreateNote rpc
   rpc CreateNote(CreateNoteRequest) returns (grafeas.v1beta1.Note) {
@@ -130,21 +182,33 @@ service Rode {
       body: "note"
     };
     option (google.api.method_signature) = "note_id,note";
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.note.write"]
+    };
   };
   rpc CreatePolicyGroup(PolicyGroup) returns (PolicyGroup) {
     option (google.api.http) = {
       post: "/v1alpha1/policy-groups"
       body: "*"
     };
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.policyGroup.write"]
+    };
   };
   rpc ListPolicyGroups(ListPolicyGroupsRequest) returns (ListPolicyGroupsResponse) {
     option (google.api.http) = {
       get: "/v1alpha1/policy-groups"
     };
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.policyGroup.read"]
+    };
   };
   rpc GetPolicyGroup(GetPolicyGroupRequest) returns (PolicyGroup) {
     option (google.api.http) = {
       get: "/v1alpha1/policy-groups/{name}"
+    };
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.policyGroup.read"]
     };
   };
   rpc UpdatePolicyGroup(PolicyGroup) returns (PolicyGroup) {
@@ -152,11 +216,17 @@ service Rode {
       patch: "/v1alpha1/policy-groups/{name}"
       body: "*"
     };
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.policyGroup.write"]
+    };
   };
 
   rpc DeletePolicyGroup(DeletePolicyGroupRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
       delete: "/v1alpha1/policy-groups/{name}"
+    };
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.policyGroup.delete"]
     };
   };
 
@@ -166,6 +236,9 @@ service Rode {
       body: "*"
     };
     option (google.api.method_signature) = "policy_version_id,policy_group";
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.policyAssignment.write"]
+    };
   };
 
   rpc GetPolicyAssignment(GetPolicyAssignmentRequest) returns (PolicyAssignment) {
@@ -173,6 +246,9 @@ service Rode {
       get: "/v1alpha1/{id=policies/*/assignments/*}"
     };
     option (google.api.method_signature) = "id";
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.policyAssignment.read"]
+    };
   };
 
   rpc UpdatePolicyAssignment(PolicyAssignment) returns (PolicyAssignment) {
@@ -181,6 +257,9 @@ service Rode {
       body: "*"
     };
     option (google.api.method_signature) = "id";
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.policyAssignment.write"]
+    };
   };
 
   rpc DeletePolicyAssignment(DeletePolicyAssignmentRequest) returns (google.protobuf.Empty) {
@@ -188,6 +267,9 @@ service Rode {
       delete: "/v1alpha1/{id=policies/*/assignments/*}"
     };
     option (google.api.method_signature) = "id";
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.policyAssignment.delete"]
+    };
   };
 
   rpc ListPolicyAssignments(ListPolicyAssignmentsRequest) returns (ListPolicyAssignmentsResponse) {
@@ -200,6 +282,9 @@ service Rode {
       ]
     };
     option (google.api.method_signature) = "policy_id,policy_group";
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.policyAssignment.read"]
+    };
   };
 }
 

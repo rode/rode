@@ -3,6 +3,11 @@
 
 ## Table of Contents
 
+- [proto/v1alpha1/auth.proto](#proto/v1alpha1/auth.proto)
+    - [Authorization](#rode.v1alpha1.Authorization)
+  
+    - [File-level Extensions](#proto/v1alpha1/auth.proto-extensions)
+  
 - [proto/v1alpha1/rode.proto](#proto/v1alpha1/rode.proto)
     - [BatchCreateOccurrencesRequest](#rode.v1alpha1.BatchCreateOccurrencesRequest)
     - [BatchCreateOccurrencesResponse](#rode.v1alpha1.BatchCreateOccurrencesResponse)
@@ -61,6 +66,45 @@
     - [ResourceType](#rode.v1alpha1.ResourceType)
   
 - [Scalar Value Types](#scalar-value-types)
+
+
+
+<a name="proto/v1alpha1/auth.proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## proto/v1alpha1/auth.proto
+
+
+
+<a name="rode.v1alpha1.Authorization"></a>
+
+### Authorization
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| permissions | [string](#string) | repeated |  |
+
+
+
+
+
+ 
+
+ 
+
+
+<a name="proto/v1alpha1/auth.proto-extensions"></a>
+
+### File-level Extensions
+| Extension | Type | Base | Number | Description |
+| --------- | ---- | ---- | ------ | ----------- |
+| authorization | Authorization | .google.protobuf.MethodOptions | 50000 | global namespace, must be in range 50000-99999 |
+
+ 
+
+ 
 
 
 

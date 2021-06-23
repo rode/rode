@@ -17,12 +17,17 @@ package auth
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
+	"strings"
+
+	"github.com/Jeffail/gabs/v2"
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	"github.com/rode/rode/config"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"strings"
 )
+
+var rolesCtxKey = "roles"
 
 type authenticator struct {
 	authConfig *config.AuthConfig
@@ -74,15 +79,36 @@ func (a *authenticator) basic(ctx context.Context) (context.Context, error) {
 }
 
 func (a *authenticator) jwt(ctx context.Context) (context.Context, error) {
-	token, err := grpc_auth.AuthFromMD(ctx, "bearer")
+	rawToken, err := grpc_auth.AuthFromMD(ctx, "bearer")
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = a.authConfig.JWT.Verifier.Verify(ctx, token)
+	token, err := a.authConfig.JWT.Verifier.Verify(ctx, rawToken)
 	if err != nil {
 		return nil, status.Errorf(codes.Unauthenticated, "error validating jwt: %v", err)
 	}
 
-	return ctx, nil
+	var claims map[string]interface{}
+	if err = token.Claims(&claims); err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "error unmarshalling claims: %v", err)
+	}
+	fmt.Printf("what we've got?: %T\n", gabs.Wrap(claims).Path("resource_access.rode.roles").Data())
+
+	allRoles, ok := gabs.Wrap(claims).Path("resource_access.rode.roles").Data().([]interface{})
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing roles claim")
+	}
+
+	var roles []Role
+	registry := NewRoleRegistry()
+	for _, s := range allRoles {
+		if r := registry.GetRoleByName(s.(string)); r != "" {
+			roles = append(roles, r)
+		}
+	}
+
+	fmt.Println("we got em boys, mission accomplished")
+	// TODO: no roles = set Anonymous
+	return context.WithValue(ctx, rolesCtxKey, roles), nil
 }

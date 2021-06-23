@@ -26,37 +26,32 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/rode/rode/pkg/grafeas"
-
-	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	"github.com/rode/es-index-manager/indexmanager"
-	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
-	"github.com/rode/rode/pkg/policy"
-	"github.com/rode/rode/pkg/resource"
-	"github.com/soheilhy/cmux"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
-	"golang.org/x/sync/errgroup"
-
 	"github.com/elastic/go-elasticsearch/v7"
-	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
-
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	grpc_recovery "github.com/grpc-ecosystem/go-grpc-middleware/recovery"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/rode/es-index-manager/indexmanager"
+	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
+	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 	"github.com/rode/rode/auth"
 	"github.com/rode/rode/config"
 	"github.com/rode/rode/opa"
+	"github.com/rode/rode/pkg/grafeas"
+	"github.com/rode/rode/pkg/policy"
+	"github.com/rode/rode/pkg/resource"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	grafeas_project_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/project_go_proto"
 	"github.com/rode/rode/server"
+	"github.com/soheilhy/cmux"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 )
 
 func main() {
@@ -77,19 +72,23 @@ func main() {
 	}
 
 	authenticator := auth.NewAuthenticator(c.Auth)
+	authzInterceptor := auth.NewAuthorizationInterceptor(logger.Named("AuthorizationInterceptor"))
 	recoveryHandler := grpc_recovery.WithRecoveryHandler(func(p interface{}) (err error) {
 		logger.Error("Panic in gRPC handler", zap.Any("panic", p))
 
 		return status.Errorf(codes.Internal, "Unexpected error")
 	})
+
 	s := grpc.NewServer(
 		grpc_middleware.WithStreamServerChain(
 			grpc_auth.StreamServerInterceptor(authenticator.Authenticate),
+			grpc_auth.StreamServerInterceptor(authzInterceptor.Authorize),
 			grpc_recovery.StreamServerInterceptor(recoveryHandler),
 		),
 
 		grpc_middleware.WithUnaryServerChain(
 			grpc_auth.UnaryServerInterceptor(authenticator.Authenticate),
+			grpc_auth.UnaryServerInterceptor(authzInterceptor.Authorize),
 			grpc_recovery.UnaryServerInterceptor(recoveryHandler),
 		),
 	)

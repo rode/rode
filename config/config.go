@@ -16,9 +16,12 @@ package config
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"flag"
 	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/coreos/go-oidc"
 )
@@ -134,7 +137,17 @@ func Build(name string, args []string) (*Config, error) {
 	}
 
 	if conf.Auth.JWT.Issuer != "" {
-		provider, err := oidc.NewProvider(context.Background(), conf.Auth.JWT.Issuer)
+		httpClient := &http.Client{
+			Timeout: 30 * time.Second,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
+				},
+			},
+		}
+		oidcCtx := oidc.ClientContext(context.Background(), httpClient)
+
+		provider, err := oidc.NewProvider(oidcCtx, conf.Auth.JWT.Issuer)
 		if err != nil {
 			return nil, fmt.Errorf("error initializing oidc provider: %v", err)
 		}
