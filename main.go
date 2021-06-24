@@ -122,7 +122,7 @@ func main() {
 	policyManager := policy.NewManager(logger.Named("PolicyManager"), esutilClient, c.Elasticsearch, indexManager, filterer)
 	policyGroupManager := policy.NewPolicyGroupManager(logger.Named("PolicyGroupManager"), esutilClient, c.Elasticsearch, indexManager, filterer)
 	policyAssignmentManager := policy.NewAssignmentManager(logger.Named("PolicyAssignmentManager"), esutilClient, c.Elasticsearch, indexManager, filterer)
-	evaluationManager := evaluation.NewManager(logger.Named("EvaluationManager"), esutilClient, policyManager, policyGroupManager, policyAssignmentManager, grafeasExtensions, opaClient, resourceManager)
+	evaluationManager := evaluation.NewManager(logger.Named("EvaluationManager"), esutilClient, policyManager, policyGroupManager, policyAssignmentManager, grafeasExtensions, opaClient, resourceManager, indexManager)
 	rodeServer, err := server.NewRodeServer(
 		logger.Named("rode"),
 		grafeasClientCommon,

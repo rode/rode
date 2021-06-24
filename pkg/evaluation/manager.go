@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/rode/es-index-manager/indexmanager"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
 	"github.com/rode/rode/opa"
 	"github.com/rode/rode/pkg/constants"
@@ -33,12 +34,21 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+//go:generate counterfeiter -generate
+
+//counterfeiter:generate . Manager
 type Manager interface {
 	EvaluateResource(context.Context, *pb.EvaluateResourceRequest) (*pb.ResourceEvaluationResult, error)
 	GetResourceEvaluation(context.Context, *pb.GetResourceEvaluationRequest) (*pb.ResourceEvaluationResult, error)
 	ListResourceEvaluations(context.Context, *pb.ListResourceEvaluationsRequest) (*pb.ListResourceEvaluationsResponse, error)
 	EvaluatePolicy(ctx context.Context, request *pb.EvaluatePolicyRequest) (*pb.EvaluatePolicyResponse, error)
 }
+
+const (
+	evaluationDocumentJoinField    = "join"
+	resourceEvaluationRelationName = "resource"
+	policyEvaluationRelationName   = "policy"
+)
 
 type EvaluationManager Manager
 
@@ -51,6 +61,7 @@ type manager struct {
 	grafeasExtensions       grafeas.Extensions
 	opa                     opa.Client
 	resourceManager         resource.Manager
+	indexManager            indexmanager.IndexManager
 }
 
 func NewManager(
@@ -62,6 +73,7 @@ func NewManager(
 	grafeasExtensions grafeas.Extensions,
 	opa opa.Client,
 	resourceManager resource.Manager,
+	indexManager indexmanager.IndexManager,
 ) Manager {
 	return &manager{
 		logger:                  logger,
@@ -72,6 +84,7 @@ func NewManager(
 		grafeasExtensions:       grafeasExtensions,
 		opa:                     opa,
 		resourceManager:         resourceManager,
+		indexManager:            indexManager,
 	}
 }
 
@@ -123,6 +136,17 @@ func (m *manager) EvaluateResource(ctx context.Context, request *pb.EvaluateReso
 		ResourceVersion: resourceVersion,
 		PolicyGroup:     policyGroup.Name,
 	}
+	bulkRequestItems := []*esutil.BulkRequestItem{
+		{
+			Operation:  esutil.BULK_CREATE,
+			Message:    resourceEvaluation,
+			DocumentId: resourceEvaluation.Id,
+			Join: &esutil.EsJoin{
+				Field: evaluationDocumentJoinField,
+				Name:  resourceEvaluationRelationName,
+			},
+		},
+	}
 
 	var policyEvaluations []*pb.PolicyEvaluation
 	for _, policyAssignment := range listPolicyAssignmentsResponse.PolicyAssignments {
@@ -140,16 +164,37 @@ func (m *manager) EvaluateResource(ctx context.Context, request *pb.EvaluateReso
 			resourceEvaluation.Pass = false
 		}
 
-		policyEvaluations = append(policyEvaluations, &pb.PolicyEvaluation{
+		policyEvaluation := &pb.PolicyEvaluation{
 			Id:                   uuid.New().String(),
 			ResourceEvaluationId: resourceEvaluation.Id,
 			PolicyVersionId:      policyAssignment.PolicyVersionId,
 			Pass:                 evaluatePolicyResponse.Result.Pass,
 			Violations:           evaluatePolicyResponse.Result.Violations,
+		}
+
+		policyEvaluations = append(policyEvaluations, policyEvaluation)
+		bulkRequestItems = append(bulkRequestItems, &esutil.BulkRequestItem{
+			Operation:  esutil.BULK_CREATE,
+			Message:    policyEvaluation,
+			DocumentId: policyEvaluation.Id,
+			Join: &esutil.EsJoin{
+				Parent: resourceEvaluation.Id,
+				Field:  evaluationDocumentJoinField,
+				Name:   policyEvaluationRelationName,
+			},
 		})
 	}
 
-	// TODO: store in ES
+	response, err := m.esClient.Bulk(ctx, &esutil.BulkRequest{
+		Index: m.indexManager.AliasName(constants.EvaluationsDocumentKind, ""),
+		Items: bulkRequestItems,
+	})
+	if err != nil {
+		return nil, util.GrpcInternalError(log, "error storing resource evaluation results", err)
+	}
+	if err = util.CheckBulkResponseErrors(response); err != nil {
+		return nil, util.GrpcInternalError(log, "error storing resource evaluation results", err)
+	}
 
 	return &pb.ResourceEvaluationResult{
 		ResourceEvaluation: resourceEvaluation,
