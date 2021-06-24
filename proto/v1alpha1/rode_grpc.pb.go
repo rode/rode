@@ -56,7 +56,7 @@ type RodeClient interface {
 	UpdatePolicyAssignment(ctx context.Context, in *PolicyAssignment, opts ...grpc.CallOption) (*PolicyAssignment, error)
 	DeletePolicyAssignment(ctx context.Context, in *DeletePolicyAssignmentRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	ListPolicyAssignments(ctx context.Context, in *ListPolicyAssignmentsRequest, opts ...grpc.CallOption) (*ListPolicyAssignmentsResponse, error)
-	EvaluateResource(ctx context.Context, in *EvaluateResourceRequest, opts ...grpc.CallOption) (*ResourceEvaluationResult, error)
+	EvaluateResource(ctx context.Context, in *ResourceEvaluationRequest, opts ...grpc.CallOption) (*ResourceEvaluationResult, error)
 	GetResourceEvaluation(ctx context.Context, in *GetResourceEvaluationRequest, opts ...grpc.CallOption) (*ResourceEvaluationResult, error)
 	ListResourceEvaluations(ctx context.Context, in *ListResourceEvaluationsRequest, opts ...grpc.CallOption) (*ListResourceEvaluationsResponse, error)
 }
@@ -303,7 +303,7 @@ func (c *rodeClient) ListPolicyAssignments(ctx context.Context, in *ListPolicyAs
 	return out, nil
 }
 
-func (c *rodeClient) EvaluateResource(ctx context.Context, in *EvaluateResourceRequest, opts ...grpc.CallOption) (*ResourceEvaluationResult, error) {
+func (c *rodeClient) EvaluateResource(ctx context.Context, in *ResourceEvaluationRequest, opts ...grpc.CallOption) (*ResourceEvaluationResult, error) {
 	out := new(ResourceEvaluationResult)
 	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/EvaluateResource", in, out, opts...)
 	if err != nil {
@@ -370,7 +370,7 @@ type RodeServer interface {
 	UpdatePolicyAssignment(context.Context, *PolicyAssignment) (*PolicyAssignment, error)
 	DeletePolicyAssignment(context.Context, *DeletePolicyAssignmentRequest) (*empty.Empty, error)
 	ListPolicyAssignments(context.Context, *ListPolicyAssignmentsRequest) (*ListPolicyAssignmentsResponse, error)
-	EvaluateResource(context.Context, *EvaluateResourceRequest) (*ResourceEvaluationResult, error)
+	EvaluateResource(context.Context, *ResourceEvaluationRequest) (*ResourceEvaluationResult, error)
 	GetResourceEvaluation(context.Context, *GetResourceEvaluationRequest) (*ResourceEvaluationResult, error)
 	ListResourceEvaluations(context.Context, *ListResourceEvaluationsRequest) (*ListResourceEvaluationsResponse, error)
 }
@@ -457,7 +457,7 @@ func (UnimplementedRodeServer) DeletePolicyAssignment(context.Context, *DeletePo
 func (UnimplementedRodeServer) ListPolicyAssignments(context.Context, *ListPolicyAssignmentsRequest) (*ListPolicyAssignmentsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListPolicyAssignments not implemented")
 }
-func (UnimplementedRodeServer) EvaluateResource(context.Context, *EvaluateResourceRequest) (*ResourceEvaluationResult, error) {
+func (UnimplementedRodeServer) EvaluateResource(context.Context, *ResourceEvaluationRequest) (*ResourceEvaluationResult, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method EvaluateResource not implemented")
 }
 func (UnimplementedRodeServer) GetResourceEvaluation(context.Context, *GetResourceEvaluationRequest) (*ResourceEvaluationResult, error) {
@@ -947,7 +947,7 @@ func _Rode_ListPolicyAssignments_Handler(srv interface{}, ctx context.Context, d
 }
 
 func _Rode_EvaluateResource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(EvaluateResourceRequest)
+	in := new(ResourceEvaluationRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -959,7 +959,7 @@ func _Rode_EvaluateResource_Handler(srv interface{}, ctx context.Context, dec fu
 		FullMethod: "/rode.v1alpha1.Rode/EvaluateResource",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RodeServer).EvaluateResource(ctx, req.(*EvaluateResourceRequest))
+		return srv.(RodeServer).EvaluateResource(ctx, req.(*ResourceEvaluationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

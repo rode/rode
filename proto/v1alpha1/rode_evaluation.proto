@@ -69,7 +69,7 @@ message PolicyEvaluation {
   repeated EvaluatePolicyViolation violations = 5;
 }
 
-message EvaluateResourceRequest {
+message ResourceEvaluationRequest {
   // ResourceUri represents the resource being evaluated in this request.
   string resource_uri = 1;
 

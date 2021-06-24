@@ -38,7 +38,7 @@ import (
 
 //counterfeiter:generate . Manager
 type Manager interface {
-	EvaluateResource(context.Context, *pb.EvaluateResourceRequest) (*pb.ResourceEvaluationResult, error)
+	EvaluateResource(context.Context, *pb.ResourceEvaluationRequest) (*pb.ResourceEvaluationResult, error)
 	GetResourceEvaluation(context.Context, *pb.GetResourceEvaluationRequest) (*pb.ResourceEvaluationResult, error)
 	ListResourceEvaluations(context.Context, *pb.ListResourceEvaluationsRequest) (*pb.ListResourceEvaluationsResponse, error)
 	EvaluatePolicy(ctx context.Context, request *pb.EvaluatePolicyRequest) (*pb.EvaluatePolicyResponse, error)
@@ -88,7 +88,7 @@ func NewManager(
 	}
 }
 
-func (m *manager) EvaluateResource(ctx context.Context, request *pb.EvaluateResourceRequest) (*pb.ResourceEvaluationResult, error) {
+func (m *manager) EvaluateResource(ctx context.Context, request *pb.ResourceEvaluationRequest) (*pb.ResourceEvaluationResult, error) {
 	log := m.logger.Named("EvaluateResource").With(zap.Any("request", request))
 
 	if request.ResourceUri == "" {

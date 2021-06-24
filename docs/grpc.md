@@ -20,12 +20,12 @@
     - [Rode](#rode.v1alpha1.Rode)
   
 - [proto/v1alpha1/rode_evaluation.proto](#proto/v1alpha1/rode_evaluation.proto)
-    - [EvaluateResourceRequest](#rode.v1alpha1.EvaluateResourceRequest)
     - [GetResourceEvaluationRequest](#rode.v1alpha1.GetResourceEvaluationRequest)
     - [ListResourceEvaluationsRequest](#rode.v1alpha1.ListResourceEvaluationsRequest)
     - [ListResourceEvaluationsResponse](#rode.v1alpha1.ListResourceEvaluationsResponse)
     - [PolicyEvaluation](#rode.v1alpha1.PolicyEvaluation)
     - [ResourceEvaluation](#rode.v1alpha1.ResourceEvaluation)
+    - [ResourceEvaluationRequest](#rode.v1alpha1.ResourceEvaluationRequest)
     - [ResourceEvaluationResult](#rode.v1alpha1.ResourceEvaluationResult)
     - [ResourceEvaluationSource](#rode.v1alpha1.ResourceEvaluationSource)
   
@@ -311,7 +311,7 @@ Response for creating occurrences in batch.
 | UpdatePolicyAssignment | [PolicyAssignment](#rode.v1alpha1.PolicyAssignment) | [PolicyAssignment](#rode.v1alpha1.PolicyAssignment) |  |
 | DeletePolicyAssignment | [DeletePolicyAssignmentRequest](#rode.v1alpha1.DeletePolicyAssignmentRequest) | [.google.protobuf.Empty](#google.protobuf.Empty) |  |
 | ListPolicyAssignments | [ListPolicyAssignmentsRequest](#rode.v1alpha1.ListPolicyAssignmentsRequest) | [ListPolicyAssignmentsResponse](#rode.v1alpha1.ListPolicyAssignmentsResponse) |  |
-| EvaluateResource | [EvaluateResourceRequest](#rode.v1alpha1.EvaluateResourceRequest) | [ResourceEvaluationResult](#rode.v1alpha1.ResourceEvaluationResult) |  |
+| EvaluateResource | [ResourceEvaluationRequest](#rode.v1alpha1.ResourceEvaluationRequest) | [ResourceEvaluationResult](#rode.v1alpha1.ResourceEvaluationResult) |  |
 | GetResourceEvaluation | [GetResourceEvaluationRequest](#rode.v1alpha1.GetResourceEvaluationRequest) | [ResourceEvaluationResult](#rode.v1alpha1.ResourceEvaluationResult) |  |
 | ListResourceEvaluations | [ListResourceEvaluationsRequest](#rode.v1alpha1.ListResourceEvaluationsRequest) | [ListResourceEvaluationsResponse](#rode.v1alpha1.ListResourceEvaluationsResponse) |  |
 
@@ -323,23 +323,6 @@ Response for creating occurrences in batch.
 <p align="right"><a href="#top">Top</a></p>
 
 ## proto/v1alpha1/rode_evaluation.proto
-
-
-
-<a name="rode.v1alpha1.EvaluateResourceRequest"></a>
-
-### EvaluateResourceRequest
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| resource_uri | [string](#string) |  | ResourceUri represents the resource being evaluated in this request. |
-| policy_group | [string](#string) |  | PolicyGroup represents the name of the policy group used to evaluate this resource. |
-| source | [ResourceEvaluationSource](#rode.v1alpha1.ResourceEvaluationSource) |  | Source represents the source of the resource evaluation request. This should be set by the enforcer or entity performing the request. |
-
-
-
 
 
 
@@ -425,6 +408,23 @@ ResourceEvaluation describes the result of a request to evaluate a particular re
 | created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
 | resource_version | [ResourceVersion](#rode.v1alpha1.ResourceVersion) |  | ResourceVersion represents the specific resource version that was evaluated in this request. |
 | policy_group | [string](#string) |  | PolicyGroup represents the name of the policy group that was evaluated in this request. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ResourceEvaluationRequest"></a>
+
+### ResourceEvaluationRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| resource_uri | [string](#string) |  | ResourceUri represents the resource being evaluated in this request. |
+| policy_group | [string](#string) |  | PolicyGroup represents the name of the policy group used to evaluate this resource. |
+| source | [ResourceEvaluationSource](#rode.v1alpha1.ResourceEvaluationSource) |  | Source represents the source of the resource evaluation request. This should be set by the enforcer or entity performing the request. |
 
 
 

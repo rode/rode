@@ -203,7 +203,7 @@ service Rode {
     option (google.api.method_signature) = "policy_id,policy_group";
   };
 
-  rpc EvaluateResource(EvaluateResourceRequest) returns (ResourceEvaluationResult) {
+  rpc EvaluateResource(ResourceEvaluationRequest) returns (ResourceEvaluationResult) {
     option (google.api.http) = {
       post: "/v1alpha1/resource-evaluations"
       body: "*"
