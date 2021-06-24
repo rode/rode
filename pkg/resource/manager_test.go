@@ -1013,9 +1013,9 @@ var _ = Describe("resource manager", func() {
 				expectedGetResponse.Found = false
 			})
 
-			It("should return nil", func() {
+			It("should return an error", func() {
 				Expect(actualResourceVersion).To(BeNil())
-				Expect(actualError).ToNot(HaveOccurred())
+				Expect(actualError).To(HaveOccurred())
 			})
 		})
 
