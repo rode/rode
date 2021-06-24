@@ -294,6 +294,52 @@ var _ = Describe("evaluation manager", func() {
 			Expect(actualResourceEvaluationResult).ToNot(BeNil())
 			Expect(actualError).ToNot(HaveOccurred())
 		})
+
+		When("the resource uri is missing", func() {
+			BeforeEach(func() {
+				expectedResourceEvaluationRequest.ResourceUri = ""
+			})
+
+			It("should return an error", func() {
+				Expect(actualResourceEvaluationResult).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.InvalidArgument))
+			})
+
+			It("should not continue with the request", func() {
+				Expect(resourceManager.GetResourceVersionCallCount()).To(BeZero())
+				Expect(policyGroupManager.GetPolicyGroupCallCount()).To(BeZero())
+				Expect(policyAssignmentManager.ListPolicyAssignmentsCallCount()).To(BeZero())
+				Expect(grafeasExtensions.ListVersionedResourceOccurrencesCallCount()).To(BeZero())
+				Expect(policyManager.GetPolicyVersionCallCount()).To(BeZero())
+				Expect(opaClient.InitializePolicyCallCount()).To(BeZero())
+				Expect(opaClient.EvaluatePolicyCallCount()).To(BeZero())
+				Expect(esClient.BulkCallCount()).To(BeZero())
+			})
+		})
+
+		When("the policy group name is missing", func() {
+			BeforeEach(func() {
+				expectedResourceEvaluationRequest.PolicyGroup = ""
+			})
+
+			It("should return an error", func() {
+				Expect(actualResourceEvaluationResult).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.InvalidArgument))
+			})
+
+			It("should not continue with the request", func() {
+				Expect(resourceManager.GetResourceVersionCallCount()).To(BeZero())
+				Expect(policyGroupManager.GetPolicyGroupCallCount()).To(BeZero())
+				Expect(policyAssignmentManager.ListPolicyAssignmentsCallCount()).To(BeZero())
+				Expect(grafeasExtensions.ListVersionedResourceOccurrencesCallCount()).To(BeZero())
+				Expect(policyManager.GetPolicyVersionCallCount()).To(BeZero())
+				Expect(opaClient.InitializePolicyCallCount()).To(BeZero())
+				Expect(opaClient.EvaluatePolicyCallCount()).To(BeZero())
+				Expect(esClient.BulkCallCount()).To(BeZero())
+			})
+		})
 	})
 
 	Context("EvaluatePolicy", func() {
