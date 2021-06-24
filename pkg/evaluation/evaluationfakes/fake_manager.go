@@ -24,11 +24,11 @@ type FakeManager struct {
 		result1 *v1alpha1.EvaluatePolicyResponse
 		result2 error
 	}
-	EvaluateResourceStub        func(context.Context, *v1alpha1.EvaluateResourceRequest) (*v1alpha1.ResourceEvaluationResult, error)
+	EvaluateResourceStub        func(context.Context, *v1alpha1.ResourceEvaluationRequest) (*v1alpha1.ResourceEvaluationResult, error)
 	evaluateResourceMutex       sync.RWMutex
 	evaluateResourceArgsForCall []struct {
 		arg1 context.Context
-		arg2 *v1alpha1.EvaluateResourceRequest
+		arg2 *v1alpha1.ResourceEvaluationRequest
 	}
 	evaluateResourceReturns struct {
 		result1 *v1alpha1.ResourceEvaluationResult
@@ -135,12 +135,12 @@ func (fake *FakeManager) EvaluatePolicyReturnsOnCall(i int, result1 *v1alpha1.Ev
 	}{result1, result2}
 }
 
-func (fake *FakeManager) EvaluateResource(arg1 context.Context, arg2 *v1alpha1.EvaluateResourceRequest) (*v1alpha1.ResourceEvaluationResult, error) {
+func (fake *FakeManager) EvaluateResource(arg1 context.Context, arg2 *v1alpha1.ResourceEvaluationRequest) (*v1alpha1.ResourceEvaluationResult, error) {
 	fake.evaluateResourceMutex.Lock()
 	ret, specificReturn := fake.evaluateResourceReturnsOnCall[len(fake.evaluateResourceArgsForCall)]
 	fake.evaluateResourceArgsForCall = append(fake.evaluateResourceArgsForCall, struct {
 		arg1 context.Context
-		arg2 *v1alpha1.EvaluateResourceRequest
+		arg2 *v1alpha1.ResourceEvaluationRequest
 	}{arg1, arg2})
 	stub := fake.EvaluateResourceStub
 	fakeReturns := fake.evaluateResourceReturns
@@ -161,13 +161,13 @@ func (fake *FakeManager) EvaluateResourceCallCount() int {
 	return len(fake.evaluateResourceArgsForCall)
 }
 
-func (fake *FakeManager) EvaluateResourceCalls(stub func(context.Context, *v1alpha1.EvaluateResourceRequest) (*v1alpha1.ResourceEvaluationResult, error)) {
+func (fake *FakeManager) EvaluateResourceCalls(stub func(context.Context, *v1alpha1.ResourceEvaluationRequest) (*v1alpha1.ResourceEvaluationResult, error)) {
 	fake.evaluateResourceMutex.Lock()
 	defer fake.evaluateResourceMutex.Unlock()
 	fake.EvaluateResourceStub = stub
 }
 
-func (fake *FakeManager) EvaluateResourceArgsForCall(i int) (context.Context, *v1alpha1.EvaluateResourceRequest) {
+func (fake *FakeManager) EvaluateResourceArgsForCall(i int) (context.Context, *v1alpha1.ResourceEvaluationRequest) {
 	fake.evaluateResourceMutex.RLock()
 	defer fake.evaluateResourceMutex.RUnlock()
 	argsForCall := fake.evaluateResourceArgsForCall[i]
