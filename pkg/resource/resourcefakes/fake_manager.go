@@ -49,6 +49,20 @@ type FakeManager struct {
 		result1 *v1alpha1.Resource
 		result2 error
 	}
+	GetResourceVersionStub        func(context.Context, string) (*v1alpha1.ResourceVersion, error)
+	getResourceVersionMutex       sync.RWMutex
+	getResourceVersionArgsForCall []struct {
+		arg1 context.Context
+		arg2 string
+	}
+	getResourceVersionReturns struct {
+		result1 *v1alpha1.ResourceVersion
+		result2 error
+	}
+	getResourceVersionReturnsOnCall map[int]struct {
+		result1 *v1alpha1.ResourceVersion
+		result2 error
+	}
 	ListResourceVersionsStub        func(context.Context, *v1alpha1.ListResourceVersionsRequest) (*v1alpha1.ListResourceVersionsResponse, error)
 	listResourceVersionsMutex       sync.RWMutex
 	listResourceVersionsArgsForCall []struct {
@@ -280,6 +294,71 @@ func (fake *FakeManager) GetResourceReturnsOnCall(i int, result1 *v1alpha1.Resou
 	}{result1, result2}
 }
 
+func (fake *FakeManager) GetResourceVersion(arg1 context.Context, arg2 string) (*v1alpha1.ResourceVersion, error) {
+	fake.getResourceVersionMutex.Lock()
+	ret, specificReturn := fake.getResourceVersionReturnsOnCall[len(fake.getResourceVersionArgsForCall)]
+	fake.getResourceVersionArgsForCall = append(fake.getResourceVersionArgsForCall, struct {
+		arg1 context.Context
+		arg2 string
+	}{arg1, arg2})
+	stub := fake.GetResourceVersionStub
+	fakeReturns := fake.getResourceVersionReturns
+	fake.recordInvocation("GetResourceVersion", []interface{}{arg1, arg2})
+	fake.getResourceVersionMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeManager) GetResourceVersionCallCount() int {
+	fake.getResourceVersionMutex.RLock()
+	defer fake.getResourceVersionMutex.RUnlock()
+	return len(fake.getResourceVersionArgsForCall)
+}
+
+func (fake *FakeManager) GetResourceVersionCalls(stub func(context.Context, string) (*v1alpha1.ResourceVersion, error)) {
+	fake.getResourceVersionMutex.Lock()
+	defer fake.getResourceVersionMutex.Unlock()
+	fake.GetResourceVersionStub = stub
+}
+
+func (fake *FakeManager) GetResourceVersionArgsForCall(i int) (context.Context, string) {
+	fake.getResourceVersionMutex.RLock()
+	defer fake.getResourceVersionMutex.RUnlock()
+	argsForCall := fake.getResourceVersionArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeManager) GetResourceVersionReturns(result1 *v1alpha1.ResourceVersion, result2 error) {
+	fake.getResourceVersionMutex.Lock()
+	defer fake.getResourceVersionMutex.Unlock()
+	fake.GetResourceVersionStub = nil
+	fake.getResourceVersionReturns = struct {
+		result1 *v1alpha1.ResourceVersion
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeManager) GetResourceVersionReturnsOnCall(i int, result1 *v1alpha1.ResourceVersion, result2 error) {
+	fake.getResourceVersionMutex.Lock()
+	defer fake.getResourceVersionMutex.Unlock()
+	fake.GetResourceVersionStub = nil
+	if fake.getResourceVersionReturnsOnCall == nil {
+		fake.getResourceVersionReturnsOnCall = make(map[int]struct {
+			result1 *v1alpha1.ResourceVersion
+			result2 error
+		})
+	}
+	fake.getResourceVersionReturnsOnCall[i] = struct {
+		result1 *v1alpha1.ResourceVersion
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeManager) ListResourceVersions(arg1 context.Context, arg2 *v1alpha1.ListResourceVersionsRequest) (*v1alpha1.ListResourceVersionsResponse, error) {
 	fake.listResourceVersionsMutex.Lock()
 	ret, specificReturn := fake.listResourceVersionsReturnsOnCall[len(fake.listResourceVersionsArgsForCall)]
@@ -419,6 +498,8 @@ func (fake *FakeManager) Invocations() map[string][][]interface{} {
 	defer fake.batchCreateResourcesMutex.RUnlock()
 	fake.getResourceMutex.RLock()
 	defer fake.getResourceMutex.RUnlock()
+	fake.getResourceVersionMutex.RLock()
+	defer fake.getResourceVersionMutex.RUnlock()
 	fake.listResourceVersionsMutex.RLock()
 	defer fake.listResourceVersionsMutex.RUnlock()
 	fake.listResourcesMutex.RLock()

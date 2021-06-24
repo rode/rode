@@ -21,6 +21,7 @@ const (
 	PolicyGroupsDocumentKind      = "policy-groups"
 	PolicyAssignmentsDocumentKind = "policy-assignments"
 	ResourcesDocumentKind         = "resources"
+	EvaluationsDocumentKind       = "evaluations"
 
 	MaxPageSize = 1000
 )

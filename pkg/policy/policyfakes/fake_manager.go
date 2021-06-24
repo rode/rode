@@ -39,20 +39,6 @@ type FakeManager struct {
 		result1 *emptypb.Empty
 		result2 error
 	}
-	EvaluatePolicyStub        func(context.Context, *v1alpha1.EvaluatePolicyRequest) (*v1alpha1.EvaluatePolicyResponse, error)
-	evaluatePolicyMutex       sync.RWMutex
-	evaluatePolicyArgsForCall []struct {
-		arg1 context.Context
-		arg2 *v1alpha1.EvaluatePolicyRequest
-	}
-	evaluatePolicyReturns struct {
-		result1 *v1alpha1.EvaluatePolicyResponse
-		result2 error
-	}
-	evaluatePolicyReturnsOnCall map[int]struct {
-		result1 *v1alpha1.EvaluatePolicyResponse
-		result2 error
-	}
 	GetPolicyStub        func(context.Context, *v1alpha1.GetPolicyRequest) (*v1alpha1.Policy, error)
 	getPolicyMutex       sync.RWMutex
 	getPolicyArgsForCall []struct {
@@ -65,6 +51,20 @@ type FakeManager struct {
 	}
 	getPolicyReturnsOnCall map[int]struct {
 		result1 *v1alpha1.Policy
+		result2 error
+	}
+	GetPolicyVersionStub        func(context.Context, string) (*v1alpha1.PolicyEntity, error)
+	getPolicyVersionMutex       sync.RWMutex
+	getPolicyVersionArgsForCall []struct {
+		arg1 context.Context
+		arg2 string
+	}
+	getPolicyVersionReturns struct {
+		result1 *v1alpha1.PolicyEntity
+		result2 error
+	}
+	getPolicyVersionReturnsOnCall map[int]struct {
+		result1 *v1alpha1.PolicyEntity
 		result2 error
 	}
 	ListPoliciesStub        func(context.Context, *v1alpha1.ListPoliciesRequest) (*v1alpha1.ListPoliciesResponse, error)
@@ -257,71 +257,6 @@ func (fake *FakeManager) DeletePolicyReturnsOnCall(i int, result1 *emptypb.Empty
 	}{result1, result2}
 }
 
-func (fake *FakeManager) EvaluatePolicy(arg1 context.Context, arg2 *v1alpha1.EvaluatePolicyRequest) (*v1alpha1.EvaluatePolicyResponse, error) {
-	fake.evaluatePolicyMutex.Lock()
-	ret, specificReturn := fake.evaluatePolicyReturnsOnCall[len(fake.evaluatePolicyArgsForCall)]
-	fake.evaluatePolicyArgsForCall = append(fake.evaluatePolicyArgsForCall, struct {
-		arg1 context.Context
-		arg2 *v1alpha1.EvaluatePolicyRequest
-	}{arg1, arg2})
-	stub := fake.EvaluatePolicyStub
-	fakeReturns := fake.evaluatePolicyReturns
-	fake.recordInvocation("EvaluatePolicy", []interface{}{arg1, arg2})
-	fake.evaluatePolicyMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *FakeManager) EvaluatePolicyCallCount() int {
-	fake.evaluatePolicyMutex.RLock()
-	defer fake.evaluatePolicyMutex.RUnlock()
-	return len(fake.evaluatePolicyArgsForCall)
-}
-
-func (fake *FakeManager) EvaluatePolicyCalls(stub func(context.Context, *v1alpha1.EvaluatePolicyRequest) (*v1alpha1.EvaluatePolicyResponse, error)) {
-	fake.evaluatePolicyMutex.Lock()
-	defer fake.evaluatePolicyMutex.Unlock()
-	fake.EvaluatePolicyStub = stub
-}
-
-func (fake *FakeManager) EvaluatePolicyArgsForCall(i int) (context.Context, *v1alpha1.EvaluatePolicyRequest) {
-	fake.evaluatePolicyMutex.RLock()
-	defer fake.evaluatePolicyMutex.RUnlock()
-	argsForCall := fake.evaluatePolicyArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *FakeManager) EvaluatePolicyReturns(result1 *v1alpha1.EvaluatePolicyResponse, result2 error) {
-	fake.evaluatePolicyMutex.Lock()
-	defer fake.evaluatePolicyMutex.Unlock()
-	fake.EvaluatePolicyStub = nil
-	fake.evaluatePolicyReturns = struct {
-		result1 *v1alpha1.EvaluatePolicyResponse
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeManager) EvaluatePolicyReturnsOnCall(i int, result1 *v1alpha1.EvaluatePolicyResponse, result2 error) {
-	fake.evaluatePolicyMutex.Lock()
-	defer fake.evaluatePolicyMutex.Unlock()
-	fake.EvaluatePolicyStub = nil
-	if fake.evaluatePolicyReturnsOnCall == nil {
-		fake.evaluatePolicyReturnsOnCall = make(map[int]struct {
-			result1 *v1alpha1.EvaluatePolicyResponse
-			result2 error
-		})
-	}
-	fake.evaluatePolicyReturnsOnCall[i] = struct {
-		result1 *v1alpha1.EvaluatePolicyResponse
-		result2 error
-	}{result1, result2}
-}
-
 func (fake *FakeManager) GetPolicy(arg1 context.Context, arg2 *v1alpha1.GetPolicyRequest) (*v1alpha1.Policy, error) {
 	fake.getPolicyMutex.Lock()
 	ret, specificReturn := fake.getPolicyReturnsOnCall[len(fake.getPolicyArgsForCall)]
@@ -383,6 +318,71 @@ func (fake *FakeManager) GetPolicyReturnsOnCall(i int, result1 *v1alpha1.Policy,
 	}
 	fake.getPolicyReturnsOnCall[i] = struct {
 		result1 *v1alpha1.Policy
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeManager) GetPolicyVersion(arg1 context.Context, arg2 string) (*v1alpha1.PolicyEntity, error) {
+	fake.getPolicyVersionMutex.Lock()
+	ret, specificReturn := fake.getPolicyVersionReturnsOnCall[len(fake.getPolicyVersionArgsForCall)]
+	fake.getPolicyVersionArgsForCall = append(fake.getPolicyVersionArgsForCall, struct {
+		arg1 context.Context
+		arg2 string
+	}{arg1, arg2})
+	stub := fake.GetPolicyVersionStub
+	fakeReturns := fake.getPolicyVersionReturns
+	fake.recordInvocation("GetPolicyVersion", []interface{}{arg1, arg2})
+	fake.getPolicyVersionMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *FakeManager) GetPolicyVersionCallCount() int {
+	fake.getPolicyVersionMutex.RLock()
+	defer fake.getPolicyVersionMutex.RUnlock()
+	return len(fake.getPolicyVersionArgsForCall)
+}
+
+func (fake *FakeManager) GetPolicyVersionCalls(stub func(context.Context, string) (*v1alpha1.PolicyEntity, error)) {
+	fake.getPolicyVersionMutex.Lock()
+	defer fake.getPolicyVersionMutex.Unlock()
+	fake.GetPolicyVersionStub = stub
+}
+
+func (fake *FakeManager) GetPolicyVersionArgsForCall(i int) (context.Context, string) {
+	fake.getPolicyVersionMutex.RLock()
+	defer fake.getPolicyVersionMutex.RUnlock()
+	argsForCall := fake.getPolicyVersionArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeManager) GetPolicyVersionReturns(result1 *v1alpha1.PolicyEntity, result2 error) {
+	fake.getPolicyVersionMutex.Lock()
+	defer fake.getPolicyVersionMutex.Unlock()
+	fake.GetPolicyVersionStub = nil
+	fake.getPolicyVersionReturns = struct {
+		result1 *v1alpha1.PolicyEntity
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeManager) GetPolicyVersionReturnsOnCall(i int, result1 *v1alpha1.PolicyEntity, result2 error) {
+	fake.getPolicyVersionMutex.Lock()
+	defer fake.getPolicyVersionMutex.Unlock()
+	fake.GetPolicyVersionStub = nil
+	if fake.getPolicyVersionReturnsOnCall == nil {
+		fake.getPolicyVersionReturnsOnCall = make(map[int]struct {
+			result1 *v1alpha1.PolicyEntity
+			result2 error
+		})
+	}
+	fake.getPolicyVersionReturnsOnCall[i] = struct {
+		result1 *v1alpha1.PolicyEntity
 		result2 error
 	}{result1, result2}
 }
@@ -654,10 +654,10 @@ func (fake *FakeManager) Invocations() map[string][][]interface{} {
 	defer fake.createPolicyMutex.RUnlock()
 	fake.deletePolicyMutex.RLock()
 	defer fake.deletePolicyMutex.RUnlock()
-	fake.evaluatePolicyMutex.RLock()
-	defer fake.evaluatePolicyMutex.RUnlock()
 	fake.getPolicyMutex.RLock()
 	defer fake.getPolicyMutex.RUnlock()
+	fake.getPolicyVersionMutex.RLock()
+	defer fake.getPolicyVersionMutex.RUnlock()
 	fake.listPoliciesMutex.RLock()
 	defer fake.listPoliciesMutex.RUnlock()
 	fake.listPolicyVersionsMutex.RLock()
