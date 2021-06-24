@@ -195,6 +195,9 @@ func (m *manager) GetPolicy(ctx context.Context, request *pb.GetPolicyRequest) (
 	if err != nil {
 		return nil, createError(log, "error getting policy version", err)
 	}
+	if policyEntity == nil {
+		return nil, createError(log, "policy version not found", nil)
+	}
 
 	policy.Policy = policyEntity
 
@@ -575,7 +578,7 @@ func (m *manager) GetPolicyVersion(ctx context.Context, id string) (*pb.PolicyEn
 	}
 
 	if !response.Found {
-		return nil, errors.New("policy entity not found")
+		return nil, nil
 	}
 
 	var policyEntity pb.PolicyEntity

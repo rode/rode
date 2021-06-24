@@ -157,6 +157,9 @@ func (m *manager) EvaluateResource(ctx context.Context, request *pb.EvaluateReso
 		if err != nil {
 			return nil, util.GrpcInternalError(log, "error fetching policy version", err)
 		}
+		if policyEntity == nil {
+			return nil, util.GrpcInternalError(log, "policy version does not exist", nil)
+		}
 
 		evaluatePolicyResponse, err := m.evaluatePolicy(ctx, policyAssignment.PolicyVersionId, policyEntity.RegoContent, occurrences)
 		if err != nil {

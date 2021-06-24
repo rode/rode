@@ -334,6 +334,103 @@ var _ = Describe("PolicyManager", func() {
 		})
 	})
 
+	Context("GetPolicyVersion", func() {
+		var (
+			actualPolicyEntity *pb.PolicyEntity
+			actualError        error
+
+			expectedPolicyId        string
+			expectedPolicyVersionId string
+
+			expectedGetResponse *esutil.EsGetResponse
+			expectedGetError    error
+
+			expectedPolicyEntity  *pb.PolicyEntity
+			expectedPolicyVersion uint32
+		)
+
+		BeforeEach(func() {
+			expectedPolicyVersion = uint32(fake.Number(1, 10))
+			expectedPolicyEntity = createRandomPolicyEntity(fake.LetterN(10), expectedPolicyVersion)
+
+			expectedPolicyId = fake.UUID()
+			expectedPolicyVersionId = fmt.Sprintf("%s.%d", expectedPolicyId, expectedPolicyVersion)
+
+			policyEntityJson, _ := protojson.Marshal(expectedPolicyEntity)
+			expectedGetResponse = &esutil.EsGetResponse{
+				Id:     expectedPolicyVersionId,
+				Found:  true,
+				Source: policyEntityJson,
+			}
+			expectedGetError = nil
+		})
+
+		JustBeforeEach(func() {
+			esClient.GetReturns(expectedGetResponse, expectedGetError)
+
+			actualPolicyEntity, actualError = manager.GetPolicyVersion(ctx, expectedPolicyVersionId)
+		})
+
+		It("should query elasticsearch for the policy entity", func() {
+			Expect(esClient.GetCallCount()).To(Equal(1))
+
+			_, getRequest := esClient.GetArgsForCall(0)
+
+			Expect(getRequest.Routing).To(Equal(expectedPolicyId))
+			Expect(getRequest.DocumentId).To(Equal(expectedPolicyVersionId))
+			Expect(getRequest.Index).To(Equal(expectedPoliciesAlias))
+		})
+
+		It("should return the policy entity and no error", func() {
+			Expect(actualPolicyEntity).To(Equal(expectedPolicyEntity))
+			Expect(actualError).ToNot(HaveOccurred())
+		})
+
+		When("the policy version id is invalid", func() {
+			BeforeEach(func() {
+				expectedPolicyVersionId = fake.LetterN(10) + "." + fake.LetterN(10)
+			})
+
+			It("should return an error", func() {
+				Expect(actualPolicyEntity).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+			})
+		})
+
+		When("an error occurs while fetching the policy version from ES", func() {
+			BeforeEach(func() {
+				expectedGetError = errors.New("get failed")
+			})
+
+			It("should return an error", func() {
+				Expect(actualPolicyEntity).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+			})
+		})
+
+		When("the policy version is not found", func() {
+			BeforeEach(func() {
+				expectedGetResponse.Found = false
+			})
+
+			It("should return nil", func() {
+				Expect(actualPolicyEntity).To(BeNil())
+				Expect(actualError).ToNot(HaveOccurred())
+			})
+		})
+
+		When("an error occurs while unmarshaling the policy entity", func() {
+			BeforeEach(func() {
+				expectedGetResponse.Source = []byte("invalid json")
+			})
+
+			It("should return an error", func() {
+				Expect(actualPolicyEntity).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+			})
+		})
+	})
+
 	Context("GetPolicy", func() {
 		var (
 			policyId             string
