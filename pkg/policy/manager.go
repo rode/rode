@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/rode/rode/pkg/util"
 	"strconv"
 	"strings"
 
@@ -158,7 +159,7 @@ func (m *manager) CreatePolicy(ctx context.Context, policy *pb.Policy) (*pb.Poli
 		return nil, createError(log, "error creating policy", err)
 	}
 
-	if err := checkBulkResponseErrors(response); err != nil {
+	if err := util.CheckBulkResponseErrors(response); err != nil {
 		return nil, createError(log, "policy creation failed", err)
 	}
 
@@ -476,7 +477,7 @@ func (m *manager) UpdatePolicy(ctx context.Context, request *pb.UpdatePolicyRequ
 		return nil, createError(log, "error updating policy", err)
 	}
 
-	if err := checkBulkResponseErrors(response); err != nil {
+	if err := util.CheckBulkResponseErrors(response); err != nil {
 		return nil, createError(log, "failed to update policy", err)
 	}
 
@@ -775,23 +776,6 @@ func parsePolicyVersionId(id string) (string, uint32, error) {
 	}
 
 	return pieces[0], uint32(version), nil
-}
-
-func checkBulkResponseErrors(response *esutil.EsBulkResponse) error {
-	var bulkErrors []error
-	for _, item := range response.Items {
-		if item.Create != nil && item.Create.Error != nil {
-			bulkErrors = append(bulkErrors, fmt.Errorf("error creating new policy version [%d] %s: %s", item.Create.Status, item.Create.Error.Type, item.Create.Error.Reason))
-		} else if item.Index != nil && item.Index.Error != nil {
-			bulkErrors = append(bulkErrors, fmt.Errorf("error updating policy [%d] %s: %s", item.Index.Status, item.Index.Error.Type, item.Index.Error.Reason))
-		}
-	}
-
-	if len(bulkErrors) > 0 {
-		return fmt.Errorf("errors: %v", bulkErrors)
-	}
-
-	return nil
 }
 
 func hasPolicyContentChanges(currentPolicy, updatedPolicy *pb.Policy) bool {
