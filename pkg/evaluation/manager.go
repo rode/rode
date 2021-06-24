@@ -103,6 +103,9 @@ func (m *manager) EvaluateResource(ctx context.Context, request *pb.EvaluateReso
 	if err != nil {
 		return nil, err
 	}
+	if resourceVersion == nil {
+		return nil, util.GrpcErrorWithCode(log, "resource version not found", nil, codes.FailedPrecondition)
+	}
 
 	// get the policy group to evaluate against
 	policyGroup, err := m.policyGroupManager.GetPolicyGroup(ctx, &pb.GetPolicyGroupRequest{Name: request.PolicyGroup})

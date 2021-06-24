@@ -27,7 +27,6 @@ import (
 	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/common_go_proto"
 	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	"go.uber.org/zap"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -421,7 +420,7 @@ func (m *manager) GetResource(ctx context.Context, resourceId string) (*pb.Resou
 }
 
 func (m *manager) GetResourceVersion(ctx context.Context, resourceUri string) (*pb.ResourceVersion, error) {
-	log := m.logger.Named("GetResourceVersion")
+	log := m.logger.Named("GetResourceVersion").With(zap.String("resourceUri", resourceUri))
 	uriParts, err := parseResourceUri(resourceUri)
 	if err != nil {
 		return nil, util.GrpcInternalError(log, "error parsing resource uri", err)
@@ -437,7 +436,8 @@ func (m *manager) GetResourceVersion(ctx context.Context, resourceUri string) (*
 		return nil, util.GrpcInternalError(log, "error fetching resource for evaluation", err)
 	}
 	if !response.Found {
-		return nil, util.GrpcErrorWithCode(log, fmt.Sprintf("resource with uri %s not found", resourceUri), nil, codes.NotFound)
+		log.Debug("resource version not found")
+		return nil, nil
 	}
 
 	var resourceVersion pb.ResourceVersion
