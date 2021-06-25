@@ -340,6 +340,105 @@ var _ = Describe("evaluation manager", func() {
 				Expect(esClient.BulkCallCount()).To(BeZero())
 			})
 		})
+
+		When("fetching the resource version fails", func() {
+			BeforeEach(func() {
+				expectedGetResourceVersionError = errors.New("error fetching resource version")
+			})
+
+			It("should return an error", func() {
+				Expect(actualResourceEvaluationResult).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+			})
+
+			It("should not continue with the request", func() {
+				Expect(policyGroupManager.GetPolicyGroupCallCount()).To(BeZero())
+				Expect(policyAssignmentManager.ListPolicyAssignmentsCallCount()).To(BeZero())
+				Expect(grafeasExtensions.ListVersionedResourceOccurrencesCallCount()).To(BeZero())
+				Expect(policyManager.GetPolicyVersionCallCount()).To(BeZero())
+				Expect(opaClient.InitializePolicyCallCount()).To(BeZero())
+				Expect(opaClient.EvaluatePolicyCallCount()).To(BeZero())
+				Expect(esClient.BulkCallCount()).To(BeZero())
+			})
+		})
+
+		When("fetching the policy group fails", func() {
+			BeforeEach(func() {
+				expectedGetPolicyGroupError = errors.New("error fetching policy group")
+			})
+
+			It("should return an error", func() {
+				Expect(actualResourceEvaluationResult).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+			})
+
+			It("should not continue with the request", func() {
+				Expect(policyAssignmentManager.ListPolicyAssignmentsCallCount()).To(BeZero())
+				Expect(grafeasExtensions.ListVersionedResourceOccurrencesCallCount()).To(BeZero())
+				Expect(policyManager.GetPolicyVersionCallCount()).To(BeZero())
+				Expect(opaClient.InitializePolicyCallCount()).To(BeZero())
+				Expect(opaClient.EvaluatePolicyCallCount()).To(BeZero())
+				Expect(esClient.BulkCallCount()).To(BeZero())
+			})
+		})
+
+		When("fetching the policy assignments fails", func() {
+			BeforeEach(func() {
+				expectedListPolicyAssignmentsError = errors.New("error fetching policy assignments")
+			})
+
+			It("should return an error", func() {
+				Expect(actualResourceEvaluationResult).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+			})
+
+			It("should not continue with the request", func() {
+				Expect(grafeasExtensions.ListVersionedResourceOccurrencesCallCount()).To(BeZero())
+				Expect(policyManager.GetPolicyVersionCallCount()).To(BeZero())
+				Expect(opaClient.InitializePolicyCallCount()).To(BeZero())
+				Expect(opaClient.EvaluatePolicyCallCount()).To(BeZero())
+				Expect(esClient.BulkCallCount()).To(BeZero())
+			})
+		})
+
+		When("there are no policy assignments for the specified group", func() {
+			BeforeEach(func() {
+				expectedPolicyAssignments = []*pb.PolicyAssignment{}
+			})
+
+			It("should return an error", func() {
+				Expect(actualResourceEvaluationResult).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.FailedPrecondition))
+			})
+
+			It("should not continue with the request", func() {
+				Expect(grafeasExtensions.ListVersionedResourceOccurrencesCallCount()).To(BeZero())
+				Expect(policyManager.GetPolicyVersionCallCount()).To(BeZero())
+				Expect(opaClient.InitializePolicyCallCount()).To(BeZero())
+				Expect(opaClient.EvaluatePolicyCallCount()).To(BeZero())
+				Expect(esClient.BulkCallCount()).To(BeZero())
+			})
+		})
+
+		When("fetching the occurrences fails", func() {
+			BeforeEach(func() {
+				expectedListVersionedResourceOccurrencesError = errors.New("error fetching occurrences")
+			})
+
+			It("should return an error", func() {
+				Expect(actualResourceEvaluationResult).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+
+			It("should not continue with the request", func() {
+				Expect(policyManager.GetPolicyVersionCallCount()).To(BeZero())
+				Expect(opaClient.InitializePolicyCallCount()).To(BeZero())
+				Expect(opaClient.EvaluatePolicyCallCount()).To(BeZero())
+				Expect(esClient.BulkCallCount()).To(BeZero())
+			})
+		})
 	})
 
 	Context("EvaluatePolicy", func() {
