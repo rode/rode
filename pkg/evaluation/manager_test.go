@@ -439,6 +439,128 @@ var _ = Describe("evaluation manager", func() {
 				Expect(esClient.BulkCallCount()).To(BeZero())
 			})
 		})
+
+		When("fetching the policy version fails", func() {
+			BeforeEach(func() {
+				expectedGetPolicyVersionError = errors.New("error fetching policy version")
+			})
+
+			It("should return an error", func() {
+				Expect(actualResourceEvaluationResult).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+
+			It("should not attempt to evaluate a policy", func() {
+				Expect(opaClient.InitializePolicyCallCount()).To(BeZero())
+				Expect(opaClient.EvaluatePolicyCallCount()).To(BeZero())
+				Expect(esClient.BulkCallCount()).To(BeZero())
+			})
+		})
+
+		When("the policy version is not found", func() {
+			BeforeEach(func() {
+				expectedPolicyEntity = nil
+			})
+
+			It("should return an error", func() {
+				Expect(actualResourceEvaluationResult).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+
+			It("should not attempt to evaluate a policy", func() {
+				Expect(opaClient.InitializePolicyCallCount()).To(BeZero())
+				Expect(opaClient.EvaluatePolicyCallCount()).To(BeZero())
+				Expect(esClient.BulkCallCount()).To(BeZero())
+			})
+		})
+
+		When("initializing the policy fails", func() {
+			BeforeEach(func() {
+				expectedInitializePolicyError = opa.NewClientError("error initializing policy", opa.OpaClientErrorTypeLoadPolicy, errors.New("error initializing policy"))
+			})
+
+			It("should return an error", func() {
+				Expect(actualResourceEvaluationResult).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+
+			It("should not attempt to evaluate a policy", func() {
+				Expect(opaClient.EvaluatePolicyCallCount()).To(BeZero())
+				Expect(esClient.BulkCallCount()).To(BeZero())
+			})
+		})
+
+		When("evaluating the policy fails", func() {
+			BeforeEach(func() {
+				expectedEvaluatePolicyError = errors.New("error evaluating policy")
+			})
+
+			It("should return an error", func() {
+				Expect(actualResourceEvaluationResult).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+
+			It("should not attempt to store evaluation results", func() {
+				Expect(esClient.BulkCallCount()).To(BeZero())
+			})
+		})
+
+		When("the policy does not pass", func() {
+			BeforeEach(func() {
+				expectedEvaluatePolicyResponse.Result.Pass = false
+			})
+
+			It("should mark the resource evaluation as failed", func() {
+				_, bulkRequest := esClient.BulkArgsForCall(0)
+
+				resourceEvaluationItem := bulkRequest.Items[0]
+				resourceEvaluation := resourceEvaluationItem.Message.(*pb.ResourceEvaluation)
+
+				Expect(resourceEvaluation.Pass).To(BeFalse())
+
+				policyEvaluationItem := bulkRequest.Items[1]
+				policyEvaluation := policyEvaluationItem.Message.(*pb.PolicyEvaluation)
+
+				Expect(policyEvaluation.Pass).To(BeFalse())
+			})
+		})
+
+		When("storing the evaluation results fails", func() {
+			BeforeEach(func() {
+				expectedBulkError = errors.New("error during bulk insert")
+			})
+
+			It("should return an error", func() {
+				Expect(actualResourceEvaluationResult).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+		})
+
+		When("the bulk insert has errors", func() {
+			BeforeEach(func() {
+				expectedBulkResponse.Items = []*esutil.EsBulkResponseItem{
+					{
+						Index: &esutil.EsIndexDocResponse{
+							Error: &esutil.EsIndexDocError{
+								Type:   fake.LetterN(10),
+								Reason: fake.LetterN(10),
+							},
+						},
+					},
+				}
+			})
+
+			It("should return an error", func() {
+				Expect(actualResourceEvaluationResult).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+		})
 	})
 
 	Context("EvaluatePolicy", func() {
