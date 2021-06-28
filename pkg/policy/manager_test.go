@@ -21,9 +21,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/rode/rode/pkg/constants"
-	"github.com/rode/rode/pkg/grafeas/grafeasfakes"
-
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -33,15 +30,10 @@ import (
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering/filteringfakes"
 	"github.com/rode/rode/config"
-	"github.com/rode/rode/opa"
-	"github.com/rode/rode/opa/opafakes"
 	pb "github.com/rode/rode/proto/v1alpha1"
-	grafeas_common_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/common_go_proto"
-	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var (
@@ -71,28 +63,24 @@ var _ = Describe("PolicyManager", func() {
 		ctx                   = context.Background()
 		expectedPoliciesAlias string
 
-		esClient          *esutilfakes.FakeClient
-		esConfig          *config.ElasticsearchConfig
-		grafeasExtensions *grafeasfakes.FakeExtensions
-		opaClient         *opafakes.FakeClient
-		indexManager      *immocks.FakeIndexManager
-		filterer          *filteringfakes.FakeFilterer
+		esClient     *esutilfakes.FakeClient
+		esConfig     *config.ElasticsearchConfig
+		indexManager *immocks.FakeIndexManager
+		filterer     *filteringfakes.FakeFilterer
 
 		manager Manager
 	)
 
 	BeforeEach(func() {
 		esClient = &esutilfakes.FakeClient{}
-		grafeasExtensions = &grafeasfakes.FakeExtensions{}
 		indexManager = &immocks.FakeIndexManager{}
-		opaClient = &opafakes.FakeClient{}
 		filterer = &filteringfakes.FakeFilterer{}
 		esConfig = randomEsConfig()
 
 		expectedPoliciesAlias = fake.LetterN(10)
 		indexManager.AliasNameReturns(expectedPoliciesAlias)
 
-		manager = NewManager(logger, esClient, esConfig, indexManager, filterer, opaClient, grafeasExtensions)
+		manager = NewManager(logger, esClient, esConfig, indexManager, filterer)
 	})
 
 	Context("CreatePolicy", func() {
@@ -342,6 +330,103 @@ var _ = Describe("PolicyManager", func() {
 
 				status := getGRPCStatusFromError(actualError)
 				Expect(status.Code()).To(Equal(codes.Internal))
+			})
+		})
+	})
+
+	Context("GetPolicyVersion", func() {
+		var (
+			actualPolicyEntity *pb.PolicyEntity
+			actualError        error
+
+			expectedPolicyId        string
+			expectedPolicyVersionId string
+
+			expectedGetResponse *esutil.EsGetResponse
+			expectedGetError    error
+
+			expectedPolicyEntity  *pb.PolicyEntity
+			expectedPolicyVersion uint32
+		)
+
+		BeforeEach(func() {
+			expectedPolicyVersion = uint32(fake.Number(1, 10))
+			expectedPolicyEntity = createRandomPolicyEntity(fake.LetterN(10), expectedPolicyVersion)
+
+			expectedPolicyId = fake.UUID()
+			expectedPolicyVersionId = fmt.Sprintf("%s.%d", expectedPolicyId, expectedPolicyVersion)
+
+			policyEntityJson, _ := protojson.Marshal(expectedPolicyEntity)
+			expectedGetResponse = &esutil.EsGetResponse{
+				Id:     expectedPolicyVersionId,
+				Found:  true,
+				Source: policyEntityJson,
+			}
+			expectedGetError = nil
+		})
+
+		JustBeforeEach(func() {
+			esClient.GetReturns(expectedGetResponse, expectedGetError)
+
+			actualPolicyEntity, actualError = manager.GetPolicyVersion(ctx, expectedPolicyVersionId)
+		})
+
+		It("should query elasticsearch for the policy entity", func() {
+			Expect(esClient.GetCallCount()).To(Equal(1))
+
+			_, getRequest := esClient.GetArgsForCall(0)
+
+			Expect(getRequest.Routing).To(Equal(expectedPolicyId))
+			Expect(getRequest.DocumentId).To(Equal(expectedPolicyVersionId))
+			Expect(getRequest.Index).To(Equal(expectedPoliciesAlias))
+		})
+
+		It("should return the policy entity and no error", func() {
+			Expect(actualPolicyEntity).To(Equal(expectedPolicyEntity))
+			Expect(actualError).ToNot(HaveOccurred())
+		})
+
+		When("the policy version id is invalid", func() {
+			BeforeEach(func() {
+				expectedPolicyVersionId = fake.LetterN(10) + "." + fake.LetterN(10)
+			})
+
+			It("should return an error", func() {
+				Expect(actualPolicyEntity).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+			})
+		})
+
+		When("an error occurs while fetching the policy version from ES", func() {
+			BeforeEach(func() {
+				expectedGetError = errors.New("get failed")
+			})
+
+			It("should return an error", func() {
+				Expect(actualPolicyEntity).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+			})
+		})
+
+		When("the policy version is not found", func() {
+			BeforeEach(func() {
+				expectedGetResponse.Found = false
+			})
+
+			It("should return nil", func() {
+				Expect(actualPolicyEntity).To(BeNil())
+				Expect(actualError).ToNot(HaveOccurred())
+			})
+		})
+
+		When("an error occurs while unmarshaling the policy entity", func() {
+			BeforeEach(func() {
+				expectedGetResponse.Source = []byte("invalid json")
+			})
+
+			It("should return an error", func() {
+				Expect(actualPolicyEntity).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
 			})
 		})
 	})
@@ -1657,280 +1742,6 @@ var _ = Describe("PolicyManager", func() {
 			})
 		})
 	})
-
-	Context("EvaluatePolicy", func() {
-		var (
-			policyId string
-			version  uint32
-			policy   *pb.Policy
-
-			resourceUri string
-			request     *pb.EvaluatePolicyRequest
-
-			getPolicyResponse *esutil.EsGetResponse
-			getPolicyError    error
-
-			getPolicyEntityResponse *esutil.EsGetResponse
-			getPolicyEntityError    error
-
-			opaInitializePolicyError opa.ClientError
-
-			opaEvaluatePolicyResponse *opa.EvaluatePolicyResponse
-			opaEvaluatePolicyError    error
-
-			listVersionedResourceOccurrencesResponse []*grafeas_proto.Occurrence
-			listVersionedResourceOccurrencesError    error
-
-			actualResponse *pb.EvaluatePolicyResponse
-			actualError    error
-		)
-
-		BeforeEach(func() {
-			policyId = fake.UUID()
-			version = fake.Uint32()
-			resourceUri = fake.URL()
-
-			policy = createRandomPolicy(policyId, version)
-			policy.Policy = createRandomPolicyEntity(goodPolicy, version)
-			policyJson, _ := protojson.Marshal(policy)
-
-			getPolicyResponse = &esutil.EsGetResponse{
-				Id:     policyId,
-				Found:  true,
-				Source: policyJson,
-			}
-			getPolicyError = nil
-
-			policyEntityJson, _ := protojson.Marshal(policy.Policy)
-			getPolicyEntityResponse = &esutil.EsGetResponse{
-				Id:     policyId,
-				Found:  true,
-				Source: policyEntityJson,
-			}
-			getPolicyEntityError = nil
-
-			opaInitializePolicyError = nil
-
-			listVersionedResourceOccurrencesResponse = []*grafeas_proto.Occurrence{
-				createRandomOccurrence(grafeas_common_proto.NoteKind_VULNERABILITY),
-				createRandomOccurrence(grafeas_common_proto.NoteKind_ATTESTATION),
-			}
-			listVersionedResourceOccurrencesError = nil
-
-			opaEvaluatePolicyResponse = &opa.EvaluatePolicyResponse{
-				Result: &opa.EvaluatePolicyResult{
-					Pass:       true,
-					Violations: []*opa.EvaluatePolicyViolation{},
-				},
-				Explanation: &[]string{fake.Word()},
-			}
-			opaEvaluatePolicyError = nil
-
-			request = &pb.EvaluatePolicyRequest{
-				Policy:      policyId,
-				ResourceUri: resourceUri,
-			}
-		})
-
-		JustBeforeEach(func() {
-			esClient.GetReturnsOnCall(0, getPolicyResponse, getPolicyError)
-			esClient.GetReturnsOnCall(1, getPolicyEntityResponse, getPolicyEntityError)
-
-			opaClient.InitializePolicyReturns(opaInitializePolicyError)
-			grafeasExtensions.ListVersionedResourceOccurrencesReturns(listVersionedResourceOccurrencesResponse, "", listVersionedResourceOccurrencesError)
-			opaClient.EvaluatePolicyReturns(opaEvaluatePolicyResponse, opaEvaluatePolicyError)
-
-			actualResponse, actualError = manager.EvaluatePolicy(ctx, request)
-		})
-
-		When("evaluation is successful", func() {
-			It("should fetch the policy and current policy version from Elasticsearch", func() {
-				Expect(indexManager.AliasNameCallCount()).To(Equal(2))
-				Expect(esClient.GetCallCount()).To(Equal(2))
-
-				_, actualRequest := esClient.GetArgsForCall(0)
-
-				Expect(actualRequest.DocumentId).To(Equal(policyId))
-				Expect(actualRequest.Index).To(Equal(expectedPoliciesAlias))
-			})
-
-			It("should initialize the policy in Open Policy Agent", func() {
-				Expect(opaClient.InitializePolicyCallCount()).To(Equal(1))
-
-				actualPolicyId, policyContent := opaClient.InitializePolicyArgsForCall(0)
-
-				Expect(actualPolicyId).To(Equal(policyId))
-				Expect(policyContent).To(Equal(goodPolicy))
-			})
-
-			It("should fetch versioned resource occurrences from Grafeas", func() {
-				Expect(grafeasExtensions.ListVersionedResourceOccurrencesCallCount()).To(Equal(1))
-
-				_, actualResourceUri, actualPageToken, actualPageSize := grafeasExtensions.ListVersionedResourceOccurrencesArgsForCall(0)
-
-				Expect(actualResourceUri).To(Equal(resourceUri))
-				Expect(actualPageToken).To(BeEmpty())
-				Expect(actualPageSize).To(BeEquivalentTo(constants.MaxPageSize))
-			})
-
-			It("should evaluate the policy in Open Policy Agent", func() {
-				Expect(opaClient.EvaluatePolicyCallCount()).To(Equal(1))
-				actualPolicy, actualInput := opaClient.EvaluatePolicyArgsForCall(0)
-
-				expectedInput, err := protojson.Marshal(&pb.EvaluatePolicyInput{
-					Occurrences: listVersionedResourceOccurrencesResponse,
-				})
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(actualPolicy).To(Equal(goodPolicy))
-				Expect(actualInput).To(MatchJSON(expectedInput))
-			})
-
-			It("should return the evaluation results", func() {
-				Expect(actualResponse).NotTo(BeNil())
-				Expect(actualResponse.Pass).To(BeTrue())
-				Expect(actualResponse.Explanation[0]).To(Equal((*opaEvaluatePolicyResponse.Explanation)[0]))
-				Expect(actualError).NotTo(HaveOccurred())
-			})
-		})
-
-		When("the request doesn't contain a resource uri", func() {
-			BeforeEach(func() {
-				request.ResourceUri = ""
-			})
-
-			It("should return an error", func() {
-				Expect(actualResponse).To(BeNil())
-				Expect(actualError).To(HaveOccurred())
-				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.InvalidArgument))
-			})
-
-			It("should not try to fetch or evaluate policy", func() {
-				Expect(esClient.GetCallCount()).To(Equal(0))
-				Expect(opaClient.EvaluatePolicyCallCount()).To(Equal(0))
-			})
-		})
-
-		When("an error occurs fetching policy", func() {
-			BeforeEach(func() {
-				getPolicyError = errors.New("get policy error")
-			})
-
-			It("should return an error", func() {
-				Expect(actualResponse).To(BeNil())
-				Expect(actualError).To(HaveOccurred())
-				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
-			})
-
-			It("should not try to evaluate policy", func() {
-				Expect(opaClient.EvaluatePolicyCallCount()).To(Equal(0))
-			})
-		})
-
-		When("an error occurs fetching the policy entity", func() {
-			BeforeEach(func() {
-				getPolicyEntityError = errors.New("get policy entity error")
-			})
-
-			It("should return an error", func() {
-				Expect(actualResponse).To(BeNil())
-				Expect(actualError).To(HaveOccurred())
-				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
-			})
-
-			It("should not try to evaluate policy", func() {
-				Expect(opaClient.EvaluatePolicyCallCount()).To(Equal(0))
-			})
-		})
-
-		When("an error occurs initializing policy in Open Policy Agent", func() {
-			BeforeEach(func() {
-				opaInitializePolicyError = opa.NewClientError(fake.Word(), opa.OpaClientErrorTypeHTTP, nil)
-			})
-
-			It("should return an error", func() {
-				Expect(actualResponse).To(BeNil())
-				Expect(actualError).To(HaveOccurred())
-				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
-			})
-
-			It("should not try to evaluate policy", func() {
-				Expect(opaClient.EvaluatePolicyCallCount()).To(Equal(0))
-			})
-		})
-
-		When("an error occurs listing occurrences", func() {
-			BeforeEach(func() {
-				listVersionedResourceOccurrencesError = errors.New("grafeas error")
-			})
-
-			It("should return an error", func() {
-				Expect(actualResponse).To(BeNil())
-				Expect(actualError).To(HaveOccurred())
-				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
-			})
-
-			It("should not try to evaluate policy", func() {
-				Expect(opaClient.EvaluatePolicyCallCount()).To(Equal(0))
-			})
-		})
-
-		When("an error occurs evaluating policy", func() {
-			BeforeEach(func() {
-				opaEvaluatePolicyError = errors.New("evaluate error")
-			})
-
-			It("should return an error", func() {
-				Expect(actualResponse).To(BeNil())
-				Expect(actualError).To(HaveOccurred())
-				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
-			})
-		})
-
-		When("the policy result is absent", func() {
-			BeforeEach(func() {
-				opaEvaluatePolicyResponse.Result = nil
-			})
-
-			It("should not pass", func() {
-				Expect(actualResponse.Pass).To(BeFalse())
-			})
-		})
-
-		When("there are violations", func() {
-			var (
-				expectedViolationsCount int
-				expectedViolations      []*pb.EvaluatePolicyViolation
-			)
-
-			BeforeEach(func() {
-				expectedViolationsCount = fake.Number(1, 5)
-				var violations []*opa.EvaluatePolicyViolation
-				expectedViolations = []*pb.EvaluatePolicyViolation{}
-
-				for i := 0; i < expectedViolationsCount; i++ {
-					violation := randomViolation()
-					expectedViolation := &pb.EvaluatePolicyViolation{
-						Id:          violation.ID,
-						Name:        violation.Name,
-						Description: violation.Description,
-						Message:     violation.Message,
-						Link:        violation.Link,
-						Pass:        violation.Pass,
-					}
-					expectedViolations = append(expectedViolations, expectedViolation)
-					violations = append(violations, violation)
-				}
-				opaEvaluatePolicyResponse.Result.Violations = violations
-			})
-
-			It("should include them in the evaluation result", func() {
-				Expect(actualResponse.Result).To(HaveLen(1))
-				actualViolations := actualResponse.Result[0].Violations
-				Expect(actualViolations).To(ConsistOf(expectedViolations))
-			})
-		})
-	})
 })
 
 func createRandomPolicy(id string, version uint32) *pb.Policy {
@@ -1948,31 +1759,6 @@ func createRandomPolicyEntity(policy string, version uint32) *pb.PolicyEntity {
 		RegoContent: policy,
 		SourcePath:  fake.URL(),
 		Message:     fake.Word(),
-	}
-}
-
-func createRandomOccurrence(kind grafeas_common_proto.NoteKind) *grafeas_proto.Occurrence {
-	return &grafeas_proto.Occurrence{
-		Name: fake.LetterN(10),
-		Resource: &grafeas_proto.Resource{
-			Uri: fmt.Sprintf("%s@sha256:%s", fake.URL(), fake.LetterN(10)),
-		},
-		NoteName:    fake.LetterN(10),
-		Kind:        kind,
-		Remediation: fake.LetterN(10),
-		CreateTime:  timestamppb.New(fake.Date()),
-		UpdateTime:  timestamppb.New(fake.Date()),
-		Details:     nil,
-	}
-}
-
-func randomViolation() *opa.EvaluatePolicyViolation {
-	return &opa.EvaluatePolicyViolation{
-		ID:          fake.LetterN(10),
-		Name:        fake.Word(),
-		Description: fake.Word(),
-		Message:     fake.Word(),
-		Pass:        fake.Bool(),
 	}
 }
 

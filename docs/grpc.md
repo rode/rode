@@ -19,6 +19,16 @@
   
     - [Rode](#rode.v1alpha1.Rode)
   
+- [proto/v1alpha1/rode_evaluation.proto](#proto/v1alpha1/rode_evaluation.proto)
+    - [GetResourceEvaluationRequest](#rode.v1alpha1.GetResourceEvaluationRequest)
+    - [ListResourceEvaluationsRequest](#rode.v1alpha1.ListResourceEvaluationsRequest)
+    - [ListResourceEvaluationsResponse](#rode.v1alpha1.ListResourceEvaluationsResponse)
+    - [PolicyEvaluation](#rode.v1alpha1.PolicyEvaluation)
+    - [ResourceEvaluation](#rode.v1alpha1.ResourceEvaluation)
+    - [ResourceEvaluationRequest](#rode.v1alpha1.ResourceEvaluationRequest)
+    - [ResourceEvaluationResult](#rode.v1alpha1.ResourceEvaluationResult)
+    - [ResourceEvaluationSource](#rode.v1alpha1.ResourceEvaluationSource)
+  
 - [proto/v1alpha1/rode_policy.proto](#proto/v1alpha1/rode_policy.proto)
     - [DeletePolicyAssignmentRequest](#rode.v1alpha1.DeletePolicyAssignmentRequest)
     - [DeletePolicyGroupRequest](#rode.v1alpha1.DeletePolicyGroupRequest)
@@ -42,7 +52,6 @@
     - [Policy](#rode.v1alpha1.Policy)
     - [PolicyAssignment](#rode.v1alpha1.PolicyAssignment)
     - [PolicyEntity](#rode.v1alpha1.PolicyEntity)
-    - [PolicyEvaluation](#rode.v1alpha1.PolicyEvaluation)
     - [PolicyGroup](#rode.v1alpha1.PolicyGroup)
     - [UpdatePolicyRequest](#rode.v1alpha1.UpdatePolicyRequest)
     - [ValidatePolicyRequest](#rode.v1alpha1.ValidatePolicyRequest)
@@ -54,8 +63,6 @@
     - [ListResourcesRequest](#rode.v1alpha1.ListResourcesRequest)
     - [ListResourcesResponse](#rode.v1alpha1.ListResourcesResponse)
     - [Resource](#rode.v1alpha1.Resource)
-    - [ResourceEvaluation](#rode.v1alpha1.ResourceEvaluation)
-    - [ResourceEvaluationSource](#rode.v1alpha1.ResourceEvaluationSource)
     - [ResourceVersion](#rode.v1alpha1.ResourceVersion)
   
     - [ResourceType](#rode.v1alpha1.ResourceType)
@@ -304,6 +311,162 @@ Response for creating occurrences in batch.
 | UpdatePolicyAssignment | [PolicyAssignment](#rode.v1alpha1.PolicyAssignment) | [PolicyAssignment](#rode.v1alpha1.PolicyAssignment) |  |
 | DeletePolicyAssignment | [DeletePolicyAssignmentRequest](#rode.v1alpha1.DeletePolicyAssignmentRequest) | [.google.protobuf.Empty](#google.protobuf.Empty) |  |
 | ListPolicyAssignments | [ListPolicyAssignmentsRequest](#rode.v1alpha1.ListPolicyAssignmentsRequest) | [ListPolicyAssignmentsResponse](#rode.v1alpha1.ListPolicyAssignmentsResponse) |  |
+| EvaluateResource | [ResourceEvaluationRequest](#rode.v1alpha1.ResourceEvaluationRequest) | [ResourceEvaluationResult](#rode.v1alpha1.ResourceEvaluationResult) |  |
+| GetResourceEvaluation | [GetResourceEvaluationRequest](#rode.v1alpha1.GetResourceEvaluationRequest) | [ResourceEvaluationResult](#rode.v1alpha1.ResourceEvaluationResult) |  |
+| ListResourceEvaluations | [ListResourceEvaluationsRequest](#rode.v1alpha1.ListResourceEvaluationsRequest) | [ListResourceEvaluationsResponse](#rode.v1alpha1.ListResourceEvaluationsResponse) |  |
+
+ 
+
+
+
+<a name="proto/v1alpha1/rode_evaluation.proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## proto/v1alpha1/rode_evaluation.proto
+
+
+
+<a name="rode.v1alpha1.GetResourceEvaluationRequest"></a>
+
+### GetResourceEvaluationRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ListResourceEvaluationsRequest"></a>
+
+### ListResourceEvaluationsRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| filter | [string](#string) |  |  |
+| page_size | [int32](#int32) |  |  |
+| page_token | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ListResourceEvaluationsResponse"></a>
+
+### ListResourceEvaluationsResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| resource_evaluations | [ResourceEvaluation](#rode.v1alpha1.ResourceEvaluation) | repeated |  |
+| next_page_token | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.PolicyEvaluation"></a>
+
+### PolicyEvaluation
+PolicyEvaluation describes the result of a request to evaluate a particular resource version against a specific policy.
+This is a child of ResourceEvaluation.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  | Id represents the unique identifier (UUID) for this particular policy evaluation. |
+| resource_evaluation_id | [string](#string) |  | ResourceEvaluationId represents the unique identifier (UUID) of the resource evaluation that triggered this policy evaluation. |
+| pass | [bool](#bool) |  | Pass represents the overall status for this policy evaluation. |
+| policy_version_id | [string](#string) |  | PolicyVersionId represents the ID of the policy version that was evaluated. |
+| violations | [EvaluatePolicyViolation](#rode.v1alpha1.EvaluatePolicyViolation) | repeated | Violations is a list of rule results. Even if a rule passed, its output will be included in Violations. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ResourceEvaluation"></a>
+
+### ResourceEvaluation
+ResourceEvaluation describes the result of a request to evaluate a particular resource version against a group of policies.
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  | Id represents the unique identifier (UUID) for this particular resource evaluation. |
+| pass | [bool](#bool) |  | Pass represents the overall status for this resource evaluation. This is determined by looking at each policy evaluation result and performing an AND on each one. If Pass is true, this means that the referenced resource version passed each policy within the policy group at the time that the evaluation was performed. |
+| source | [ResourceEvaluationSource](#rode.v1alpha1.ResourceEvaluationSource) |  | Source represents the source of the resource evaluation request. This should be set by the enforcer or entity performing the request. |
+| created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
+| resource_version | [ResourceVersion](#rode.v1alpha1.ResourceVersion) |  | ResourceVersion represents the specific resource version that was evaluated in this request. |
+| policy_group | [string](#string) |  | PolicyGroup represents the name of the policy group that was evaluated in this request. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ResourceEvaluationRequest"></a>
+
+### ResourceEvaluationRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| resource_uri | [string](#string) |  | ResourceUri represents the resource being evaluated in this request. |
+| policy_group | [string](#string) |  | PolicyGroup represents the name of the policy group used to evaluate this resource. |
+| source | [ResourceEvaluationSource](#rode.v1alpha1.ResourceEvaluationSource) |  | Source represents the source of the resource evaluation request. This should be set by the enforcer or entity performing the request. |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ResourceEvaluationResult"></a>
+
+### ResourceEvaluationResult
+ResourceEvaluationResult is a struct containing a resource evaluation and all associated policy evaluations
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| resource_evaluation | [ResourceEvaluation](#rode.v1alpha1.ResourceEvaluation) |  |  |
+| policy_evaluations | [PolicyEvaluation](#rode.v1alpha1.PolicyEvaluation) | repeated |  |
+
+
+
+
+
+
+<a name="rode.v1alpha1.ResourceEvaluationSource"></a>
+
+### ResourceEvaluationSource
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| name | [string](#string) |  |  |
+| url | [string](#string) |  |  |
+
+
+
+
+
+ 
+
+ 
+
+ 
 
  
 
@@ -689,26 +852,6 @@ for a safe rollout of new changes.
 
 
 
-<a name="rode.v1alpha1.PolicyEvaluation"></a>
-
-### PolicyEvaluation
-PolicyEvaluation describes the result of a request to evaluate a particular resource version against a specific policy.
-This is a child of ResourceEvaluation.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| id | [string](#string) |  | Id represents the unique identifier (UUID) for this particular policy evaluation. |
-| resource_evaluation_id | [string](#string) |  | ResourceEvaluationId represents the unique identifier (UUID) of the resource evaluation that triggered this policy evaluation. |
-| pass | [bool](#bool) |  | Pass represents the overall status for this policy evaluation. |
-| policy_version_id | [string](#string) |  | PolicyVersionId represents the ID of the policy version that was evaluated. |
-| violations | [EvaluatePolicyViolation](#rode.v1alpha1.EvaluatePolicyViolation) | repeated | Violations is a list of rule results. Even if a rule passed, its output will be included in Violations. |
-
-
-
-
-
-
 <a name="rode.v1alpha1.PolicyGroup"></a>
 
 ### PolicyGroup
@@ -872,42 +1015,6 @@ policies around a certain compliance framework (e.g., PCI).
 | name | [string](#string) |  | Name represents the name of this resource as seen on the UI. |
 | type | [ResourceType](#rode.v1alpha1.ResourceType) |  | Type represents the resource type for this resource, such as &#34;DOCKER&#34; or &#34;GIT&#34; |
 | created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
-
-
-
-
-
-
-<a name="rode.v1alpha1.ResourceEvaluation"></a>
-
-### ResourceEvaluation
-ResourceEvaluation describes the result of a request to evaluate a particular resource version against a group of policies.
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| id | [string](#string) |  | Id represents the unique identifier (UUID) for this particular resource evaluation. |
-| pass | [bool](#bool) |  | Pass represents the overall status for this resource evaluation. This is determined by looking at each policy evaluation result and performing an AND on each one. If Pass is true, this means that the referenced resource version passed each policy within the policy group at the time that the evaluation was performed. |
-| source | [ResourceEvaluationSource](#rode.v1alpha1.ResourceEvaluationSource) |  | Source represents the source of the resource evaluation request. This should be set by the enforcer or entity performing the request. |
-| created | [google.protobuf.Timestamp](#google.protobuf.Timestamp) |  |  |
-| resource_version | [ResourceVersion](#rode.v1alpha1.ResourceVersion) |  | ResourceVersion represents the specific resource version that was evaluated in this request. |
-| policy_group | [string](#string) |  | PolicyGroup represents the name of the policy group that was evaluated in this request. |
-
-
-
-
-
-
-<a name="rode.v1alpha1.ResourceEvaluationSource"></a>
-
-### ResourceEvaluationSource
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| name | [string](#string) |  |  |
-| url | [string](#string) |  |  |
 
 
 
