@@ -611,6 +611,149 @@ var _ = Describe("evaluation manager", func() {
 		})
 	})
 
+	Context("GetResourceEvaluation", func() {
+		var (
+			actualResourceEvaluationResult *pb.ResourceEvaluationResult
+			actualError                    error
+
+			expectedMultiSearchResponse *esutil.EsMultiSearchResponse
+			expectedMultiSearchError    error
+
+			expectedResourceEvaluation *pb.ResourceEvaluation
+			expectedPolicyEvaluation   *pb.PolicyEvaluation
+
+			expectedResourceEvaluationId string
+		)
+
+		BeforeEach(func() {
+			expectedResourceEvaluationId = fake.UUID()
+			expectedResourceEvaluation = &pb.ResourceEvaluation{
+				Id:   expectedResourceEvaluationId,
+				Pass: fake.Bool(),
+			}
+
+			expectedPolicyEvaluation = &pb.PolicyEvaluation{
+				Id:                   fake.UUID(),
+				ResourceEvaluationId: expectedResourceEvaluationId,
+				Pass:                 fake.Bool(),
+			}
+
+			resourceEvaluationJson, _ := protojson.Marshal(expectedResourceEvaluation)
+			policyEvaluationJson, _ := protojson.Marshal(expectedPolicyEvaluation)
+
+			expectedMultiSearchResponse = &esutil.EsMultiSearchResponse{
+				Responses: []*esutil.EsMultiSearchResponseHitsSummary{
+					{
+						Hits: &esutil.EsMultiSearchResponseHits{
+							Total: &esutil.EsSearchResponseTotal{
+								Value: 1,
+							},
+							Hits: []*esutil.EsMultiSearchResponseHit{
+								{
+									Source: resourceEvaluationJson,
+								},
+							},
+						},
+					},
+					{
+						Hits: &esutil.EsMultiSearchResponseHits{
+							Total: &esutil.EsSearchResponseTotal{
+								Value: 1,
+							},
+							Hits: []*esutil.EsMultiSearchResponseHit{
+								{
+									Source: policyEvaluationJson,
+								},
+							},
+						},
+					},
+				},
+			}
+			expectedMultiSearchError = nil
+		})
+
+		JustBeforeEach(func() {
+			esClient.MultiSearchReturns(expectedMultiSearchResponse, expectedMultiSearchError)
+
+			actualResourceEvaluationResult, actualError = manager.GetResourceEvaluation(ctx, &pb.GetResourceEvaluationRequest{
+				Id: expectedResourceEvaluationId,
+			})
+		})
+
+		It("should perform a multi search for the resource evaluation and child policy evaluations", func() {
+			Expect(esClient.MultiSearchCallCount()).To(Equal(1))
+
+			_, searchRequest := esClient.MultiSearchArgsForCall(0)
+
+			Expect(searchRequest.Index).To(Equal(expectedEvaluationsAlias))
+			Expect(searchRequest.Searches).To(HaveLen(2))
+
+			resourceEvaluationSearch := searchRequest.Searches[0]
+
+			Expect((*resourceEvaluationSearch.Query.Term)["_id"]).To(Equal(expectedResourceEvaluationId))
+
+			policyEvaluationSearch := searchRequest.Searches[1]
+
+			Expect(policyEvaluationSearch.Query.HasParent.ParentType).To(Equal(resourceEvaluationRelationName))
+			Expect((*policyEvaluationSearch.Query.HasParent.Query.Term)["_id"]).To(Equal(expectedResourceEvaluationId))
+		})
+
+		It("should return the result and no error", func() {
+			Expect(actualResourceEvaluationResult.ResourceEvaluation).To(Equal(expectedResourceEvaluation))
+			Expect(actualResourceEvaluationResult.PolicyEvaluations).To(HaveLen(1))
+			Expect(actualResourceEvaluationResult.PolicyEvaluations[0]).To(Equal(expectedPolicyEvaluation))
+			Expect(actualError).ToNot(HaveOccurred())
+		})
+
+		When("an error occurs while searching for the resource evaluation", func() {
+			BeforeEach(func() {
+				expectedMultiSearchError = errors.New("error performing msearch")
+			})
+
+			It("should return an error", func() {
+				Expect(actualResourceEvaluationResult).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+		})
+
+		When("the resource evaluation is not found", func() {
+			BeforeEach(func() {
+				expectedMultiSearchResponse.Responses[0].Hits.Total.Value = 0
+			})
+
+			It("should return an error", func() {
+				Expect(actualResourceEvaluationResult).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.NotFound))
+			})
+		})
+
+		When("the resource evaluation json is invalid", func() {
+			BeforeEach(func() {
+				expectedMultiSearchResponse.Responses[0].Hits.Hits[0].Source = []byte("invalid json")
+			})
+
+			It("should return an error", func() {
+				Expect(actualResourceEvaluationResult).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+		})
+
+		When("the policy evaluation json is invalid", func() {
+			BeforeEach(func() {
+				expectedMultiSearchResponse.Responses[1].Hits.Hits[0].Source = []byte("invalid json")
+			})
+
+			It("should return an error", func() {
+				Expect(actualResourceEvaluationResult).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+		})
+	})
+
 	Context("EvaluatePolicy", func() {
 		var (
 			policyId       string
