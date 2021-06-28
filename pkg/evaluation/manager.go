@@ -123,9 +123,12 @@ func (m *manager) EvaluateResource(ctx context.Context, request *pb.ResourceEval
 	}
 
 	// fetch occurrences from grafeas
-	occurrences, _, err := m.grafeasExtensions.ListVersionedResourceOccurrences(ctx, request.ResourceUri, "", constants.MaxPageSize)
+	occurrences, nextPage, err := m.grafeasExtensions.ListVersionedResourceOccurrences(ctx, request.ResourceUri, "", constants.MaxPageSize)
 	if err != nil {
 		return nil, util.GrpcInternalError(log, "error listing occurrences", err)
+	}
+	if nextPage != "" {
+		log.Warn(fmt.Sprintf("listing occurrences for resource %s resulted in more than %d occurrences, proceeding with evaluation anyway", request.ResourceUri, constants.MaxPageSize))
 	}
 
 	resourceEvaluation := &pb.ResourceEvaluation{
