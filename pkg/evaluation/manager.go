@@ -63,6 +63,7 @@ type manager struct {
 	opa                     opa.Client
 	resourceManager         resource.Manager
 	indexManager            indexmanager.IndexManager
+	filterer                filtering.Filterer
 }
 
 func NewManager(
@@ -75,6 +76,7 @@ func NewManager(
 	opa opa.Client,
 	resourceManager resource.Manager,
 	indexManager indexmanager.IndexManager,
+	filterer filtering.Filterer,
 ) Manager {
 	return &manager{
 		logger:                  logger,
@@ -86,6 +88,7 @@ func NewManager(
 		opa:                     opa,
 		resourceManager:         resourceManager,
 		indexManager:            indexManager,
+		filterer:                filterer,
 	}
 }
 
@@ -272,7 +275,70 @@ func (m *manager) GetResourceEvaluation(ctx context.Context, request *pb.GetReso
 }
 
 func (m *manager) ListResourceEvaluations(ctx context.Context, request *pb.ListResourceEvaluationsRequest) (*pb.ListResourceEvaluationsResponse, error) {
-	panic("implement me")
+	log := m.logger.Named("ListResourceEvaluations").With(zap.String("resourceUri", request.ResourceUri))
+
+	if request.ResourceUri == "" {
+		return nil, util.GrpcErrorWithCode(log, "resourceUri is required", nil, codes.InvalidArgument)
+	}
+
+	queries := filtering.Must{
+		&filtering.Query{
+			Term: &filtering.Term{
+				"resourceVersion.version": request.ResourceUri,
+			},
+		},
+	}
+
+	if request.Filter != "" {
+		filterQuery, err := m.filterer.ParseExpression(request.Filter)
+		if err != nil {
+			return nil, util.GrpcInternalError(log, "error parsing filter expression", err)
+		}
+
+		queries = append(queries, filterQuery)
+	}
+
+	searchRequest := &esutil.SearchRequest{
+		Index: m.indexManager.AliasName(constants.EvaluationsDocumentKind, ""),
+		Search: &esutil.EsSearch{
+			Query: &filtering.Query{
+				Bool: &filtering.Bool{
+					Must: &queries,
+				},
+			},
+			Sort: map[string]esutil.EsSortOrder{
+				"created": esutil.EsSortOrderDescending,
+			},
+		},
+	}
+
+	if request.PageSize != 0 {
+		searchRequest.Pagination = &esutil.SearchPaginationOptions{
+			Size:  int(request.PageSize),
+			Token: request.PageToken,
+		}
+	}
+
+	searchResponse, err := m.esClient.Search(ctx, searchRequest)
+	if err != nil {
+		return nil, util.GrpcInternalError(log, "error searching for resource evaluations", err)
+	}
+
+	var resourceEvaluations []*pb.ResourceEvaluation
+	for _, hit := range searchResponse.Hits.Hits {
+		var resourceEvaluation pb.ResourceEvaluation
+		err = protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(hit.Source, &resourceEvaluation)
+		if err != nil {
+			return nil, util.GrpcInternalError(log, "error unmarshalling resource evaluation into json", err)
+		}
+
+		resourceEvaluations = append(resourceEvaluations, &resourceEvaluation)
+	}
+
+	return &pb.ListResourceEvaluationsResponse{
+		ResourceEvaluations: resourceEvaluations,
+		NextPageToken:       searchResponse.NextPageToken,
+	}, nil
 }
 
 func (m *manager) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePolicyRequest) (*pb.EvaluatePolicyResponse, error) {

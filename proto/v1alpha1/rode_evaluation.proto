@@ -92,9 +92,10 @@ message GetResourceEvaluationRequest {
 }
 
 message ListResourceEvaluationsRequest {
-  string filter = 1;
-  int32 page_size = 2;
-  string page_token = 3;
+  string resource_uri = 1;
+  string filter = 2;
+  int32 page_size = 3;
+  string page_token = 4;
 }
 
 message ListResourceEvaluationsResponse {

@@ -23,6 +23,8 @@ import (
 	"github.com/rode/es-index-manager/mocks"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil/esutilfakes"
+	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
+	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering/filteringfakes"
 	"github.com/rode/rode/opa"
 	"github.com/rode/rode/opa/opafakes"
 	"github.com/rode/rode/pkg/constants"
@@ -51,6 +53,7 @@ var _ = Describe("evaluation manager", func() {
 		opaClient               *opafakes.FakeClient
 		resourceManager         *resourcefakes.FakeManager
 		indexManager            *mocks.FakeIndexManager
+		filterer                *filteringfakes.FakeFilterer
 
 		manager Manager
 	)
@@ -66,11 +69,12 @@ var _ = Describe("evaluation manager", func() {
 		opaClient = &opafakes.FakeClient{}
 		resourceManager = &resourcefakes.FakeManager{}
 		indexManager = &mocks.FakeIndexManager{}
+		filterer = &filteringfakes.FakeFilterer{}
 
 		expectedEvaluationsAlias = fake.LetterN(10)
 		indexManager.AliasNameReturns(expectedEvaluationsAlias)
 
-		manager = NewManager(logger, esClient, policyManager, policyGroupManager, policyAssignmentManager, grafeasExtensions, opaClient, resourceManager, indexManager)
+		manager = NewManager(logger, esClient, policyManager, policyGroupManager, policyAssignmentManager, grafeasExtensions, opaClient, resourceManager, indexManager, filterer)
 	})
 
 	Context("EvaluateResource", func() {
@@ -607,6 +611,179 @@ var _ = Describe("evaluation manager", func() {
 
 					Expect(failingPolicyEvaluation.Pass).To(BeFalse())
 				})
+			})
+		})
+	})
+
+	Context("ListResourceEvaluations", func() {
+		var (
+			actualListResourceEvaluationsResponse *pb.ListResourceEvaluationsResponse
+			actualError                           error
+
+			expectedListResourceEvaluationsRequest *pb.ListResourceEvaluationsRequest
+
+			expectedSearchResponse *esutil.SearchResponse
+			expectedSearchError    error
+
+			expectedResourceEvaluation   *pb.ResourceEvaluation
+			expectedResourceEvaluationId string
+			expectedResourceUri          string
+
+			expectedFilterQuery *filtering.Query
+			expectedFilterError error
+		)
+
+		BeforeEach(func() {
+			expectedResourceUri = fake.LetterN(10)
+			expectedResourceEvaluationId = fake.LetterN(10)
+			expectedListResourceEvaluationsRequest = &pb.ListResourceEvaluationsRequest{
+				ResourceUri: expectedResourceUri,
+			}
+
+			expectedResourceEvaluation = &pb.ResourceEvaluation{
+				Id:   expectedResourceEvaluationId,
+				Pass: fake.Bool(),
+			}
+			resourceEvaluationJson, _ := protojson.Marshal(expectedResourceEvaluation)
+			expectedSearchResponse = &esutil.SearchResponse{
+				Hits: &esutil.EsSearchResponseHits{
+					Hits: []*esutil.EsSearchResponseHit{
+						{
+							Source: resourceEvaluationJson,
+							ID:     expectedResourceEvaluationId,
+						},
+					},
+					Total: &esutil.EsSearchResponseTotal{
+						Value: 1,
+					},
+				},
+			}
+			expectedSearchError = nil
+		})
+
+		JustBeforeEach(func() {
+			filterer.ParseExpressionReturns(expectedFilterQuery, expectedFilterError)
+			esClient.SearchReturns(expectedSearchResponse, expectedSearchError)
+
+			actualListResourceEvaluationsResponse, actualError = manager.ListResourceEvaluations(ctx, expectedListResourceEvaluationsRequest)
+		})
+
+		It("should perform a search", func() {
+			Expect(esClient.SearchCallCount()).To(Equal(1))
+
+			_, searchRequest := esClient.SearchArgsForCall(0)
+			Expect(searchRequest.Index).To(Equal(expectedEvaluationsAlias))
+
+			// no pagination options were specified
+			Expect(searchRequest.Pagination).To(BeNil())
+
+			// should sort by timestamp
+			Expect(searchRequest.Search.Sort["created"]).To(Equal(esutil.EsSortOrderDescending))
+
+			// no filter was specified, so we should only have one query
+			Expect(*searchRequest.Search.Query.Bool.Must).To(HaveLen(1))
+
+			// the only query should specify a term query for the resource uri
+			term := (*searchRequest.Search.Query.Bool.Must)[0].(*filtering.Query).Term
+			Expect((*term)["resourceVersion.version"]).To(Equal(expectedResourceUri))
+		})
+
+		It("should not attempt to parse a filter", func() {
+			Expect(filterer.ParseExpressionCallCount()).To(Equal(0))
+		})
+
+		It("should return the resource evaluations and no error", func() {
+			Expect(actualListResourceEvaluationsResponse.ResourceEvaluations).To(HaveLen(1))
+			Expect(actualListResourceEvaluationsResponse.ResourceEvaluations[0]).To(Equal(expectedResourceEvaluation))
+
+			Expect(actualError).ToNot(HaveOccurred())
+		})
+
+		When("a filter is specified", func() {
+			BeforeEach(func() {
+				expectedListResourceEvaluationsRequest.Filter = fake.LetterN(10)
+
+				expectedFilterQuery = &filtering.Query{
+					Term: &filtering.Term{
+						fake.LetterN(10): fake.LetterN(10),
+					},
+				}
+				expectedFilterError = nil
+			})
+
+			It("should attempt to parse the filter", func() {
+				Expect(filterer.ParseExpressionCallCount()).To(Equal(1))
+
+				filter := filterer.ParseExpressionArgsForCall(0)
+				Expect(filter).To(Equal(expectedListResourceEvaluationsRequest.Filter))
+			})
+
+			It("should use the filter query when searching", func() {
+				Expect(esClient.SearchCallCount()).To(Equal(1))
+
+				_, searchRequest := esClient.SearchArgsForCall(0)
+
+				Expect(*searchRequest.Search.Query.Bool.Must).To(HaveLen(2))
+
+				filterQuery := (*searchRequest.Search.Query.Bool.Must)[1].(*filtering.Query)
+				Expect(filterQuery).To(Equal(expectedFilterQuery))
+			})
+
+			When("an error occurs while attempting to parse the filter", func() {
+				BeforeEach(func() {
+					expectedFilterError = errors.New("error parsing filter")
+				})
+
+				It("should not attempt a search", func() {
+					Expect(esClient.SearchCallCount()).To(Equal(0))
+				})
+
+				It("should return an error", func() {
+					Expect(actualListResourceEvaluationsResponse).To(BeNil())
+					Expect(actualError).To(HaveOccurred())
+					Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+				})
+			})
+		})
+
+		When("an error occurs while searching", func() {
+			BeforeEach(func() {
+				expectedSearchError = errors.New("error searching")
+			})
+
+			It("should return an error", func() {
+				Expect(actualListResourceEvaluationsResponse).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+		})
+
+		When("pagination is used", func() {
+			BeforeEach(func() {
+				expectedListResourceEvaluationsRequest.PageSize = int32(fake.Number(1, 10))
+				expectedListResourceEvaluationsRequest.PageToken = fake.LetterN(10)
+			})
+
+			It("should use pagination when searching", func() {
+				Expect(esClient.SearchCallCount()).To(Equal(1))
+
+				_, searchRequest := esClient.SearchArgsForCall(0)
+
+				Expect(searchRequest.Pagination).ToNot(BeNil())
+				Expect(searchRequest.Pagination.Size).To(BeEquivalentTo(expectedListResourceEvaluationsRequest.PageSize))
+				Expect(searchRequest.Pagination.Token).To(Equal(expectedListResourceEvaluationsRequest.PageToken))
+			})
+		})
+
+		When("the resource uri is not specified", func() {
+			BeforeEach(func() {
+				expectedListResourceEvaluationsRequest.ResourceUri = ""
+			})
+
+			It("should return an error", func() {
+				Expect(actualListResourceEvaluationsResponse).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.InvalidArgument))
 			})
 		})
 	})
