@@ -561,6 +561,54 @@ var _ = Describe("evaluation manager", func() {
 				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
 			})
 		})
+
+		When("multiple policies are assigned to the policy group", func() {
+			BeforeEach(func() {
+				// the new fake values can be the same as the previous one, all that matters is that the additional policy fails
+				expectedPolicyAssignments = append(expectedPolicyAssignments, &pb.PolicyAssignment{
+					Id:              fake.UUID(),
+					PolicyVersionId: expectedPolicyVersionId,
+					PolicyGroup:     expectedPolicyGroupName,
+				})
+
+				policyManager.GetPolicyVersionReturnsOnCall(1, expectedPolicyEntity, expectedGetPolicyVersionError)
+				opaClient.InitializePolicyReturnsOnCall(1, expectedInitializePolicyError)
+			})
+
+			When("one of the policies fails", func() {
+				BeforeEach(func() {
+					opaClient.EvaluatePolicyReturnsOnCall(1, &opa.EvaluatePolicyResponse{
+						Result: &opa.EvaluatePolicyResult{
+							Pass: false,
+						},
+					}, expectedEvaluatePolicyError)
+				})
+
+				It("should store the overall resource evaluation as a failure", func() {
+					Expect(esClient.BulkCallCount()).To(Equal(1))
+
+					_, bulkRequest := esClient.BulkArgsForCall(0)
+
+					Expect(bulkRequest.Items).To(HaveLen(3)) // one for resource evaluation, one for each policy evaluation
+					Expect(bulkRequest.Index).To(Equal(expectedEvaluationsAlias))
+
+					resourceEvaluationItem := bulkRequest.Items[0]
+					resourceEvaluation := resourceEvaluationItem.Message.(*pb.ResourceEvaluation)
+
+					Expect(resourceEvaluation.Pass).To(BeFalse())
+
+					passingPolicyEvaluationItem := bulkRequest.Items[1]
+					passingPolicyEvaluation := passingPolicyEvaluationItem.Message.(*pb.PolicyEvaluation)
+
+					Expect(passingPolicyEvaluation.Pass).To(BeTrue())
+
+					failingPolicyEvaluationItem := bulkRequest.Items[2]
+					failingPolicyEvaluation := failingPolicyEvaluationItem.Message.(*pb.PolicyEvaluation)
+
+					Expect(failingPolicyEvaluation.Pass).To(BeFalse())
+				})
+			})
+		})
 	})
 
 	Context("EvaluatePolicy", func() {
