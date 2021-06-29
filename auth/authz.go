@@ -50,14 +50,12 @@ func (a *authorizationInterceptor) Authorize(ctx context.Context) (context.Conte
 	svcd := fd.(protoreflect.ServiceDescriptor)
 	method := svcd.Methods().ByName(protoreflect.Name(methodName))
 	authz := proto.GetExtension(method.Options(), pb.E_Authorization).(*pb.Authorization)
-	fmt.Println("permissions", authz)
 	requiredPermissions := strset.New(authz.Permissions...)
 
 	roles, ok := ctx.Value(rolesCtxKey).([]Role)
 	if !ok {
 		return nil, errors.New("missing roles")
 	}
-	fmt.Println("youve got roles", roles)
 
 	registry := NewRoleRegistry()
 	callerPermissions := strset.New()
@@ -69,9 +67,6 @@ func (a *authorizationInterceptor) Authorize(ctx context.Context) (context.Conte
 
 		callerPermissions.Add(permissions...)
 	}
-
-	fmt.Println("rpc permissions", requiredPermissions)
-	fmt.Println("caller permissions", callerPermissions)
 
 	if !callerPermissions.IsSubset(requiredPermissions) {
 		return nil, status.Error(codes.PermissionDenied, "missing required permissions for call")

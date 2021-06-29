@@ -17,7 +17,6 @@ package auth
 import (
 	"context"
 	"encoding/base64"
-	"fmt"
 	"strings"
 
 	"github.com/Jeffail/gabs/v2"
@@ -93,7 +92,6 @@ func (a *authenticator) jwt(ctx context.Context) (context.Context, error) {
 	if err = token.Claims(&claims); err != nil {
 		return nil, status.Errorf(codes.Unauthenticated, "error unmarshalling claims: %v", err)
 	}
-	fmt.Printf("what we've got?: %T\n", gabs.Wrap(claims).Path("resource_access.rode.roles").Data())
 
 	allRoles, ok := gabs.Wrap(claims).Path(a.authConfig.JWT.RoleClaimPath).Data().([]interface{})
 	if !ok {
@@ -108,7 +106,6 @@ func (a *authenticator) jwt(ctx context.Context) (context.Context, error) {
 		}
 	}
 
-	fmt.Println("we got em boys, mission accomplished")
 	// TODO: no roles = set Anonymous
 	return context.WithValue(ctx, rolesCtxKey, roles), nil
 }
