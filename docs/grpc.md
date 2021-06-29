@@ -349,6 +349,7 @@ Response for creating occurrences in batch.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
+| resource_uri | [string](#string) |  |  |
 | filter | [string](#string) |  |  |
 | page_size | [int32](#int32) |  |  |
 | page_token | [string](#string) |  |  |
@@ -366,7 +367,7 @@ Response for creating occurrences in batch.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| resource_evaluations | [ResourceEvaluation](#rode.v1alpha1.ResourceEvaluation) | repeated |  |
+| resource_evaluations | [ResourceEvaluationResult](#rode.v1alpha1.ResourceEvaluationResult) | repeated |  |
 | next_page_token | [string](#string) |  |  |
 
 
