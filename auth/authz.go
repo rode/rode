@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	pb "github.com/rode/rode/proto/v1alpha1"
 	"github.com/scylladb/go-set/strset"
@@ -19,49 +18,69 @@ import (
 
 type AuthorizationInterceptor interface {
 	Authorize(context.Context) (context.Context, error)
+	LoadServicePermissions(serviceInfo map[string]grpc.ServiceInfo) error
 }
 
-type authorizationInterceptor struct{
-	logger *zap.Logger
+type authorizationInterceptor struct {
+	logger            *zap.Logger
+	roleRegistry      RoleRegistry
+	methodPermissions map[string][]string
 }
 
-func NewAuthorizationInterceptor(logger *zap.Logger) AuthorizationInterceptor {
-	return &authorizationInterceptor{logger}
+func NewAuthorizationInterceptor(logger *zap.Logger, registry RoleRegistry) AuthorizationInterceptor {
+	return &authorizationInterceptor{
+		logger,
+		registry,
+		map[string][]string{},
+	}
 }
 
-func (a *authorizationInterceptor) Authorize(ctx context.Context) (context.Context, error)  {
+func (a *authorizationInterceptor) LoadServicePermissions(serviceInfo map[string]grpc.ServiceInfo) error {
+	for serviceName := range serviceInfo {
+		fd, err := protoregistry.GlobalFiles.FindDescriptorByName(protoreflect.FullName(serviceName))
+
+		if err != nil {
+			return err
+		}
+		serviceDescriptor := fd.(protoreflect.ServiceDescriptor)
+		for i := 0; i < serviceDescriptor.Methods().Len(); i++ {
+			method := serviceDescriptor.Methods().Get(i)
+			authz := proto.GetExtension(method.Options(), pb.E_Authorization).(*pb.Authorization)
+			if authz == nil {
+				continue
+			}
+
+			fullName := fmt.Sprintf("/%s/%s", serviceName, method.Name())
+			a.methodPermissions[fullName] = authz.Permissions
+		}
+	}
+
+	return nil
+}
+
+func (a *authorizationInterceptor) Authorize(ctx context.Context) (context.Context, error) {
 	log := a.logger.Named("Authorize")
-	methodFullName, ok := grpc.Method(ctx)
+	methodName, ok := grpc.Method(ctx)
 	if !ok {
 		return nil, errors.New("unable to determine server method")
 	}
 
-	log = log.With(zap.String("method", methodFullName))
-	 log.Debug("Validating request authorization")
-
-	parts := strings.Split(methodFullName, "/")
-	serviceName := parts[1]
-	methodName := parts[2]
-
-	fd, err := protoregistry.GlobalFiles.FindDescriptorByName(protoreflect.FullName(serviceName))
-	if err != nil {
-		return nil, fmt.Errorf("error looking up service descriptor: %v", err)
+	log = log.With(zap.String("method", methodName))
+	methodPermissions, ok := a.methodPermissions[methodName]
+	if !ok {
+		return ctx, nil
 	}
-	svcd := fd.(protoreflect.ServiceDescriptor)
-	method := svcd.Methods().ByName(protoreflect.Name(methodName))
-	authz := proto.GetExtension(method.Options(), pb.E_Authorization).(*pb.Authorization)
-	requiredPermissions := strset.New(authz.Permissions...)
 
+	requiredPermissions := strset.New(methodPermissions...)
 	roles, ok := ctx.Value(rolesCtxKey).([]Role)
 	if !ok {
 		return nil, errors.New("missing roles")
 	}
 
-	registry := NewRoleRegistry()
 	callerPermissions := strset.New()
 	for _, r := range roles {
 		var permissions []string
-		for _, p := range registry.GetRolePermissions(r) {
+		for _, p := range a.roleRegistry.GetRolePermissions(r) {
 			permissions = append(permissions, string(p))
 		}
 

@@ -21,7 +21,9 @@ import (
 
 	"github.com/Jeffail/gabs/v2"
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
+	"github.com/grpc-ecosystem/go-grpc-middleware/util/metautils"
 	"github.com/rode/rode/config"
+	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -30,19 +32,29 @@ var rolesCtxKey = "roles"
 
 type authenticator struct {
 	authConfig *config.AuthConfig
+	logger *zap.Logger
+	roleRegistry RoleRegistry
 }
 
 type Authenticator interface {
 	Authenticate(ctx context.Context) (context.Context, error)
 }
 
-func NewAuthenticator(authConfig *config.AuthConfig) Authenticator {
+func NewAuthenticator(authConfig *config.AuthConfig, logger *zap.Logger, registry RoleRegistry) Authenticator {
 	return &authenticator{
-		authConfig: authConfig,
+		authConfig,
+		logger,
+		registry,
 	}
 }
 
 func (a *authenticator) Authenticate(ctx context.Context) (context.Context, error) {
+	authzHeader := metautils.ExtractIncoming(ctx).Get("authorization")
+
+	if authzHeader == "" {
+		return context.WithValue(ctx, rolesCtxKey, []Role{RoleAnonymous}), nil
+	}
+
 	if a.authConfig.Basic.Username != "" && a.authConfig.Basic.Password != "" {
 		return a.basic(ctx)
 	}
@@ -71,7 +83,7 @@ func (a *authenticator) basic(ctx context.Context) (context.Context, error) {
 	}
 
 	if a.authConfig.Basic.Username == parts[0] && a.authConfig.Basic.Password == parts[1] {
-		return ctx, nil
+		return context.WithValue(ctx, rolesCtxKey, []Role{RoleAdministrator}), nil
 	}
 
 	return nil, status.Error(codes.Unauthenticated, "invalid username or password")
@@ -99,13 +111,15 @@ func (a *authenticator) jwt(ctx context.Context) (context.Context, error) {
 	}
 
 	var roles []Role
-	registry := NewRoleRegistry()
-	for _, s := range allRoles {
-		if r := registry.GetRoleByName(s.(string)); r != "" {
-			roles = append(roles, r)
+	for _, roleName := range allRoles {
+		if role := a.roleRegistry.GetRoleByName(roleName.(string)); role != "" {
+			roles = append(roles, role)
 		}
 	}
 
-	// TODO: no roles = set Anonymous
+	if len(roles) == 0 {
+		roles = append(roles, RoleAnonymous)
+	}
+
 	return context.WithValue(ctx, rolesCtxKey, roles), nil
 }

@@ -71,8 +71,9 @@ func main() {
 		logger.Fatal("failed to listen", zap.Error(err))
 	}
 
-	authenticator := auth.NewAuthenticator(c.Auth)
-	authzInterceptor := auth.NewAuthorizationInterceptor(logger.Named("AuthorizationInterceptor"))
+	roleRegistry := auth.NewRoleRegistry()
+	authenticator := auth.NewAuthenticator(c.Auth, logger.Named("Authenticator"), roleRegistry)
+	authzInterceptor := auth.NewAuthorizationInterceptor(logger.Named("AuthorizationInterceptor"), roleRegistry)
 	recoveryHandler := grpc_recovery.WithRecoveryHandler(func(p interface{}) (err error) {
 		logger.Error("Panic in gRPC handler", zap.Any("panic", p))
 
@@ -131,6 +132,7 @@ func main() {
 		policyGroupManager,
 		policyAssignmentManager,
 	)
+
 	if err != nil {
 		logger.Fatal("failed to create Rode server", zap.Error(err))
 	}
@@ -138,6 +140,10 @@ func main() {
 
 	pb.RegisterRodeServer(s, rodeServer)
 	grpc_health_v1.RegisterHealthServer(s, healthzServer)
+
+	if err := authzInterceptor.LoadServicePermissions(s.GetServiceInfo()); err != nil {
+		logger.Fatal("failed to configure service permissions", zap.Error(err))
+	}
 
 	mux := cmux.New(lis)
 	grpcListener := mux.Match(cmux.HTTP2())
