@@ -216,8 +216,7 @@ func (m *manager) GetResourceEvaluation(ctx context.Context, request *pb.GetReso
 	log := m.logger.Named("GetResourceEvaluation").With(zap.String("id", request.Id))
 
 	searchResponse, err := m.esClient.MultiSearch(ctx, &esutil.MultiSearchRequest{
-		Index:   m.indexManager.AliasName(constants.EvaluationsDocumentKind, ""),
-		Routing: request.Id,
+		Index: m.indexManager.AliasName(constants.EvaluationsDocumentKind, ""),
 		Searches: []*esutil.EsSearch{
 			{
 				Query: &filtering.Query{
@@ -237,6 +236,7 @@ func (m *manager) GetResourceEvaluation(ctx context.Context, request *pb.GetReso
 						},
 					},
 				},
+				Routing: request.Id,
 			},
 		},
 	})
@@ -330,7 +330,10 @@ func (m *manager) ListResourceEvaluations(ctx context.Context, request *pb.ListR
 		return nil, util.GrpcInternalError(log, "error searching for resource evaluations", err)
 	}
 
-	var resourceEvaluations []*pb.ResourceEvaluation
+	var (
+		resourceEvaluationResults []*pb.ResourceEvaluationResult
+		policyEvaluationSearches  []*esutil.EsSearch
+	)
 	for _, hit := range searchResponse.Hits.Hits {
 		var resourceEvaluation pb.ResourceEvaluation
 		err = protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(hit.Source, &resourceEvaluation)
@@ -338,11 +341,49 @@ func (m *manager) ListResourceEvaluations(ctx context.Context, request *pb.ListR
 			return nil, util.GrpcInternalError(log, "error unmarshalling resource evaluation into json", err)
 		}
 
-		resourceEvaluations = append(resourceEvaluations, &resourceEvaluation)
+		resourceEvaluationResults = append(resourceEvaluationResults, &pb.ResourceEvaluationResult{
+			ResourceEvaluation: &resourceEvaluation,
+		})
+		policyEvaluationSearches = append(policyEvaluationSearches, &esutil.EsSearch{
+			Query: &filtering.Query{
+				HasParent: &filtering.HasParent{
+					ParentType: resourceEvaluationRelationName,
+					Query: &filtering.Query{
+						Term: &filtering.Term{
+							"_id": resourceEvaluation.Id,
+						},
+					},
+				},
+			},
+			Routing: resourceEvaluation.Id,
+		})
+	}
+
+	multiSearchResponse, err := m.esClient.MultiSearch(ctx, &esutil.MultiSearchRequest{
+		Index:    m.indexManager.AliasName(constants.EvaluationsDocumentKind, ""),
+		Searches: policyEvaluationSearches,
+	})
+	if err != nil {
+		return nil, util.GrpcInternalError(log, "error searching for policy evaluations", err)
+	}
+
+	for i, response := range multiSearchResponse.Responses {
+		var policyEvaluations []*pb.PolicyEvaluation
+		for _, hit := range response.Hits.Hits {
+			var poliyEvaluation pb.PolicyEvaluation
+			err = protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(hit.Source, &poliyEvaluation)
+			if err != nil {
+				return nil, util.GrpcInternalError(log, "error unmarshalling policy evaluation into json", err)
+			}
+
+			policyEvaluations = append(policyEvaluations, &poliyEvaluation)
+		}
+
+		resourceEvaluationResults[i].PolicyEvaluations = policyEvaluations
 	}
 
 	return &pb.ListResourceEvaluationsResponse{
-		ResourceEvaluations: resourceEvaluations,
+		ResourceEvaluations: resourceEvaluationResults,
 		NextPageToken:       searchResponse.NextPageToken,
 	}, nil
 }

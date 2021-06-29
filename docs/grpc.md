@@ -367,7 +367,7 @@ Response for creating occurrences in batch.
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| resource_evaluations | [ResourceEvaluation](#rode.v1alpha1.ResourceEvaluation) | repeated |  |
+| resource_evaluations | [ResourceEvaluationResult](#rode.v1alpha1.ResourceEvaluationResult) | repeated |  |
 | next_page_token | [string](#string) |  |  |
 
 

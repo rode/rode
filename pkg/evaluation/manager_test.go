@@ -633,6 +633,11 @@ var _ = Describe("evaluation manager", func() {
 			expectedFilterError error
 
 			expectedGetResourceVersionError error
+
+			expectedPolicyEvaluation *pb.PolicyEvaluation
+
+			expectedMultiSearchResponse *esutil.EsMultiSearchResponse
+			expectedMultiSearchError    error
 		)
 
 		BeforeEach(func() {
@@ -663,12 +668,37 @@ var _ = Describe("evaluation manager", func() {
 			expectedSearchError = nil
 
 			expectedGetResourceVersionError = nil
+
+			expectedPolicyEvaluation = &pb.PolicyEvaluation{
+				Id:                   fake.UUID(),
+				ResourceEvaluationId: expectedResourceEvaluationId,
+				Pass:                 fake.Bool(),
+			}
+			policyEvaluationJson, _ := protojson.Marshal(expectedPolicyEvaluation)
+			expectedMultiSearchResponse = &esutil.EsMultiSearchResponse{
+				Responses: []*esutil.EsMultiSearchResponseHitsSummary{
+					{
+						Hits: &esutil.EsMultiSearchResponseHits{
+							Hits: []*esutil.EsMultiSearchResponseHit{
+								{
+									Source: policyEvaluationJson,
+								},
+							},
+							Total: &esutil.EsSearchResponseTotal{
+								Value: 1,
+							},
+						},
+					},
+				},
+			}
+			expectedMultiSearchError = nil
 		})
 
 		JustBeforeEach(func() {
 			resourceManager.GetResourceVersionReturns(nil, expectedGetResourceVersionError)
 			filterer.ParseExpressionReturns(expectedFilterQuery, expectedFilterError)
 			esClient.SearchReturns(expectedSearchResponse, expectedSearchError)
+			esClient.MultiSearchReturns(expectedMultiSearchResponse, expectedMultiSearchError)
 
 			actualListResourceEvaluationsResponse, actualError = manager.ListResourceEvaluations(ctx, expectedListResourceEvaluationsRequest)
 		})
@@ -680,7 +710,7 @@ var _ = Describe("evaluation manager", func() {
 			Expect(resourceUri).To(Equal(expectedResourceUri))
 		})
 
-		It("should perform a search", func() {
+		It("should perform a search for resource evaluations", func() {
 			Expect(esClient.SearchCallCount()).To(Equal(1))
 
 			_, searchRequest := esClient.SearchArgsForCall(0)
@@ -700,13 +730,28 @@ var _ = Describe("evaluation manager", func() {
 			Expect((*term)["resourceVersion.version"]).To(Equal(expectedResourceUri))
 		})
 
+		It("should search for associated policy evaluations", func() {
+			Expect(esClient.MultiSearchCallCount()).To(Equal(1))
+
+			_, multiSearchRequest := esClient.MultiSearchArgsForCall(0)
+
+			Expect(multiSearchRequest.Index).To(Equal(expectedEvaluationsAlias))
+
+			Expect(multiSearchRequest.Searches).To(HaveLen(1))
+			Expect(multiSearchRequest.Searches[0].Routing).To(Equal(expectedResourceEvaluationId))
+			Expect(multiSearchRequest.Searches[0].Query.HasParent.ParentType).To(Equal(resourceEvaluationRelationName))
+			Expect((*multiSearchRequest.Searches[0].Query.HasParent.Query.Term)["_id"]).To(Equal(expectedResourceEvaluationId))
+		})
+
 		It("should not attempt to parse a filter", func() {
 			Expect(filterer.ParseExpressionCallCount()).To(Equal(0))
 		})
 
 		It("should return the resource evaluations and no error", func() {
 			Expect(actualListResourceEvaluationsResponse.ResourceEvaluations).To(HaveLen(1))
-			Expect(actualListResourceEvaluationsResponse.ResourceEvaluations[0]).To(Equal(expectedResourceEvaluation))
+			Expect(actualListResourceEvaluationsResponse.ResourceEvaluations[0].ResourceEvaluation).To(Equal(expectedResourceEvaluation))
+			Expect(actualListResourceEvaluationsResponse.ResourceEvaluations[0].PolicyEvaluations).To(HaveLen(1))
+			Expect(actualListResourceEvaluationsResponse.ResourceEvaluations[0].PolicyEvaluations[0]).To(Equal(expectedPolicyEvaluation))
 
 			Expect(actualError).ToNot(HaveOccurred())
 		})
@@ -894,7 +939,6 @@ var _ = Describe("evaluation manager", func() {
 			_, searchRequest := esClient.MultiSearchArgsForCall(0)
 
 			Expect(searchRequest.Index).To(Equal(expectedEvaluationsAlias))
-			Expect(searchRequest.Routing).To(Equal(expectedResourceEvaluationId))
 			Expect(searchRequest.Searches).To(HaveLen(2))
 
 			resourceEvaluationSearch := searchRequest.Searches[0]
@@ -904,6 +948,7 @@ var _ = Describe("evaluation manager", func() {
 			policyEvaluationSearch := searchRequest.Searches[1]
 
 			Expect(policyEvaluationSearch.Query.HasParent.ParentType).To(Equal(resourceEvaluationRelationName))
+			Expect(policyEvaluationSearch.Routing).To(Equal(expectedResourceEvaluationId))
 			Expect((*policyEvaluationSearch.Query.HasParent.Query.Term)["_id"]).To(Equal(expectedResourceEvaluationId))
 		})
 

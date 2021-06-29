@@ -99,6 +99,6 @@ message ListResourceEvaluationsRequest {
 }
 
 message ListResourceEvaluationsResponse {
-  repeated ResourceEvaluation resource_evaluations = 1;
+  repeated ResourceEvaluationResult resource_evaluations = 1;
   string next_page_token = 2;
 }
