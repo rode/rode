@@ -216,7 +216,8 @@ func (m *manager) GetResourceEvaluation(ctx context.Context, request *pb.GetReso
 	log := m.logger.Named("GetResourceEvaluation").With(zap.String("id", request.Id))
 
 	searchResponse, err := m.esClient.MultiSearch(ctx, &esutil.MultiSearchRequest{
-		Index: m.indexManager.AliasName(constants.EvaluationsDocumentKind, ""),
+		Index:   m.indexManager.AliasName(constants.EvaluationsDocumentKind, ""),
+		Routing: request.Id,
 		Searches: []*esutil.EsSearch{
 			{
 				Query: &filtering.Query{
@@ -279,6 +280,11 @@ func (m *manager) ListResourceEvaluations(ctx context.Context, request *pb.ListR
 
 	if request.ResourceUri == "" {
 		return nil, util.GrpcErrorWithCode(log, "resourceUri is required", nil, codes.InvalidArgument)
+	}
+
+	_, err := m.resourceManager.GetResourceVersion(ctx, request.ResourceUri)
+	if err != nil {
+		return nil, err
 	}
 
 	queries := filtering.Must{

@@ -631,6 +631,8 @@ var _ = Describe("evaluation manager", func() {
 
 			expectedFilterQuery *filtering.Query
 			expectedFilterError error
+
+			expectedGetResourceVersionError error
 		)
 
 		BeforeEach(func() {
@@ -659,13 +661,23 @@ var _ = Describe("evaluation manager", func() {
 				},
 			}
 			expectedSearchError = nil
+
+			expectedGetResourceVersionError = nil
 		})
 
 		JustBeforeEach(func() {
+			resourceManager.GetResourceVersionReturns(nil, expectedGetResourceVersionError)
 			filterer.ParseExpressionReturns(expectedFilterQuery, expectedFilterError)
 			esClient.SearchReturns(expectedSearchResponse, expectedSearchError)
 
 			actualListResourceEvaluationsResponse, actualError = manager.ListResourceEvaluations(ctx, expectedListResourceEvaluationsRequest)
+		})
+
+		It("should check for the existence of the resource version", func() {
+			Expect(resourceManager.GetResourceVersionCallCount()).To(Equal(1))
+
+			_, resourceUri := resourceManager.GetResourceVersionArgsForCall(0)
+			Expect(resourceUri).To(Equal(expectedResourceUri))
 		})
 
 		It("should perform a search", func() {
@@ -785,6 +797,25 @@ var _ = Describe("evaluation manager", func() {
 				Expect(actualError).To(HaveOccurred())
 				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.InvalidArgument))
 			})
+
+			It("should not perform a search", func() {
+				Expect(esClient.SearchCallCount()).To(Equal(0))
+			})
+		})
+
+		When("an error occurs while fetching the resource version", func() {
+			BeforeEach(func() {
+				expectedGetResourceVersionError = errors.New("error searching for resource version")
+			})
+
+			It("should return an error", func() {
+				Expect(actualListResourceEvaluationsResponse).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+			})
+
+			It("should not perform a search", func() {
+				Expect(esClient.SearchCallCount()).To(Equal(0))
+			})
 		})
 	})
 
@@ -863,6 +894,7 @@ var _ = Describe("evaluation manager", func() {
 			_, searchRequest := esClient.MultiSearchArgsForCall(0)
 
 			Expect(searchRequest.Index).To(Equal(expectedEvaluationsAlias))
+			Expect(searchRequest.Routing).To(Equal(expectedResourceEvaluationId))
 			Expect(searchRequest.Searches).To(HaveLen(2))
 
 			resourceEvaluationSearch := searchRequest.Searches[0]
