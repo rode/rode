@@ -293,6 +293,9 @@ service Rode {
       post: "/v1alpha1/resource-evaluations"
       body: "*"
     };
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.resource.evaluate"]
+    };
   }
 
   rpc GetResourceEvaluation(GetResourceEvaluationRequest) returns (ResourceEvaluationResult) {
@@ -300,11 +303,17 @@ service Rode {
       get: "/v1alpha1/resource-evaluations/{id}"
     };
     option (google.api.method_signature) = "id";
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.resource.read"]
+    };
   }
 
   rpc ListResourceEvaluations(ListResourceEvaluationsRequest) returns (ListResourceEvaluationsResponse) {
     option (google.api.http) = {
       get: "/v1alpha1/resource-evaluations"
+    };
+    option (rode.v1alpha1.authorization) = {
+      permissions: ["rode.resource.read"]
     };
   }
 }
