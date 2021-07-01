@@ -862,6 +862,22 @@ var _ = Describe("evaluation manager", func() {
 				Expect(esClient.SearchCallCount()).To(Equal(0))
 			})
 		})
+
+		When("no resource evaluations are found", func() {
+			BeforeEach(func() {
+				expectedSearchResponse.Hits.Total.Value = 0
+				expectedSearchResponse.Hits.Hits = []*esutil.EsSearchResponseHit{}
+			})
+
+			It("should not perform a multisearch", func() {
+				Expect(esClient.MultiSearchCallCount()).To(BeZero())
+			})
+
+			It("should return a response with an empty list", func() {
+				Expect(actualListResourceEvaluationsResponse.ResourceEvaluations).To(BeEmpty())
+				Expect(actualError).ToNot(HaveOccurred())
+			})
+		})
 	})
 
 	Context("GetResourceEvaluation", func() {

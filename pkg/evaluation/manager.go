@@ -330,6 +330,10 @@ func (m *manager) ListResourceEvaluations(ctx context.Context, request *pb.ListR
 		return nil, util.GrpcInternalError(log, "error searching for resource evaluations", err)
 	}
 
+	if searchResponse.Hits.Total.Value == 0 {
+		return &pb.ListResourceEvaluationsResponse{}, nil
+	}
+
 	var (
 		resourceEvaluationResults []*pb.ResourceEvaluationResult
 		policyEvaluationSearches  []*esutil.EsSearch
