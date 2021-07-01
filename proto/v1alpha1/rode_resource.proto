@@ -60,34 +60,6 @@ message ResourceVersion {
   google.protobuf.Timestamp created = 3;
 }
 
-// ResourceEvaluation describes the result of a request to evaluate a particular resource version against a group of policies.
-message ResourceEvaluation {
-  // Id represents the unique identifier (UUID) for this particular resource evaluation.
-  string id = 1;
-
-  // Pass represents the overall status for this resource evaluation. This is determined by looking at each policy evaluation
-  // result and performing an AND on each one. If Pass is true, this means that the referenced resource version passed each
-  // policy within the policy group at the time that the evaluation was performed.
-  bool pass = 2;
-
-  // Source represents the source of the resource evaluation request. This should be set by the enforcer or entity performing
-  // the request.
-  ResourceEvaluationSource source = 3;
-
-  google.protobuf.Timestamp created = 4;
-
-  // ResourceVersion represents the specific resource version that was evaluated in this request.
-  ResourceVersion resource_version = 5;
-
-  // PolicyGroup represents the name of the policy group that was evaluated in this request.
-  string policy_group = 6;
-}
-
-message ResourceEvaluationSource {
-  string name = 1;
-  string url = 2;
-}
-
 message ListResourcesRequest {
   string filter = 1;
   int32 page_size = 2;

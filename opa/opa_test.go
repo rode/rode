@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	pb "github.com/rode/rode/proto/v1alpha1"
 
 	"net/http"
 
@@ -208,7 +209,7 @@ var _ = Describe("opa client", func() {
 				opaResponse = &EvaluatePolicyResponse{
 					Result: &EvaluatePolicyResult{
 						Pass: gofakeit.Bool(),
-						Violations: []*EvaluatePolicyViolation{
+						Violations: []*pb.EvaluatePolicyViolation{
 							{
 								Message: gofakeit.Paragraph(1, 1, 10, "."),
 							},

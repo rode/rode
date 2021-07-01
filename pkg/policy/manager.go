@@ -18,11 +18,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/rode/rode/pkg/util"
 	"strconv"
 	"strings"
-
-	"github.com/rode/rode/pkg/constants"
-	"github.com/rode/rode/pkg/grafeas"
 
 	"github.com/google/uuid"
 	"github.com/open-policy-agent/opa/ast"
@@ -30,7 +28,7 @@ import (
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 	"github.com/rode/rode/config"
-	"github.com/rode/rode/opa"
+	"github.com/rode/rode/pkg/constants"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -52,10 +50,10 @@ const (
 type Manager interface {
 	CreatePolicy(context.Context, *pb.Policy) (*pb.Policy, error)
 	GetPolicy(context.Context, *pb.GetPolicyRequest) (*pb.Policy, error)
+	GetPolicyVersion(ctx context.Context, id string) (*pb.PolicyEntity, error)
 	DeletePolicy(context.Context, *pb.DeletePolicyRequest) (*emptypb.Empty, error)
 	ListPolicies(context.Context, *pb.ListPoliciesRequest) (*pb.ListPoliciesResponse, error)
 	UpdatePolicy(context.Context, *pb.UpdatePolicyRequest) (*pb.Policy, error)
-	EvaluatePolicy(context.Context, *pb.EvaluatePolicyRequest) (*pb.EvaluatePolicyResponse, error)
 	ValidatePolicy(context.Context, *pb.ValidatePolicyRequest) (*pb.ValidatePolicyResponse, error)
 	ListPolicyVersions(context.Context, *pb.ListPolicyVersionsRequest) (*pb.ListPolicyVersionsResponse, error)
 }
@@ -63,12 +61,10 @@ type Manager interface {
 type manager struct {
 	logger *zap.Logger
 
-	esClient          esutil.Client
-	esConfig          *config.ElasticsearchConfig
-	indexManager      indexmanager.IndexManager
-	filterer          filtering.Filterer
-	opa               opa.Client
-	grafeasExtensions grafeas.Extensions
+	esClient     esutil.Client
+	esConfig     *config.ElasticsearchConfig
+	indexManager indexmanager.IndexManager
+	filterer     filtering.Filterer
 }
 
 func NewManager(
@@ -77,17 +73,13 @@ func NewManager(
 	esConfig *config.ElasticsearchConfig,
 	indexManager indexmanager.IndexManager,
 	filterer filtering.Filterer,
-	opa opa.Client,
-	grafeasExtensions grafeas.Extensions,
 ) Manager {
 	return &manager{
-		logger:            logger,
-		esClient:          esClient,
-		esConfig:          esConfig,
-		indexManager:      indexManager,
-		filterer:          filterer,
-		opa:               opa,
-		grafeasExtensions: grafeasExtensions,
+		logger:       logger,
+		esClient:     esClient,
+		esConfig:     esConfig,
+		indexManager: indexManager,
+		filterer:     filterer,
 	}
 }
 
@@ -167,7 +159,7 @@ func (m *manager) CreatePolicy(ctx context.Context, policy *pb.Policy) (*pb.Poli
 		return nil, createError(log, "error creating policy", err)
 	}
 
-	if err := checkBulkResponseErrors(response); err != nil {
+	if err := util.CheckBulkResponseErrors(response); err != nil {
 		return nil, createError(log, "policy creation failed", err)
 	}
 
@@ -180,8 +172,8 @@ func (m *manager) CreatePolicy(ctx context.Context, policy *pb.Policy) (*pb.Poli
 func (m *manager) GetPolicy(ctx context.Context, request *pb.GetPolicyRequest) (*pb.Policy, error) {
 	log := m.logger.Named("GetPolicy")
 	log.Debug("received request")
-	policyId, version, err := parsePolicyVersionId(request.Id)
 
+	policyId, version, err := parsePolicyVersionId(request.Id)
 	if err != nil {
 		return nil, createErrorWithCode(log, "invalid policy id", err, codes.InvalidArgument)
 	}
@@ -199,26 +191,15 @@ func (m *manager) GetPolicy(ctx context.Context, request *pb.GetPolicyRequest) (
 
 	log = log.With(zap.Uint32("version", version))
 
-	response, err := m.esClient.Get(ctx, &esutil.GetRequest{
-		Routing:    policyId,
-		Index:      m.policiesAlias(),
-		DocumentId: policyVersionId(policy.Id, version),
-	})
-
+	policyEntity, err := m.GetPolicyVersion(ctx, policyVersionId(policy.Id, version))
 	if err != nil {
-		return nil, createError(log, "unable to determine current policy version", err)
+		return nil, createError(log, "error getting policy version", err)
+	}
+	if policyEntity == nil {
+		return nil, createError(log, "policy version not found", nil)
 	}
 
-	if !response.Found {
-		return nil, createError(log, "policy entity not found", nil)
-	}
-
-	var policyEntity pb.PolicyEntity
-	err = protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(response.Source, &policyEntity)
-	if err != nil {
-		return nil, createError(log, "error unmarshalling policy version", err)
-	}
-	policy.Policy = &policyEntity
+	policy.Policy = policyEntity
 
 	return policy, nil
 }
@@ -499,7 +480,7 @@ func (m *manager) UpdatePolicy(ctx context.Context, request *pb.UpdatePolicyRequ
 		return nil, createError(log, "error updating policy", err)
 	}
 
-	if err := checkBulkResponseErrors(response); err != nil {
+	if err := util.CheckBulkResponseErrors(response); err != nil {
 		return nil, createError(log, "failed to update policy", err)
 	}
 
@@ -576,80 +557,37 @@ func (m *manager) ValidatePolicy(_ context.Context, policy *pb.ValidatePolicyReq
 	}, nil
 }
 
-func (m *manager) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePolicyRequest) (*pb.EvaluatePolicyResponse, error) {
-	var err error
-	log := m.logger.Named("EvaluatePolicy").With(zap.String("policy", request.Policy), zap.String("resource", request.ResourceUri))
-	log.Debug("evaluate policy request received")
+func (m *manager) GetPolicyVersion(ctx context.Context, id string) (*pb.PolicyEntity, error) {
+	log := m.logger.Named("GetPolicyVersion")
 
-	if request.ResourceUri == "" {
-		return nil, createErrorWithCode(log, "resource uri is required", nil, codes.InvalidArgument)
-	}
-
-	policy, err := m.GetPolicy(ctx, &pb.GetPolicyRequest{Id: request.Policy})
+	policyId, version, err := parsePolicyVersionId(id)
 	if err != nil {
-		return nil, createError(log, "error fetching policy", err)
+		return nil, fmt.Errorf("error parsing policy version id: %v", err)
 	}
 
-	// check OPA policy has been loaded, using the policy id
-	err = m.opa.InitializePolicy(request.Policy, policy.Policy.RegoContent)
-	if err != nil {
-		return nil, createError(log, "error initializing policy in OPA", err)
-	}
+	log = log.With(zap.Uint32("version", version))
 
-	// fetch occurrences from grafeas
-	occurrences, _, err := m.grafeasExtensions.ListVersionedResourceOccurrences(ctx, request.ResourceUri, "", constants.MaxPageSize)
-	if err != nil {
-		return nil, createError(log, "error listing occurrences", err)
-	}
-
-	log.Debug("Occurrences found", zap.Any("occurrences", occurrences))
-
-	input, _ := protojson.Marshal(&pb.EvaluatePolicyInput{
-		Occurrences: occurrences,
+	log.Debug("fetching policy version")
+	response, err := m.esClient.Get(ctx, &esutil.GetRequest{
+		Routing:    policyId,
+		Index:      m.policiesAlias(),
+		DocumentId: id,
 	})
-
-	evaluatePolicyResponse := &opa.EvaluatePolicyResponse{
-		Result: &opa.EvaluatePolicyResult{
-			Pass:       false,
-			Violations: []*opa.EvaluatePolicyViolation{},
-		},
-	}
-	// evaluate OPA policy
-	evaluatePolicyResponse, err = m.opa.EvaluatePolicy(policy.Policy.RegoContent, input)
 	if err != nil {
-		return nil, createError(log, "error evaluating policy", err)
+		return nil, fmt.Errorf("error fetching policy version: %v", err)
 	}
 
-	log.Debug("Evaluate policy result", zap.Any("policy result", evaluatePolicyResponse))
-
-	attestation := &pb.EvaluatePolicyResult{}
-	attestation.Created = timestamppb.Now()
-	if evaluatePolicyResponse.Result != nil {
-		attestation.Pass = evaluatePolicyResponse.Result.Pass
-
-		for _, violation := range evaluatePolicyResponse.Result.Violations {
-			attestation.Violations = append(attestation.Violations, &pb.EvaluatePolicyViolation{
-				Id:          violation.ID,
-				Name:        violation.Name,
-				Description: violation.Description,
-				Message:     violation.Message,
-				Link:        violation.Link,
-				Pass:        violation.Pass,
-			})
-		}
-	} else {
-		evaluatePolicyResponse.Result = &opa.EvaluatePolicyResult{
-			Pass: false,
-		}
+	if !response.Found {
+		return nil, nil
 	}
 
-	return &pb.EvaluatePolicyResponse{
-		Pass: evaluatePolicyResponse.Result.Pass,
-		Result: []*pb.EvaluatePolicyResult{
-			attestation,
-		},
-		Explanation: *evaluatePolicyResponse.Explanation,
-	}, nil
+	var policyEntity pb.PolicyEntity
+	err = protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(response.Source, &policyEntity)
+	if err != nil {
+		return nil, createError(log, "error unmarshalling policy version", err)
+	}
+
+	return &policyEntity, nil
 }
 
 func (m *manager) getPolicy(ctx context.Context, log *zap.Logger, id string) (*pb.Policy, error) {
@@ -841,23 +779,6 @@ func parsePolicyVersionId(id string) (string, uint32, error) {
 	}
 
 	return pieces[0], uint32(version), nil
-}
-
-func checkBulkResponseErrors(response *esutil.EsBulkResponse) error {
-	var bulkErrors []error
-	for _, item := range response.Items {
-		if item.Create != nil && item.Create.Error != nil {
-			bulkErrors = append(bulkErrors, fmt.Errorf("error creating new policy version [%d] %s: %s", item.Create.Status, item.Create.Error.Type, item.Create.Error.Reason))
-		} else if item.Index != nil && item.Index.Error != nil {
-			bulkErrors = append(bulkErrors, fmt.Errorf("error updating policy [%d] %s: %s", item.Index.Status, item.Index.Error.Type, item.Index.Error.Reason))
-		}
-	}
-
-	if len(bulkErrors) > 0 {
-		return fmt.Errorf("errors: %v", bulkErrors)
-	}
-
-	return nil
 }
 
 func hasPolicyContentChanges(currentPolicy, updatedPolicy *pb.Policy) bool {

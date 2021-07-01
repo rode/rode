@@ -12,16 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package constants
+package evaluation
 
-const (
-	RodeProjectSlug = "projects/rode"
-
-	PoliciesDocumentKind          = "policies"
-	PolicyGroupsDocumentKind      = "policy-groups"
-	PolicyAssignmentsDocumentKind = "policy-assignments"
-	ResourcesDocumentKind         = "resources"
-	EvaluationsDocumentKind       = "evaluations"
-
-	MaxPageSize = 1000
+import (
+	"github.com/brianvoe/gofakeit/v6"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"go.uber.org/zap"
+	"google.golang.org/grpc/status"
+	"testing"
 )
+
+var (
+	logger = zap.NewNop()
+	fake   = gofakeit.New(0)
+)
+
+func TestEvaluation(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Evaluation Suite")
+}
+
+func getGRPCStatusFromError(err error) *status.Status {
+	s, ok := status.FromError(err)
+	Expect(ok).To(BeTrue(), "Expected error to be a gRPC status")
+
+	return s
+}

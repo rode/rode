@@ -21,10 +21,13 @@ import (
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 	"github.com/rode/rode/config"
+	"github.com/rode/rode/pkg/constants"
+	"github.com/rode/rode/pkg/util"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	"github.com/rode/rode/protodeps/grafeas/proto/v1beta1/common_go_proto"
 	grafeas_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -46,6 +49,7 @@ type Manager interface {
 	ListResources(ctx context.Context, request *pb.ListResourcesRequest) (*pb.ListResourcesResponse, error)
 	ListResourceVersions(ctx context.Context, request *pb.ListResourceVersionsRequest) (*pb.ListResourceVersionsResponse, error)
 	GetResource(ctx context.Context, resourceId string) (*pb.Resource, error)
+	GetResourceVersion(ctx context.Context, resourceUri string) (*pb.ResourceVersion, error)
 }
 
 type manager struct {
@@ -414,6 +418,35 @@ func (m *manager) GetResource(ctx context.Context, resourceId string) (*pb.Resou
 	}
 
 	return &resource, nil
+}
+
+func (m *manager) GetResourceVersion(ctx context.Context, resourceUri string) (*pb.ResourceVersion, error) {
+	log := m.logger.Named("GetResourceVersion").With(zap.String("resourceUri", resourceUri))
+	uriParts, err := parseResourceUri(resourceUri)
+	if err != nil {
+		return nil, util.GrpcInternalError(log, "error parsing resource uri", err)
+	}
+
+	// the id of the version is the full resource uri, and the parent (for routing) is the prefixed name
+	response, err := m.esClient.Get(ctx, &esutil.GetRequest{
+		Index:      m.indexManager.AliasName(constants.ResourcesDocumentKind, ""),
+		DocumentId: resourceUri,
+		Routing:    uriParts.prefixedName,
+	})
+	if err != nil {
+		return nil, util.GrpcInternalError(log, "error fetching resource version", err)
+	}
+	if !response.Found {
+		return nil, util.GrpcErrorWithCode(log, fmt.Sprintf("resource version matching uri %s not found", resourceUri), nil, codes.NotFound)
+	}
+
+	var resourceVersion pb.ResourceVersion
+	err = protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(response.Source, &resourceVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	return &resourceVersion, nil
 }
 
 // resourceVersionsFromOccurrence will create a map of versions, keyed by their IDs, from an occurrence.

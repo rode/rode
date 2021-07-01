@@ -958,6 +958,89 @@ var _ = Describe("resource manager", func() {
 			})
 		})
 	})
+
+	Context("GetResourceVersion", func() {
+		var (
+			actualResourceVersion *pb.ResourceVersion
+			actualError           error
+
+			expectedResourceName    string
+			expectedResourceUri     string
+			expectedResourceVersion *pb.ResourceVersion
+
+			expectedGetResponse *esutil.EsGetResponse
+			expectedGetError    error
+		)
+
+		BeforeEach(func() {
+			expectedResourceName = strings.Split(fake.URL(), "://")[1]
+			expectedResourceUri = fmt.Sprintf("%s@sha256:%s", expectedResourceName, fake.LetterN(10))
+			expectedResourceVersion = &pb.ResourceVersion{
+				Version: expectedResourceUri,
+			}
+
+			resourceVersionJson, _ := protojson.Marshal(expectedResourceVersion)
+			expectedGetResponse = &esutil.EsGetResponse{
+				Found:  true,
+				Source: resourceVersionJson,
+			}
+			expectedGetError = nil
+		})
+
+		JustBeforeEach(func() {
+			esClient.GetReturns(expectedGetResponse, expectedGetError)
+
+			actualResourceVersion, actualError = manager.GetResourceVersion(ctx, expectedResourceUri)
+		})
+
+		It("should query elasticsearch for the resource version", func() {
+			Expect(esClient.GetCallCount()).To(Equal(1))
+
+			_, getRequest := esClient.GetArgsForCall(0)
+
+			Expect(getRequest.DocumentId).To(Equal(expectedResourceUri))
+			Expect(getRequest.Routing).To(Equal(expectedResourceName))
+			Expect(getRequest.Index).To(Equal(resourcesAlias))
+		})
+
+		It("should return the resource version and no error", func() {
+			Expect(actualResourceVersion).To(Equal(expectedResourceVersion))
+			Expect(actualError).ToNot(HaveOccurred())
+		})
+
+		When("the resource version is not found", func() {
+			BeforeEach(func() {
+				expectedGetResponse.Found = false
+			})
+
+			It("should return an error", func() {
+				Expect(actualResourceVersion).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+			})
+		})
+
+		When("the get request fails", func() {
+			BeforeEach(func() {
+				expectedGetError = errors.New("get failed")
+			})
+
+			It("should return an error", func() {
+				Expect(actualResourceVersion).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+			})
+		})
+
+		When("an invalid uri is provided", func() {
+			BeforeEach(func() {
+				expectedResourceUri = fake.LetterN(10)
+			})
+
+			It("should return an error", func() {
+				Expect(actualResourceVersion).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+			})
+		})
+	})
 })
 
 func createRandomOccurrence(kind grafeas_common_proto.NoteKind) *grafeas_go_proto.Occurrence {

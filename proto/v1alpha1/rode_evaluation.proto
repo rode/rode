@@ -1,0 +1,104 @@
+// Copyright 2021 The Rode Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package rode.v1alpha1;
+
+option go_package = "github.com/rode/rode/proto/v1alpha1";
+
+import "google/protobuf/timestamp.proto";
+import "proto/v1alpha1/rode_resource.proto";
+import "proto/v1alpha1/rode_policy.proto";
+
+// ResourceEvaluation describes the result of a request to evaluate a particular resource version against a group of policies.
+message ResourceEvaluation {
+  // Id represents the unique identifier (UUID) for this particular resource evaluation.
+  string id = 1;
+
+  // Pass represents the overall status for this resource evaluation. This is determined by looking at each policy evaluation
+  // result and performing an AND on each one. If Pass is true, this means that the referenced resource version passed each
+  // policy within the policy group at the time that the evaluation was performed.
+  bool pass = 2;
+
+  // Source represents the source of the resource evaluation request. This should be set by the enforcer or entity performing
+  // the request.
+  ResourceEvaluationSource source = 3;
+
+  google.protobuf.Timestamp created = 4;
+
+  // ResourceVersion represents the specific resource version that was evaluated in this request.
+  ResourceVersion resource_version = 5;
+
+  // PolicyGroup represents the name of the policy group that was evaluated in this request.
+  string policy_group = 6;
+}
+
+message ResourceEvaluationSource {
+  string name = 1;
+  string url = 2;
+}
+
+// PolicyEvaluation describes the result of a request to evaluate a particular resource version against a specific policy.
+// This is a child of ResourceEvaluation.
+message PolicyEvaluation {
+  // Id represents the unique identifier (UUID) for this particular policy evaluation.
+  string id = 1;
+
+  // ResourceEvaluationId represents the unique identifier (UUID) of the resource evaluation that triggered this policy evaluation.
+  string resource_evaluation_id = 2;
+
+  // Pass represents the overall status for this policy evaluation.
+  bool pass = 3;
+
+  // PolicyVersionId represents the ID of the policy version that was evaluated.
+  string policy_version_id = 4;
+
+  // Violations is a list of rule results. Even if a rule passed, its output will be included in Violations.
+  repeated EvaluatePolicyViolation violations = 5;
+}
+
+message ResourceEvaluationRequest {
+  // ResourceUri represents the resource being evaluated in this request.
+  string resource_uri = 1;
+
+  // PolicyGroup represents the name of the policy group used to evaluate this resource.
+  string policy_group = 2;
+
+  // Source represents the source of the resource evaluation request. This should be set by the enforcer or entity performing
+  // the request.
+  ResourceEvaluationSource source = 3;
+}
+
+// ResourceEvaluationResult is a struct containing a resource evaluation and all associated policy evaluations
+message ResourceEvaluationResult {
+  ResourceEvaluation resource_evaluation = 1;
+  repeated PolicyEvaluation policy_evaluations = 2;
+}
+
+message GetResourceEvaluationRequest {
+  string id = 1;
+}
+
+message ListResourceEvaluationsRequest {
+  string resource_uri = 1;
+  string filter = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListResourceEvaluationsResponse {
+  repeated ResourceEvaluationResult resource_evaluations = 1;
+  string next_page_token = 2;
+}
