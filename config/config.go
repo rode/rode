@@ -44,8 +44,9 @@ type OpaConfig struct {
 }
 
 type AuthConfig struct {
-	Basic *BasicAuthConfig
-	JWT   *JWTAuthConfig
+	Enabled bool
+	Basic   *BasicAuthConfig
+	JWT     *JWTAuthConfig
 }
 
 type BasicAuthConfig struct {
@@ -173,6 +174,8 @@ func Build(name string, args []string) (*Config, error) {
 	} else if conf.Auth.JWT.RequiredAudience != "" {
 		return nil, errors.New("the --jwt-required-audience flag cannot be specified without --jwt-issuer")
 	}
+
+	conf.Auth.Enabled = (conf.Auth.Basic.Username != "" && conf.Auth.Basic.Password != "") || conf.Auth.JWT.Issuer != ""
 
 	return conf, nil
 }

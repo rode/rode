@@ -74,7 +74,7 @@ func main() {
 
 	roleRegistry := auth.NewRoleRegistry()
 	authenticator := auth.NewAuthenticator(c.Auth, logger.Named("Authenticator"), roleRegistry)
-	authzInterceptor := auth.NewAuthorizationInterceptor(logger.Named("AuthorizationInterceptor"), roleRegistry)
+	authzInterceptor := auth.NewAuthorizationInterceptor(c.Auth, logger.Named("AuthorizationInterceptor"), roleRegistry)
 	recoveryHandler := grpc_recovery.WithRecoveryHandler(func(p interface{}) (err error) {
 		logger.Error("Panic in gRPC handler", zap.Any("panic", p))
 

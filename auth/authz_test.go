@@ -19,6 +19,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/rode/rode/config"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	_ "google.golang.org/grpc/health/grpc_health_v1" // imported so that the health service is in the proto registry
@@ -33,13 +34,15 @@ const (
 
 var _ = Describe("AuthorizationInterceptor", func() {
 	var (
+		authConfig  *config.AuthConfig
 		ctx         context.Context
 		interceptor AuthorizationInterceptor
 		registry    = NewRoleRegistry()
 	)
 
 	BeforeEach(func() {
-		interceptor = NewAuthorizationInterceptor(logger, registry)
+		authConfig = &config.AuthConfig{Enabled: true}
+		interceptor = NewAuthorizationInterceptor(authConfig, logger, registry)
 	})
 
 	Context("LoadServicePermissions", func() {
@@ -119,6 +122,23 @@ var _ = Describe("AuthorizationInterceptor", func() {
 
 		It("should return the same context", func() {
 			Expect(actualCtx).To(Equal(ctx))
+		})
+
+		When("auth is disabled", func() {
+			BeforeEach(func() {
+				// reset context to remove gRPC method and roles
+				// normally this would fail when auth is enabled
+				ctx = context.Background()
+				authConfig.Enabled = false
+			})
+
+			It("should not return an error", func() {
+				Expect(actualError).NotTo(HaveOccurred())
+			})
+
+			It("should return the same context", func() {
+				Expect(actualCtx).To(Equal(ctx))
+			})
 		})
 
 		When("the gRPC method isn't in the context", func() {

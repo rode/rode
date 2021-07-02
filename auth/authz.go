@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/rode/rode/config"
 	"github.com/rode/rode/pkg/util"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	"github.com/scylladb/go-set/strset"
@@ -34,13 +35,15 @@ type AuthorizationInterceptor interface {
 }
 
 type authorizationInterceptor struct {
+	authConfig            *config.AuthConfig
 	logger            *zap.Logger
 	roleRegistry      RoleRegistry
 	methodPermissions map[string][]string
 }
 
-func NewAuthorizationInterceptor(logger *zap.Logger, registry RoleRegistry) AuthorizationInterceptor {
+func NewAuthorizationInterceptor(authConfig *config.AuthConfig, logger *zap.Logger, registry RoleRegistry) AuthorizationInterceptor {
 	return &authorizationInterceptor{
+		authConfig,
 		logger,
 		registry,
 		map[string][]string{},
@@ -72,6 +75,10 @@ func (a *authorizationInterceptor) LoadServicePermissions(serviceInfo map[string
 
 func (a *authorizationInterceptor) Authorize(ctx context.Context) (context.Context, error) {
 	log := a.logger.Named("Authorize")
+	if !a.authConfig.Enabled {
+		return ctx, nil
+	}
+
 	methodName, ok := grpc.Method(ctx)
 	if !ok {
 		return nil, util.GrpcInternalError(log, "unable to determine server method", nil)

@@ -87,6 +87,7 @@ func TestConfig(t *testing.T) {
 					JWT: &JWTAuthConfig{
 						RoleClaimPath: "roles",
 					},
+					Enabled: true,
 				},
 				Elasticsearch: &ElasticsearchConfig{
 					Host:    "http://elasticsearch-master:9200",
@@ -206,6 +207,7 @@ func TestConfig(t *testing.T) {
 			c, err := Build("rode", []string{fmt.Sprintf("--jwt-issuer=%s", issuer)})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(c.Auth.JWT.Issuer).To(Equal(issuer))
+			Expect(c.Auth.Enabled).To(BeTrue())
 		})
 
 		t.Run("should be successful with required audience", func(t *testing.T) {
