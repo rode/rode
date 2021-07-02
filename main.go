@@ -83,15 +83,15 @@ func main() {
 
 	s := grpc.NewServer(
 		grpc_middleware.WithStreamServerChain(
+			grpc_recovery.StreamServerInterceptor(recoveryHandler),
 			grpc_auth.StreamServerInterceptor(authenticator.Authenticate),
 			grpc_auth.StreamServerInterceptor(authzInterceptor.Authorize),
-			grpc_recovery.StreamServerInterceptor(recoveryHandler),
 		),
 
 		grpc_middleware.WithUnaryServerChain(
+			grpc_recovery.UnaryServerInterceptor(recoveryHandler),
 			grpc_auth.UnaryServerInterceptor(authenticator.Authenticate),
 			grpc_auth.UnaryServerInterceptor(authzInterceptor.Authorize),
-			grpc_recovery.UnaryServerInterceptor(recoveryHandler),
 		),
 	)
 	if c.Debug {

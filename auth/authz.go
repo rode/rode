@@ -35,7 +35,7 @@ type AuthorizationInterceptor interface {
 }
 
 type authorizationInterceptor struct {
-	authConfig            *config.AuthConfig
+	authConfig        *config.AuthConfig
 	logger            *zap.Logger
 	roleRegistry      RoleRegistry
 	methodPermissions map[string][]string
