@@ -92,6 +92,8 @@ const (
 	RefreshFalse   = "false"
 )
 
+var oidcClientContext = oidc.ClientContext
+
 func Build(name string, args []string) (*Config, error) {
 	flags := flag.NewFlagSet(name, flag.ContinueOnError)
 
@@ -144,6 +146,7 @@ func Build(name string, args []string) (*Config, error) {
 		oidcCtx := context.Background()
 
 		if conf.Auth.JWT.TlsInsecureSkipVerify {
+			fmt.Println("init")
 			httpClient := &http.Client{
 				Timeout: 30 * time.Second,
 				Transport: &http.Transport{
@@ -152,7 +155,7 @@ func Build(name string, args []string) (*Config, error) {
 					},
 				},
 			}
-			oidcCtx = oidc.ClientContext(oidcCtx, httpClient)
+			oidcCtx = oidcClientContext(oidcCtx, httpClient)
 		}
 
 		provider, err := oidc.NewProvider(oidcCtx, conf.Auth.JWT.Issuer)

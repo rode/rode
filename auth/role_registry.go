@@ -103,6 +103,7 @@ func NewRoleRegistry() RoleRegistry {
 			RoleAdministrator: {
 				PermissionEvaluationResultRead,
 				PermissionOccurrenceRead,
+				PermissionOccurrenceWrite,
 				PermissionPolicyAssignmentDelete,
 				PermissionPolicyAssignmentRead,
 				PermissionPolicyAssignmentWrite,

@@ -23,16 +23,16 @@ import (
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	"github.com/grpc-ecosystem/go-grpc-middleware/util/metautils"
 	"github.com/rode/rode/config"
+	"github.com/rode/rode/pkg/util"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 var rolesCtxKey = "roles"
 
 type authenticator struct {
-	authConfig *config.AuthConfig
-	logger *zap.Logger
+	authConfig   *config.AuthConfig
+	logger       *zap.Logger
 	roleRegistry RoleRegistry
 }
 
@@ -49,6 +49,7 @@ func NewAuthenticator(authConfig *config.AuthConfig, logger *zap.Logger, registr
 }
 
 func (a *authenticator) Authenticate(ctx context.Context) (context.Context, error) {
+	log := a.logger.Named("Authenticate")
 	authzHeader := metautils.ExtractIncoming(ctx).Get("authorization")
 
 	if authzHeader == "" {
@@ -56,17 +57,17 @@ func (a *authenticator) Authenticate(ctx context.Context) (context.Context, erro
 	}
 
 	if a.authConfig.Basic.Username != "" && a.authConfig.Basic.Password != "" {
-		return a.basic(ctx)
+		return a.basic(ctx, log.With(zap.String("authMethod", "basic")))
 	}
 
 	if a.authConfig.JWT.Issuer != "" {
-		return a.jwt(ctx)
+		return a.jwt(ctx, log.With(zap.String("authMethod", "jwt")))
 	}
 
 	return ctx, nil
 }
 
-func (a *authenticator) basic(ctx context.Context) (context.Context, error) {
+func (a *authenticator) basic(ctx context.Context, log *zap.Logger) (context.Context, error) {
 	token, err := grpc_auth.AuthFromMD(ctx, "basic")
 	if err != nil {
 		return nil, err
@@ -74,22 +75,22 @@ func (a *authenticator) basic(ctx context.Context) (context.Context, error) {
 
 	data, err := base64.StdEncoding.DecodeString(token)
 	if err != nil {
-		return nil, status.Errorf(codes.Unauthenticated, "error decoding auth token: %v", err)
+		return nil, util.GrpcErrorWithCode(log, "error decoding auth token", err,  codes.Unauthenticated)
 	}
 
 	parts := strings.Split(string(data), ":")
 	if len(parts) != 2 {
-		return nil, status.Errorf(codes.Unauthenticated, "expected auth token to follow format ${username}:${password}")
+		return nil, util.GrpcErrorWithCode(log, "expected auth token to follow format ${username}:${password}", nil,  codes.Unauthenticated)
 	}
 
 	if a.authConfig.Basic.Username == parts[0] && a.authConfig.Basic.Password == parts[1] {
 		return context.WithValue(ctx, rolesCtxKey, []Role{RoleAdministrator}), nil
 	}
 
-	return nil, status.Error(codes.Unauthenticated, "invalid username or password")
+	return nil, util.GrpcErrorWithCode(log, "invalid username or password", nil,  codes.Unauthenticated)
 }
 
-func (a *authenticator) jwt(ctx context.Context) (context.Context, error) {
+func (a *authenticator) jwt(ctx context.Context, log *zap.Logger) (context.Context, error) {
 	rawToken, err := grpc_auth.AuthFromMD(ctx, "bearer")
 	if err != nil {
 		return nil, err
@@ -97,17 +98,17 @@ func (a *authenticator) jwt(ctx context.Context) (context.Context, error) {
 
 	token, err := a.authConfig.JWT.Verifier.Verify(ctx, rawToken)
 	if err != nil {
-		return nil, status.Errorf(codes.Unauthenticated, "error validating jwt: %v", err)
+		return nil, util.GrpcErrorWithCode(log, "error validating jwt", err,  codes.Unauthenticated)
 	}
 
 	var claims map[string]interface{}
 	if err = token.Claims(&claims); err != nil {
-		return nil, status.Errorf(codes.Unauthenticated, "error unmarshalling claims: %v", err)
+		return nil, util.GrpcErrorWithCode(log, "error unmarshalling claims", err,  codes.Unauthenticated)
 	}
 
 	allRoles, ok := gabs.Wrap(claims).Path(a.authConfig.JWT.RoleClaimPath).Data().([]interface{})
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "missing roles claim")
+		return nil, util.GrpcErrorWithCode(log, "missing roles claim", nil,  codes.Unauthenticated)
 	}
 
 	var roles []Role

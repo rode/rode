@@ -15,12 +15,14 @@
 package config
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"testing"
 
-	"github.com/brianvoe/gofakeit/v5"
+	"github.com/brianvoe/gofakeit/v6"
+	"github.com/coreos/go-oidc"
 	"github.com/jarcoal/httpmock"
 	. "github.com/onsi/gomega"
 )
@@ -40,7 +42,9 @@ func TestConfig(t *testing.T) {
 			expected: &Config{
 				Auth: &AuthConfig{
 					Basic: &BasicAuthConfig{},
-					JWT:   &JWTAuthConfig{},
+					JWT: &JWTAuthConfig{
+						RoleClaimPath: "roles",
+					},
 				},
 				Elasticsearch: &ElasticsearchConfig{
 					Host:    "http://elasticsearch-master:9200",
@@ -80,7 +84,9 @@ func TestConfig(t *testing.T) {
 						Username: "foo",
 						Password: "bar",
 					},
-					JWT: &JWTAuthConfig{},
+					JWT: &JWTAuthConfig{
+						RoleClaimPath: "roles",
+					},
 				},
 				Elasticsearch: &ElasticsearchConfig{
 					Host:    "http://elasticsearch-master:9200",
@@ -117,7 +123,9 @@ func TestConfig(t *testing.T) {
 			expected: &Config{
 				Auth: &AuthConfig{
 					Basic: &BasicAuthConfig{},
-					JWT:   &JWTAuthConfig{},
+					JWT: &JWTAuthConfig{
+						RoleClaimPath: "roles",
+					},
 				},
 				Grafeas: &GrafeasConfig{
 					Host: "localhost:8080",
@@ -226,6 +234,28 @@ func TestConfig(t *testing.T) {
 
 			_, err := Build("rode", []string{fmt.Sprintf("--jwt-issuer=%s", issuer)})
 			Expect(err).To(HaveOccurred())
+		})
+
+		t.Run("should provided a custom client when verification is off", func(t *testing.T) {
+			httpmock.Activate()
+			defer httpmock.Deactivate()
+			var actualTransport *http.Transport
+
+			oidcClientContext = func(ctx context.Context, client *http.Client) context.Context {
+				actualTransport = client.Transport.(*http.Transport)
+				httpmock.ActivateNonDefault(client)
+
+				httpmock.RegisterResponder("GET", issuer+wellknown, func(request *http.Request) (*http.Response, error) {
+					return httpmock.NewStringResponse(http.StatusOK, string(responseBytes)), nil
+				})
+
+				return oidc.ClientContext(ctx, client)
+			}
+
+			_, err := Build("rode", []string{"--jwt-tls-insecure-skip-verify=true", fmt.Sprintf("--jwt-issuer=%s", issuer)})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(actualTransport).NotTo(BeNil())
+			Expect(actualTransport.TLSClientConfig.InsecureSkipVerify).To(BeTrue())
 		})
 	})
 }
