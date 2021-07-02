@@ -42,6 +42,7 @@ var (
 	PermissionPolicyGroupWrite       Permission = "rode.policyGroup.write"
 	PermissionResourceEvaluate       Permission = "rode.resource.evaluate"
 	PermissionResourceRead           Permission = "rode.resource.read"
+	PermissionNoteWrite              Permission = "rode.note.write"
 )
 
 type RoleRegistry interface {
@@ -72,6 +73,7 @@ func NewRoleRegistry() RoleRegistry {
 			},
 			RoleCollector: {
 				PermissionCollectorRegister,
+				PermissionNoteWrite,
 				PermissionOccurrenceRead,
 				PermissionOccurrenceWrite,
 			},
@@ -114,7 +116,9 @@ func NewRoleRegistry() RoleRegistry {
 				PermissionResourceRead,
 			},
 			RoleAdministrator: {
+				PermissionCollectorRegister,
 				PermissionEvaluationResultRead,
+				PermissionNoteWrite,
 				PermissionOccurrenceRead,
 				PermissionOccurrenceWrite,
 				PermissionPolicyAssignmentDelete,
@@ -130,7 +134,6 @@ func NewRoleRegistry() RoleRegistry {
 				PermissionPolicyWrite,
 				PermissionResourceEvaluate,
 				PermissionResourceRead,
-				PermissionCollectorRegister,
 			},
 		},
 	}

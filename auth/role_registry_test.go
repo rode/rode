@@ -72,7 +72,7 @@ var _ = Describe("RoleRegistry", func() {
 
 		When("the Administrator role is requested", func() {
 			It("should return all roles", func() {
-				Expect(registry.GetRolePermissions(RoleAdministrator)).To(HaveLen(17))
+				Expect(registry.GetRolePermissions(RoleAdministrator)).To(HaveLen(18))
 			})
 		})
 
