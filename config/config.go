@@ -146,7 +146,6 @@ func Build(name string, args []string) (*Config, error) {
 		oidcCtx := context.Background()
 
 		if conf.Auth.JWT.TlsInsecureSkipVerify {
-			fmt.Println("init")
 			httpClient := &http.Client{
 				Timeout: 30 * time.Second,
 				Transport: &http.Transport{

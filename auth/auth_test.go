@@ -27,7 +27,7 @@ import (
 
 	"github.com/brianvoe/gofakeit/v5"
 	"github.com/coreos/go-oidc"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt"
 	"github.com/grpc-ecosystem/go-grpc-middleware/util/metautils"
 	. "github.com/onsi/gomega"
 	"github.com/rode/rode/config"
