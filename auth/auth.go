@@ -75,19 +75,19 @@ func (a *authenticator) basic(ctx context.Context, log *zap.Logger) (context.Con
 
 	data, err := base64.StdEncoding.DecodeString(token)
 	if err != nil {
-		return nil, util.GrpcErrorWithCode(log, "error decoding auth token", err,  codes.Unauthenticated)
+		return nil, util.GrpcErrorWithCode(log, "error decoding auth token", err, codes.Unauthenticated)
 	}
 
 	parts := strings.Split(string(data), ":")
 	if len(parts) != 2 {
-		return nil, util.GrpcErrorWithCode(log, "expected auth token to follow format ${username}:${password}", nil,  codes.Unauthenticated)
+		return nil, util.GrpcErrorWithCode(log, "expected auth token to follow format ${username}:${password}", nil, codes.Unauthenticated)
 	}
 
 	if a.authConfig.Basic.Username == parts[0] && a.authConfig.Basic.Password == parts[1] {
 		return context.WithValue(ctx, rolesCtxKey, []Role{RoleAdministrator}), nil
 	}
 
-	return nil, util.GrpcErrorWithCode(log, "invalid username or password", nil,  codes.Unauthenticated)
+	return nil, util.GrpcErrorWithCode(log, "invalid username or password", nil, codes.Unauthenticated)
 }
 
 func (a *authenticator) jwt(ctx context.Context, log *zap.Logger) (context.Context, error) {
@@ -98,17 +98,17 @@ func (a *authenticator) jwt(ctx context.Context, log *zap.Logger) (context.Conte
 
 	token, err := a.authConfig.JWT.Verifier.Verify(ctx, rawToken)
 	if err != nil {
-		return nil, util.GrpcErrorWithCode(log, "error validating jwt", err,  codes.Unauthenticated)
+		return nil, util.GrpcErrorWithCode(log, "error validating jwt", err, codes.Unauthenticated)
 	}
 
 	var claims map[string]interface{}
 	if err = token.Claims(&claims); err != nil {
-		return nil, util.GrpcErrorWithCode(log, "error unmarshalling claims", err,  codes.Unauthenticated)
+		return nil, util.GrpcErrorWithCode(log, "error unmarshalling claims", err, codes.Unauthenticated)
 	}
 
 	allRoles, ok := gabs.Wrap(claims).Path(a.authConfig.JWT.RoleClaimPath).Data().([]interface{})
 	if !ok {
-		return nil, util.GrpcErrorWithCode(log, "missing roles claim", nil,  codes.Unauthenticated)
+		return nil, util.GrpcErrorWithCode(log, "missing roles claim", nil, codes.Unauthenticated)
 	}
 
 	var roles []Role
