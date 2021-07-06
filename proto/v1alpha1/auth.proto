@@ -25,5 +25,5 @@ message Authorization {
 }
 
 extend google.protobuf.MethodOptions {
-  Authorization authorization = 50000; // global namespace, must be in range 50000-99999
+  Authorization authorization = 68489; // global namespace, must be in the range 50000-99999
 }

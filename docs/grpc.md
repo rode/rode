@@ -107,7 +107,7 @@
 ### File-level Extensions
 | Extension | Type | Base | Number | Description |
 | --------- | ---- | ---- | ------ | ----------- |
-| authorization | Authorization | .google.protobuf.MethodOptions | 50000 | global namespace, must be in range 50000-99999 |
+| authorization | Authorization | .google.protobuf.MethodOptions | 68489 | global namespace, must be in the range 50000-99999 |
 
  
 
