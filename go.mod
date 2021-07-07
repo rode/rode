@@ -3,12 +3,13 @@ module github.com/rode/rode
 go 1.16
 
 require (
+	github.com/Jeffail/gabs/v2 v2.6.1
 	github.com/antlr/antlr4 v0.0.0-20210409163025-478e46409e82 // indirect
 	github.com/brianvoe/gofakeit/v5 v5.10.1
 	github.com/brianvoe/gofakeit/v6 v6.4.1
 	github.com/coreos/go-oidc v2.2.1+incompatible
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/elastic/go-elasticsearch/v7 v7.12.0
+	github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/golang/protobuf v1.5.2
 	github.com/google/cel-go v0.7.3 // indirect
 	github.com/google/uuid v1.2.0
@@ -25,6 +26,7 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/rode/es-index-manager v0.1.2
 	github.com/rode/grafeas-elasticsearch v0.8.7
+	github.com/scylladb/go-set v1.0.2
 	github.com/soheilhy/cmux v0.1.4
 	github.com/stretchr/testify v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect

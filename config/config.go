@@ -16,9 +16,12 @@ package config
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"flag"
 	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/coreos/go-oidc"
 )
@@ -41,8 +44,9 @@ type OpaConfig struct {
 }
 
 type AuthConfig struct {
-	Basic *BasicAuthConfig
-	JWT   *JWTAuthConfig
+	Enabled bool
+	Basic   *BasicAuthConfig
+	JWT     *JWTAuthConfig
 }
 
 type BasicAuthConfig struct {
@@ -51,9 +55,11 @@ type BasicAuthConfig struct {
 }
 
 type JWTAuthConfig struct {
-	Issuer           string
-	RequiredAudience string
-	Verifier         *oidc.IDTokenVerifier
+	Issuer                string
+	RequiredAudience      string
+	RoleClaimPath         string
+	TlsInsecureSkipVerify bool
+	Verifier              *oidc.IDTokenVerifier
 }
 
 type ElasticsearchConfig struct {
@@ -87,6 +93,8 @@ const (
 	RefreshFalse   = "false"
 )
 
+var oidcClientContext = oidc.ClientContext
+
 func Build(name string, args []string) (*Config, error) {
 	flags := flag.NewFlagSet(name, flag.ContinueOnError)
 
@@ -104,6 +112,8 @@ func Build(name string, args []string) (*Config, error) {
 	flags.StringVar(&conf.Auth.Basic.Password, "basic-auth-password", "", "when set, basic auth will be enabled for all endpoints, using the provided password. --basic-auth-username must also be set")
 	flags.StringVar(&conf.Auth.JWT.Issuer, "jwt-issuer", "", "when set, jwt based auth will be enabled for all endpoints. the provided issuer will be used to fetch the discovery document in order to validate received jwts")
 	flags.StringVar(&conf.Auth.JWT.RequiredAudience, "jwt-required-audience", "", "when set, if jwt based auth is enabled, this audience must be specified within the `aud` claim of any received jwts")
+	flags.StringVar(&conf.Auth.JWT.RoleClaimPath, "jwt-role-claim-path", "roles", "name of the claim containing user roles. a nested claim can be used by adding periods between the key names")
+	flags.BoolVar(&conf.Auth.JWT.TlsInsecureSkipVerify, "jwt-tls-insecure-skip-verify", false, "disables TLS certificate verification. intended for testing only")
 
 	flags.IntVar(&conf.Port, "port", 50051, "the port that the rode gRPC/HTTP API server should listen on")
 	flags.BoolVar(&conf.Debug, "debug", false, "when set, debug mode will be enabled")
@@ -134,7 +144,21 @@ func Build(name string, args []string) (*Config, error) {
 	}
 
 	if conf.Auth.JWT.Issuer != "" {
-		provider, err := oidc.NewProvider(context.Background(), conf.Auth.JWT.Issuer)
+		oidcCtx := context.Background()
+
+		if conf.Auth.JWT.TlsInsecureSkipVerify {
+			httpClient := &http.Client{
+				Timeout: 30 * time.Second,
+				Transport: &http.Transport{
+					TLSClientConfig: &tls.Config{
+						InsecureSkipVerify: true,
+					},
+				},
+			}
+			oidcCtx = oidcClientContext(oidcCtx, httpClient)
+		}
+
+		provider, err := oidc.NewProvider(oidcCtx, conf.Auth.JWT.Issuer)
 		if err != nil {
 			return nil, fmt.Errorf("error initializing oidc provider: %v", err)
 		}
@@ -150,6 +174,8 @@ func Build(name string, args []string) (*Config, error) {
 	} else if conf.Auth.JWT.RequiredAudience != "" {
 		return nil, errors.New("the --jwt-required-audience flag cannot be specified without --jwt-issuer")
 	}
+
+	conf.Auth.Enabled = (conf.Auth.Basic.Username != "" && conf.Auth.Basic.Password != "") || conf.Auth.JWT.Issuer != ""
 
 	return conf, nil
 }
