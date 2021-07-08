@@ -16,7 +16,11 @@ package common
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
+	"github.com/grpc-ecosystem/go-grpc-middleware/util/metautils"
 	"github.com/jarcoal/httpmock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -24,6 +28,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
 	"net"
+	"strings"
 )
 
 var _ = Describe("client", func() {
@@ -35,13 +40,29 @@ var _ = Describe("client", func() {
 
 		fakeListener *bufconn.Listener
 		fakeServer   *grpc.Server
+
+		actualAuthenticationHeader string
 	)
 
 	BeforeEach(func() {
 		httpmock.Activate()
 		httpmock.ActivateNonDefault(insecureOauthHttpClient)
 
-		fakeServer = grpc.NewServer()
+		fakeAuthnFunc := func(ctx context.Context) (context.Context, error) {
+			actualAuthenticationHeader = metautils.ExtractIncoming(ctx).Get("authorization")
+
+			return ctx, nil
+		}
+
+		fakeServer = grpc.NewServer(
+			grpc_middleware.WithStreamServerChain(
+				grpc_auth.StreamServerInterceptor(fakeAuthnFunc),
+			),
+			grpc_middleware.WithUnaryServerChain(
+				grpc_auth.UnaryServerInterceptor(fakeAuthnFunc),
+			),
+		)
+
 		pb.RegisterRodeServer(fakeServer, &pb.UnimplementedRodeServer{})
 
 		fakeListener = bufconn.Listen(1024 * 1024)
@@ -50,8 +71,6 @@ var _ = Describe("client", func() {
 				return fakeListener.Dial()
 			}),
 		}
-
-		go fakeServer.Serve(fakeListener)
 
 		expectedConfig = &ClientConfig{
 			Rode: &RodeClientConfig{
@@ -62,6 +81,7 @@ var _ = Describe("client", func() {
 	})
 
 	JustBeforeEach(func() {
+		go fakeServer.Serve(fakeListener)
 		actualRodeClient, actualError = NewRodeClient(expectedConfig)
 	})
 
@@ -139,6 +159,23 @@ var _ = Describe("client", func() {
 		It("should return a rode client", func() {
 			Expect(actualRodeClient).ToNot(BeNil())
 			Expect(actualError).ToNot(HaveOccurred())
+		})
+
+		It("should send a basic authentication header with each request", func() {
+			_, _ = actualRodeClient.GetPolicy(context.Background(), &pb.GetPolicyRequest{})
+
+			Expect(actualAuthenticationHeader).ToNot(BeEmpty())
+
+			parts := strings.Split(actualAuthenticationHeader, " ")
+
+			Expect(parts[0]).To(Equal("Basic"))
+
+			data, err := base64.StdEncoding.DecodeString(parts[1])
+			Expect(err).ToNot(HaveOccurred())
+
+			dataParts := strings.Split(string(data), ":")
+			Expect(dataParts[0]).To(Equal(expectedUsername))
+			Expect(dataParts[1]).To(Equal(expectedPassword))
 		})
 
 		When("the username is missing", func() {
