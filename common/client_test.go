@@ -165,7 +165,7 @@ var _ = Describe("client", func() {
 	})
 
 	// TODO: figure out how to make this not take 10 seconds
-	When("connecting to the server fails", func() {
+	XWhen("connecting to the server fails", func() {
 		BeforeEach(func() {
 			dialOptions = []grpc.DialOption{
 				grpc.WithContextDialer(func(ctx context.Context, s string) (net.Conn, error) {
