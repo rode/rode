@@ -23,11 +23,13 @@ import (
 	"time"
 )
 
+var dialOptions []grpc.DialOption
+
 func NewRodeClient(config *ClientConfig) (pb.RodeClient, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	if config.Rode == nil || config.Rode.Host == "" {
+	if config == nil || config.Rode == nil || config.Rode.Host == "" {
 		return nil, errors.New("rode host must be specified")
 	}
 
@@ -35,9 +37,7 @@ func NewRodeClient(config *ClientConfig) (pb.RodeClient, error) {
 		return nil, errors.New("only one authentication method can be used")
 	}
 
-	dialOptions := []grpc.DialOption{
-		grpc.WithBlock(),
-	}
+	dialOptions = append(dialOptions, grpc.WithBlock())
 
 	if config.Rode.DisableTransportSecurity {
 		dialOptions = append(dialOptions, grpc.WithInsecure())

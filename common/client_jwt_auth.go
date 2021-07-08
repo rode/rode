@@ -29,6 +29,14 @@ type jwtAuth struct {
 	insecure    bool
 }
 
+var insecureOauthHttpClient = &http.Client{
+	Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	},
+}
+
 func newJwtAuth(config *JWTAuthConfig, insecure bool) (credentials.PerRPCCredentials, error) {
 	clientCredentialsConfig := &clientcredentials.Config{
 		ClientID:     config.ClientID,
@@ -39,15 +47,7 @@ func newJwtAuth(config *JWTAuthConfig, insecure bool) (credentials.PerRPCCredent
 	ctx := context.Background()
 
 	if config.TlsInsecureSkipVerify {
-		httpClient := &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: true,
-				},
-			},
-		}
-
-		ctx = context.WithValue(ctx, oauth2.HTTPClient, httpClient)
+		ctx = context.WithValue(ctx, oauth2.HTTPClient, insecureOauthHttpClient)
 	}
 
 	tokenSource := clientCredentialsConfig.TokenSource(ctx)
