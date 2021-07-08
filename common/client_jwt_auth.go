@@ -55,7 +55,7 @@ func newJwtAuth(config *JWTAuthConfig, insecure bool) (credentials.PerRPCCredent
 	// get an initial token to ensure client credentials are valid
 	_, err := tokenSource.Token()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting initial token: %v", err)
 	}
 
 	return &jwtAuth{

@@ -28,6 +28,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
 	"net"
+	"net/http"
 	"strings"
 )
 
@@ -137,6 +138,85 @@ var _ = Describe("client", func() {
 		It("should return an error", func() {
 			Expect(actualRodeClient).To(BeNil())
 			Expect(actualError).To(HaveOccurred())
+		})
+	})
+
+	When("JWT auth is configured", func() {
+		type tokenResponse struct {
+			AccessToken string `json:"access_token"`
+		}
+
+		var (
+			expectedClientId     string
+			expectedClientSecret string
+			expectedTokenUrl     string
+			expectedAccessToken  string
+		)
+
+		BeforeEach(func() {
+			expectedClientId = fake.LetterN(10)
+			expectedClientSecret = fake.UUID()
+			expectedTokenUrl = fake.URL()
+			expectedAccessToken = fake.UUID()
+
+			expectedConfig.JWTAuth = &JWTAuthConfig{
+				ClientID:              expectedClientId,
+				ClientSecret:          expectedClientSecret,
+				TokenURL:              expectedTokenUrl,
+				TlsInsecureSkipVerify: false,
+			}
+
+			httpmock.RegisterResponder(http.MethodPost, expectedTokenUrl, func(*http.Request) (*http.Response, error) {
+				return httpmock.NewJsonResponse(http.StatusOK, &tokenResponse{
+					AccessToken: expectedAccessToken,
+				})
+			})
+		})
+
+		It("should return a rode client", func() {
+			Expect(actualRodeClient).ToNot(BeNil())
+			Expect(actualError).ToNot(HaveOccurred())
+		})
+
+		It("should send a bearer authentication header with each request", func() {
+			_, _ = actualRodeClient.GetPolicy(context.Background(), &pb.GetPolicyRequest{})
+
+			Expect(actualAuthenticationHeader).ToNot(BeEmpty())
+
+			parts := strings.Split(actualAuthenticationHeader, " ")
+
+			Expect(parts[0]).To(Equal("Bearer"))
+			Expect(parts[1]).To(Equal(expectedAccessToken))
+		})
+
+		When("getting the access token fails", func() {
+			BeforeEach(func() {
+				httpmock.Reset()
+				httpmock.RegisterResponder(http.MethodPost, expectedTokenUrl, func(*http.Request) (*http.Response, error) {
+					return httpmock.NewStringResponse(http.StatusInternalServerError, "error"), nil
+				})
+			})
+
+			It("should return an error", func() {
+				Expect(actualRodeClient).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+			})
+		})
+
+		When("tls verification is disabled", func() {
+			BeforeEach(func() {
+				expectedConfig.JWTAuth.TlsInsecureSkipVerify = true
+			})
+
+			It("should use a http client with tls verification disabled", func() {
+				_, _ = actualRodeClient.GetPolicy(context.Background(), &pb.GetPolicyRequest{})
+
+				mockTransport, ok := insecureOauthHttpClient.Transport.(*httpmock.MockTransport)
+				Expect(ok).To(BeTrue())
+
+				httpmock.GetCallCountInfo()
+				Expect(mockTransport.GetCallCountInfo()).ToNot(HaveLen(0))
+			})
 		})
 	})
 
