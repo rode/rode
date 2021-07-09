@@ -60,7 +60,7 @@ var _ = Describe("client flags", func() {
 			Rode: &RodeClientConfig{
 				Host: "rode:50051",
 			},
-			JWTAuth:   &JWTAuthConfig{},
+			OIDCAuth:  &OIDCAuthConfig{},
 			BasicAuth: &BasicAuthConfig{},
 		}),
 		Entry("rode config", []string{
@@ -71,18 +71,18 @@ var _ = Describe("client flags", func() {
 				Host:                     expectedRodeHost,
 				DisableTransportSecurity: true,
 			},
-			JWTAuth:   &JWTAuthConfig{},
+			OIDCAuth:  &OIDCAuthConfig{},
 			BasicAuth: &BasicAuthConfig{},
 		}),
-		Entry("jwt auth", []string{
-			"--jwt-client-id=" + expectedClientId,
-			"--jwt-client-secret=" + expectedClientSecret,
-			"--jwt-token-url=" + expectedTokenUrl,
+		Entry("oidc auth", []string{
+			"--oidc-client-id=" + expectedClientId,
+			"--oidc-client-secret=" + expectedClientSecret,
+			"--oidc-token-url=" + expectedTokenUrl,
 		}, &ClientConfig{
 			Rode: &RodeClientConfig{
 				Host: "rode:50051",
 			},
-			JWTAuth: &JWTAuthConfig{
+			OIDCAuth: &OIDCAuthConfig{
 				ClientID:     expectedClientId,
 				ClientSecret: expectedClientSecret,
 				TokenURL:     expectedTokenUrl,
@@ -96,7 +96,7 @@ var _ = Describe("client flags", func() {
 			Rode: &RodeClientConfig{
 				Host: "rode:50051",
 			},
-			JWTAuth: &JWTAuthConfig{},
+			OIDCAuth: &OIDCAuthConfig{},
 			BasicAuth: &BasicAuthConfig{
 				Username: expectedUsername,
 				Password: expectedPassword,

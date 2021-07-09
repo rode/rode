@@ -16,7 +16,7 @@ package common
 
 type ClientConfig struct {
 	Rode      *RodeClientConfig
-	JWTAuth   *JWTAuthConfig
+	OIDCAuth  *OIDCAuthConfig
 	BasicAuth *BasicAuthConfig
 }
 
@@ -25,7 +25,7 @@ type RodeClientConfig struct {
 	DisableTransportSecurity bool
 }
 
-type JWTAuthConfig struct {
+type OIDCAuthConfig struct {
 	ClientID              string
 	ClientSecret          string
 	TokenURL              string

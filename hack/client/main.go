@@ -23,13 +23,13 @@ import (
 )
 
 func main() {
-	// configure the rode client with JWT auth
+	// configure the rode client with OIDC auth
 	rodeClient, err := common.NewRodeClient(&common.ClientConfig{
 		Rode: &common.RodeClientConfig{
 			Host:                     "localhost:50051",
 			DisableTransportSecurity: true,
 		},
-		JWTAuth: &common.JWTAuthConfig{
+		OIDCAuth: &common.OIDCAuthConfig{
 			ClientID:              "rode-ui",
 			ClientSecret:          "8a487ca4-6a96-4dc2-affa-35ea7f67e50c",
 			TokenURL:              "https://keycloak.test/auth/realms/rode-demo/protocol/openid-connect/token",

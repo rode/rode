@@ -25,7 +25,7 @@ import (
 	"net/http"
 )
 
-type jwtAuth struct {
+type oidcAuth struct {
 	tokenSource oauth2.TokenSource
 	insecure    bool
 }
@@ -38,7 +38,7 @@ var insecureOauthHttpClient = &http.Client{
 	},
 }
 
-func newJwtAuth(config *JWTAuthConfig, insecure bool) (credentials.PerRPCCredentials, error) {
+func newOidcAuth(config *OIDCAuthConfig, insecure bool) (credentials.PerRPCCredentials, error) {
 	if config.ClientID == "" || config.ClientSecret == "" || config.TokenURL == "" {
 		return nil, errors.New("client ID, client secret, and token URL must all be set for JWT auth")
 	}
@@ -63,13 +63,13 @@ func newJwtAuth(config *JWTAuthConfig, insecure bool) (credentials.PerRPCCredent
 		return nil, fmt.Errorf("error getting initial token: %v", err)
 	}
 
-	return &jwtAuth{
+	return &oidcAuth{
 		tokenSource: tokenSource,
 		insecure:    insecure,
 	}, nil
 }
 
-func (j jwtAuth) GetRequestMetadata(context.Context, ...string) (map[string]string, error) {
+func (j oidcAuth) GetRequestMetadata(context.Context, ...string) (map[string]string, error) {
 	token, err := j.tokenSource.Token()
 	if err != nil {
 		return nil, err
@@ -80,6 +80,6 @@ func (j jwtAuth) GetRequestMetadata(context.Context, ...string) (map[string]stri
 	}, nil
 }
 
-func (j jwtAuth) RequireTransportSecurity() bool {
+func (j oidcAuth) RequireTransportSecurity() bool {
 	return !j.insecure
 }

@@ -133,7 +133,7 @@ var _ = Describe("client", func() {
 	When("more than one authentication method is specified", func() {
 		BeforeEach(func() {
 			expectedConfig.BasicAuth = &BasicAuthConfig{}
-			expectedConfig.JWTAuth = &JWTAuthConfig{}
+			expectedConfig.OIDCAuth = &OIDCAuthConfig{}
 		})
 
 		It("should return an error", func() {
@@ -142,7 +142,7 @@ var _ = Describe("client", func() {
 		})
 	})
 
-	When("JWT auth is configured", func() {
+	When("OIDC auth is configured", func() {
 		type tokenResponse struct {
 			AccessToken string `json:"access_token"`
 		}
@@ -160,7 +160,7 @@ var _ = Describe("client", func() {
 			expectedTokenUrl = fake.URL()
 			expectedAccessToken = fake.UUID()
 
-			expectedConfig.JWTAuth = &JWTAuthConfig{
+			expectedConfig.OIDCAuth = &OIDCAuthConfig{
 				ClientID:              expectedClientId,
 				ClientSecret:          expectedClientSecret,
 				TokenURL:              expectedTokenUrl,
@@ -206,7 +206,7 @@ var _ = Describe("client", func() {
 
 		When("tls verification is disabled", func() {
 			BeforeEach(func() {
-				expectedConfig.JWTAuth.TlsInsecureSkipVerify = true
+				expectedConfig.OIDCAuth.TlsInsecureSkipVerify = true
 			})
 
 			It("should use a http client with tls verification disabled", func() {
@@ -222,7 +222,7 @@ var _ = Describe("client", func() {
 
 		When("the client ID is not specified", func() {
 			BeforeEach(func() {
-				expectedConfig.JWTAuth.ClientID = ""
+				expectedConfig.OIDCAuth.ClientID = ""
 			})
 
 			It("should return an error", func() {
@@ -233,7 +233,7 @@ var _ = Describe("client", func() {
 
 		When("the client secret is not specified", func() {
 			BeforeEach(func() {
-				expectedConfig.JWTAuth.ClientSecret = ""
+				expectedConfig.OIDCAuth.ClientSecret = ""
 			})
 
 			It("should return an error", func() {
@@ -244,7 +244,7 @@ var _ = Describe("client", func() {
 
 		When("the token URL is not specified", func() {
 			BeforeEach(func() {
-				expectedConfig.JWTAuth.TokenURL = ""
+				expectedConfig.OIDCAuth.TokenURL = ""
 			})
 
 			It("should return an error", func() {

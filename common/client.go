@@ -36,7 +36,7 @@ func NewRodeClient(config *ClientConfig) (pb.RodeClient, error) {
 		return nil, errors.New("rode host must be specified")
 	}
 
-	if config.JWTAuth != nil && config.BasicAuth != nil {
+	if config.OIDCAuth != nil && config.BasicAuth != nil {
 		return nil, errors.New("only one authentication method can be used")
 	}
 
@@ -46,13 +46,13 @@ func NewRodeClient(config *ClientConfig) (pb.RodeClient, error) {
 		dialOptions = append(dialOptions, grpc.WithInsecure())
 	}
 
-	if config.JWTAuth != nil {
-		jwtCredentials, err := newJwtAuth(config.JWTAuth, config.Rode.DisableTransportSecurity)
+	if config.OIDCAuth != nil {
+		oidcCredentials, err := newOidcAuth(config.OIDCAuth, config.Rode.DisableTransportSecurity)
 		if err != nil {
-			return nil, fmt.Errorf("error configuring JWT auth: %v", err)
+			return nil, fmt.Errorf("error configuring OIDC auth: %v", err)
 		}
 
-		dialOptions = append(dialOptions, grpc.WithPerRPCCredentials(jwtCredentials))
+		dialOptions = append(dialOptions, grpc.WithPerRPCCredentials(oidcCredentials))
 	}
 
 	if config.BasicAuth != nil {
