@@ -28,7 +28,7 @@ var (
 	fake   = gofakeit.New(0)
 )
 
-func TestAuthPkg(t *testing.T) {
+func TestCommon(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Common Suite")
 }
