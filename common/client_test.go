@@ -42,7 +42,7 @@ var _ = Describe("client", func() {
 		fakeListener *bufconn.Listener
 		fakeServer   *grpc.Server
 
-		actualAuthenticationHeader string
+		actualAuthorizationHeader string
 	)
 
 	BeforeEach(func() {
@@ -50,7 +50,7 @@ var _ = Describe("client", func() {
 		httpmock.ActivateNonDefault(insecureOauthHttpClient)
 
 		fakeAuthnFunc := func(ctx context.Context) (context.Context, error) {
-			actualAuthenticationHeader = metautils.ExtractIncoming(ctx).Get("authorization")
+			actualAuthorizationHeader = metautils.ExtractIncoming(ctx).Get("authorization")
 
 			return ctx, nil
 		}
@@ -181,9 +181,9 @@ var _ = Describe("client", func() {
 		It("should send a bearer authentication header with each request", func() {
 			_, _ = actualRodeClient.GetPolicy(context.Background(), &pb.GetPolicyRequest{})
 
-			Expect(actualAuthenticationHeader).ToNot(BeEmpty())
+			Expect(actualAuthorizationHeader).ToNot(BeEmpty())
 
-			parts := strings.Split(actualAuthenticationHeader, " ")
+			parts := strings.Split(actualAuthorizationHeader, " ")
 
 			Expect(parts[0]).To(Equal("Bearer"))
 			Expect(parts[1]).To(Equal(expectedAccessToken))
@@ -277,9 +277,9 @@ var _ = Describe("client", func() {
 		It("should send a basic authentication header with each request", func() {
 			_, _ = actualRodeClient.GetPolicy(context.Background(), &pb.GetPolicyRequest{})
 
-			Expect(actualAuthenticationHeader).ToNot(BeEmpty())
+			Expect(actualAuthorizationHeader).ToNot(BeEmpty())
 
-			parts := strings.Split(actualAuthenticationHeader, " ")
+			parts := strings.Split(actualAuthorizationHeader, " ")
 
 			Expect(parts[0]).To(Equal("Basic"))
 
