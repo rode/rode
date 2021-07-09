@@ -12,20 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package common
 
 import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/rode/rode/hack/util"
-	pb "github.com/rode/rode/proto/v1alpha1"
-	"google.golang.org/grpc"
-	"log"
+	"google.golang.org/grpc/credentials"
 )
 
 type basicAuth struct {
 	username, password string
+	insecure           bool
+}
+
+func newBasicAuth(config *BasicAuthConfig, insecure bool) credentials.PerRPCCredentials {
+	return &basicAuth{
+		username: config.Username,
+		password: config.Password,
+		insecure: insecure,
+	}
 }
 
 func (b basicAuth) GetRequestMetadata(context.Context, ...string) (map[string]string, error) {
@@ -37,25 +43,6 @@ func (b basicAuth) GetRequestMetadata(context.Context, ...string) (map[string]st
 	}, nil
 }
 
-func (basicAuth) RequireTransportSecurity() bool {
-	return false // no transport security required for testing locally. don't do this in production
-}
-
-func main() {
-	conn, err := grpc.Dial(util.Address,
-		grpc.WithInsecure(),
-		grpc.WithBlock(),
-		grpc.WithPerRPCCredentials(&basicAuth{
-			username: "foo",
-			password: "bar",
-		}),
-	)
-	if err != nil {
-		log.Fatalf("did not connect: %v", err)
-	}
-	defer conn.Close()
-
-	c := pb.NewRodeClient(conn)
-
-	util.CreateOccurrences(c)
+func (b basicAuth) RequireTransportSecurity() bool {
+	return !b.insecure
 }

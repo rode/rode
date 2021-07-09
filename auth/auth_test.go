@@ -44,7 +44,7 @@ func TestAuth(t *testing.T) {
 	t.Run("no authentication", func(t *testing.T) {
 		authenticator := NewAuthenticator(&config.AuthConfig{
 			Basic: &config.BasicAuthConfig{},
-			JWT:   &config.JWTAuthConfig{},
+			OIDC:  &config.OIDCAuthConfig{},
 		}, logger, registry)
 
 		_, err := authenticator.Authenticate(ctx)
@@ -54,7 +54,7 @@ func TestAuth(t *testing.T) {
 	t.Run("no authentication but authorization header set", func(t *testing.T) {
 		authenticator := NewAuthenticator(&config.AuthConfig{
 			Basic: &config.BasicAuthConfig{},
-			JWT:   &config.JWTAuthConfig{},
+			OIDC:  &config.OIDCAuthConfig{},
 		}, logger, registry)
 
 		meta := metautils.NiceMD(metadata.New(map[string]string{
@@ -108,7 +108,7 @@ func TestAuth(t *testing.T) {
 		})
 	})
 
-	t.Run("jwt authentication", func(t *testing.T) {
+	t.Run("oidc authentication", func(t *testing.T) {
 		issuer := gofakeit.LetterN(10)
 		keySet := &fakeKeySet{}
 		clientId := gofakeit.LetterN(10)
@@ -118,7 +118,7 @@ func TestAuth(t *testing.T) {
 
 		authConfig := &config.AuthConfig{
 			Basic: &config.BasicAuthConfig{},
-			JWT: &config.JWTAuthConfig{
+			OIDC: &config.OIDCAuthConfig{
 				Issuer:        issuer,
 				Verifier:      verifier,
 				RoleClaimPath: "roles",

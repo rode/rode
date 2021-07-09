@@ -60,8 +60,8 @@ func (a *authenticator) Authenticate(ctx context.Context) (context.Context, erro
 		return a.basic(ctx, log.With(zap.String("authMethod", "basic")))
 	}
 
-	if a.authConfig.JWT.Issuer != "" {
-		return a.jwt(ctx, log.With(zap.String("authMethod", "jwt")))
+	if a.authConfig.OIDC.Issuer != "" {
+		return a.oidc(ctx, log.With(zap.String("authMethod", "oidc")))
 	}
 
 	return ctx, nil
@@ -90,13 +90,13 @@ func (a *authenticator) basic(ctx context.Context, log *zap.Logger) (context.Con
 	return nil, util.GrpcErrorWithCode(log, "invalid username or password", nil, codes.Unauthenticated)
 }
 
-func (a *authenticator) jwt(ctx context.Context, log *zap.Logger) (context.Context, error) {
+func (a *authenticator) oidc(ctx context.Context, log *zap.Logger) (context.Context, error) {
 	rawToken, err := grpc_auth.AuthFromMD(ctx, "bearer")
 	if err != nil {
 		return nil, err
 	}
 
-	token, err := a.authConfig.JWT.Verifier.Verify(ctx, rawToken)
+	token, err := a.authConfig.OIDC.Verifier.Verify(ctx, rawToken)
 	if err != nil {
 		return nil, util.GrpcErrorWithCode(log, "error validating jwt", err, codes.Unauthenticated)
 	}
@@ -106,7 +106,7 @@ func (a *authenticator) jwt(ctx context.Context, log *zap.Logger) (context.Conte
 		return nil, util.GrpcErrorWithCode(log, "error unmarshalling claims", err, codes.Unauthenticated)
 	}
 
-	allRoles, ok := gabs.Wrap(claims).Path(a.authConfig.JWT.RoleClaimPath).Data().([]interface{})
+	allRoles, ok := gabs.Wrap(claims).Path(a.authConfig.OIDC.RoleClaimPath).Data().([]interface{})
 	if !ok {
 		return nil, util.GrpcErrorWithCode(log, "missing roles claim", nil, codes.Unauthenticated)
 	}
