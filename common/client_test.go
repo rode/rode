@@ -218,6 +218,39 @@ var _ = Describe("client", func() {
 				Expect(mockTransport.GetCallCountInfo()).ToNot(HaveLen(0))
 			})
 		})
+
+		When("the client ID is not specified", func() {
+			BeforeEach(func() {
+				expectedConfig.JWTAuth.ClientID = ""
+			})
+
+			It("should return an error", func() {
+				Expect(actualRodeClient).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+			})
+		})
+
+		When("the client secret is not specified", func() {
+			BeforeEach(func() {
+				expectedConfig.JWTAuth.ClientSecret = ""
+			})
+
+			It("should return an error", func() {
+				Expect(actualRodeClient).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+			})
+		})
+
+		When("the token URL is not specified", func() {
+			BeforeEach(func() {
+				expectedConfig.JWTAuth.TokenURL = ""
+			})
+
+			It("should return an error", func() {
+				Expect(actualRodeClient).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+			})
+		})
 	})
 
 	When("basic auth is configured", func() {

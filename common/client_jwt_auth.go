@@ -17,6 +17,7 @@ package common
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
@@ -38,6 +39,10 @@ var insecureOauthHttpClient = &http.Client{
 }
 
 func newJwtAuth(config *JWTAuthConfig, insecure bool) (credentials.PerRPCCredentials, error) {
+	if config.ClientID == "" || config.ClientSecret == "" || config.TokenURL == "" {
+		return nil, errors.New("client ID, client secret, and token URL must all be set for JWT auth")
+	}
+
 	clientCredentialsConfig := &clientcredentials.Config{
 		ClientID:     config.ClientID,
 		ClientSecret: config.ClientSecret,
