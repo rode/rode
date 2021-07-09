@@ -42,7 +42,7 @@ func TestConfig(t *testing.T) {
 			expected: &Config{
 				Auth: &AuthConfig{
 					Basic: &BasicAuthConfig{},
-					JWT: &JWTAuthConfig{
+					OIDC: &OIDCAuthConfig{
 						RoleClaimPath: "roles",
 					},
 				},
@@ -84,7 +84,7 @@ func TestConfig(t *testing.T) {
 						Username: "foo",
 						Password: "bar",
 					},
-					JWT: &JWTAuthConfig{
+					OIDC: &OIDCAuthConfig{
 						RoleClaimPath: "roles",
 					},
 					Enabled: true,
@@ -114,8 +114,8 @@ func TestConfig(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name:        "jwt required audience without issuer",
-			flags:       []string{"--jwt-required-audience=foo"},
+			name:        "OIDC required audience without issuer",
+			flags:       []string{"--oidc-required-audience=foo"},
 			expectError: true,
 		},
 		{
@@ -124,7 +124,7 @@ func TestConfig(t *testing.T) {
 			expected: &Config{
 				Auth: &AuthConfig{
 					Basic: &BasicAuthConfig{},
-					JWT: &JWTAuthConfig{
+					OIDC: &OIDCAuthConfig{
 						RoleClaimPath: "roles",
 					},
 				},
@@ -174,7 +174,7 @@ func TestConfig(t *testing.T) {
 		})
 	}
 
-	t.Run("jwt", func(t *testing.T) {
+	t.Run("OIDC", func(t *testing.T) {
 		type providerJSON struct {
 			Issuer      string   `json:"issuer"`
 			AuthURL     string   `json:"authorization_endpoint"`
@@ -204,9 +204,9 @@ func TestConfig(t *testing.T) {
 				return httpmock.NewStringResponse(http.StatusOK, string(responseBytes)), nil
 			})
 
-			c, err := Build("rode", []string{fmt.Sprintf("--jwt-issuer=%s", issuer)})
+			c, err := Build("rode", []string{fmt.Sprintf("--oidc-issuer=%s", issuer)})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(c.Auth.JWT.Issuer).To(Equal(issuer))
+			Expect(c.Auth.OIDC.Issuer).To(Equal(issuer))
 			Expect(c.Auth.Enabled).To(BeTrue())
 		})
 
@@ -220,10 +220,10 @@ func TestConfig(t *testing.T) {
 				return httpmock.NewStringResponse(http.StatusOK, string(responseBytes)), nil
 			})
 
-			c, err := Build("rode", []string{fmt.Sprintf("--jwt-issuer=%s", issuer), fmt.Sprintf("--jwt-required-audience=%s", audience)})
+			c, err := Build("rode", []string{fmt.Sprintf("--oidc-issuer=%s", issuer), fmt.Sprintf("--oidc-required-audience=%s", audience)})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(c.Auth.JWT.Issuer).To(Equal(issuer))
-			Expect(c.Auth.JWT.RequiredAudience).To(Equal(audience))
+			Expect(c.Auth.OIDC.Issuer).To(Equal(issuer))
+			Expect(c.Auth.OIDC.RequiredAudience).To(Equal(audience))
 		})
 
 		t.Run("should fail if fetching the openid discovery document fails", func(t *testing.T) {
@@ -234,7 +234,7 @@ func TestConfig(t *testing.T) {
 				return httpmock.NewStringResponse(http.StatusInternalServerError, "error"), nil
 			})
 
-			_, err := Build("rode", []string{fmt.Sprintf("--jwt-issuer=%s", issuer)})
+			_, err := Build("rode", []string{fmt.Sprintf("--oidc-issuer=%s", issuer)})
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -254,7 +254,7 @@ func TestConfig(t *testing.T) {
 				return oidc.ClientContext(ctx, client)
 			}
 
-			_, err := Build("rode", []string{"--jwt-tls-insecure-skip-verify=true", fmt.Sprintf("--jwt-issuer=%s", issuer)})
+			_, err := Build("rode", []string{"--oidc-tls-insecure-skip-verify=true", fmt.Sprintf("--oidc-issuer=%s", issuer)})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actualTransport).NotTo(BeNil())
 			Expect(actualTransport.TLSClientConfig.InsecureSkipVerify).To(BeTrue())

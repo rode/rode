@@ -40,7 +40,7 @@ var insecureOauthHttpClient = &http.Client{
 
 func newOidcAuth(config *OIDCAuthConfig, insecure bool) (credentials.PerRPCCredentials, error) {
 	if config.ClientID == "" || config.ClientSecret == "" || config.TokenURL == "" {
-		return nil, errors.New("client ID, client secret, and token URL must all be set for JWT auth")
+		return nil, errors.New("client ID, client secret, and token URL must all be set for OIDC auth")
 	}
 
 	clientCredentialsConfig := &clientcredentials.Config{
