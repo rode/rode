@@ -23,10 +23,13 @@ import (
 	"time"
 )
 
-var dialOptions []grpc.DialOption
+var (
+	dialOptions     []grpc.DialOption
+	contextDuration = 10 * time.Second
+)
 
 func NewRodeClient(config *ClientConfig) (pb.RodeClient, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), contextDuration)
 	defer cancel()
 
 	if config == nil || config.Rode == nil || config.Rode.Host == "" {

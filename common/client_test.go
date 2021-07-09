@@ -30,6 +30,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 )
 
 var _ = Describe("client", func() {
@@ -314,14 +315,18 @@ var _ = Describe("client", func() {
 		})
 	})
 
-	// TODO: figure out how to make this not take 10 seconds
-	XWhen("connecting to the server fails", func() {
+	When("connecting to the server fails", func() {
 		BeforeEach(func() {
+			contextDuration = 1 * time.Millisecond
 			dialOptions = []grpc.DialOption{
 				grpc.WithContextDialer(func(ctx context.Context, s string) (net.Conn, error) {
 					return nil, errors.New("failed connecting to server")
 				}),
 			}
+		})
+
+		AfterEach(func() {
+			contextDuration = 10 * time.Second
 		})
 
 		It("should return an error", func() {
