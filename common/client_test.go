@@ -83,7 +83,9 @@ var _ = Describe("client", func() {
 	})
 
 	JustBeforeEach(func() {
-		go fakeServer.Serve(fakeListener)
+		go func() {
+			_ = fakeServer.Serve(fakeListener)
+		}()
 		actualRodeClient, actualError = NewRodeClient(expectedConfig)
 	})
 
@@ -132,8 +134,12 @@ var _ = Describe("client", func() {
 
 	When("more than one authentication method is specified", func() {
 		BeforeEach(func() {
-			expectedConfig.BasicAuth = &BasicAuthConfig{}
-			expectedConfig.OIDCAuth = &OIDCAuthConfig{}
+			expectedConfig.BasicAuth = &BasicAuthConfig{
+				Username: fake.Username(),
+			}
+			expectedConfig.OIDCAuth = &OIDCAuthConfig{
+				ClientID: fake.UUID(),
+			}
 		})
 
 		It("should return an error", func() {

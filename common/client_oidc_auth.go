@@ -83,3 +83,7 @@ func (j oidcAuth) GetRequestMetadata(context.Context, ...string) (map[string]str
 func (j oidcAuth) RequireTransportSecurity() bool {
 	return !j.insecure
 }
+
+func (c *ClientConfig) oidcAuthIsConfigured() bool {
+	return c.OIDCAuth != nil && (c.OIDCAuth.ClientID != "" || c.OIDCAuth.ClientSecret != "")
+}

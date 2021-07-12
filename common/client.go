@@ -36,7 +36,7 @@ func NewRodeClient(config *ClientConfig) (pb.RodeClient, error) {
 		return nil, errors.New("rode host must be specified")
 	}
 
-	if config.OIDCAuth != nil && config.BasicAuth != nil {
+	if config.oidcAuthIsConfigured() && config.basicAuthIsConfigured() {
 		return nil, errors.New("only one authentication method can be used")
 	}
 
@@ -46,7 +46,7 @@ func NewRodeClient(config *ClientConfig) (pb.RodeClient, error) {
 		dialOptions = append(dialOptions, grpc.WithInsecure())
 	}
 
-	if config.OIDCAuth != nil {
+	if config.oidcAuthIsConfigured() {
 		oidcCredentials, err := newOidcAuth(config.OIDCAuth, config.Rode.DisableTransportSecurity)
 		if err != nil {
 			return nil, fmt.Errorf("error configuring OIDC auth: %v", err)
@@ -55,7 +55,7 @@ func NewRodeClient(config *ClientConfig) (pb.RodeClient, error) {
 		dialOptions = append(dialOptions, grpc.WithPerRPCCredentials(oidcCredentials))
 	}
 
-	if config.BasicAuth != nil {
+	if config.basicAuthIsConfigured() {
 		if config.BasicAuth.Username == "" || config.BasicAuth.Password == "" {
 			return nil, errors.New("both username and password must be set for basic auth")
 		}

@@ -46,3 +46,7 @@ func (b basicAuth) GetRequestMetadata(context.Context, ...string) (map[string]st
 func (b basicAuth) RequireTransportSecurity() bool {
 	return !b.insecure
 }
+
+func (c *ClientConfig) basicAuthIsConfigured() bool {
+	return c.BasicAuth != nil && (c.BasicAuth.Username != "" || c.BasicAuth.Password != "")
+}
