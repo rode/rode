@@ -83,9 +83,7 @@ var _ = Describe("client", func() {
 	})
 
 	JustBeforeEach(func() {
-		go func() {
-			_ = fakeServer.Serve(fakeListener)
-		}()
+		go fakeServer.Serve(fakeListener)
 		actualRodeClient, actualError = NewRodeClient(expectedConfig)
 	})
 

@@ -60,3 +60,6 @@ protoc -I . \
   --doc_out=docs --doc_opt=markdown,grpc.md \
   --grpc-gateway_out=. --grpc-gateway_opt paths=source_relative \
   ./proto/v1alpha1/*.proto
+
+# generate mocks for the rode client
+counterfeiter -o ./proto/v1alpha1fakes ./proto/v1alpha1.RodeClient

@@ -36,7 +36,7 @@ dockers:
       - "go.mod"
       - "go.sum"
       - "main.go"
-      - "proto"
+      - "proto/v1alpha1"
       - "protodeps"
       - "server"
       - "auth"

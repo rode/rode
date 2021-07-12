@@ -22,6 +22,7 @@ require (
 	github.com/onsi/ginkgo v1.16.2
 	github.com/onsi/gomega v1.12.0
 	github.com/open-policy-agent/opa v0.27.1
+	github.com/peterbourgon/ff/v3 v3.1.0
 	github.com/pquerna/cachecontrol v0.1.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/rode/es-index-manager v0.1.2
