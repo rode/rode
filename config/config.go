@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/coreos/go-oidc"
+	"github.com/peterbourgon/ff/v3"
 )
 
 type Config struct {
@@ -126,7 +127,7 @@ func Build(name string, args []string) (*Config, error) {
 	var elasticsearchRefresh string
 	flags.StringVar(&elasticsearchRefresh, "elasticsearch-refresh", "true", "refresh controls when changes made by a request are made visible to search. Options are \"true\", \"false\", \"wait_for\"")
 
-	err := flags.Parse(args)
+	err := ff.Parse(flags, args, ff.WithEnvVarNoPrefix())
 	if err != nil {
 		return nil, err
 	}
