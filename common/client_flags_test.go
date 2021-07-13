@@ -78,14 +78,16 @@ var _ = Describe("client flags", func() {
 			"--oidc-client-id=" + expectedClientId,
 			"--oidc-client-secret=" + expectedClientSecret,
 			"--oidc-token-url=" + expectedTokenUrl,
+			"--oidc-tls-insecure-skip-verify",
 		}, &ClientConfig{
 			Rode: &RodeClientConfig{
 				Host: "rode:50051",
 			},
 			OIDCAuth: &OIDCAuthConfig{
-				ClientID:     expectedClientId,
-				ClientSecret: expectedClientSecret,
-				TokenURL:     expectedTokenUrl,
+				ClientID:              expectedClientId,
+				ClientSecret:          expectedClientSecret,
+				TokenURL:              expectedTokenUrl,
+				TlsInsecureSkipVerify: true,
 			},
 			BasicAuth: &BasicAuthConfig{},
 		}),
