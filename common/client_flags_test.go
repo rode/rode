@@ -84,9 +84,9 @@ var _ = Describe("client flags", func() {
 				Host: "rode:50051",
 			},
 			OIDCAuth: &OIDCAuthConfig{
-				ClientID:     expectedClientId,
-				ClientSecret: expectedClientSecret,
-				TokenURL:     expectedTokenUrl,
+				ClientID:              expectedClientId,
+				ClientSecret:          expectedClientSecret,
+				TokenURL:              expectedTokenUrl,
 				TlsInsecureSkipVerify: true,
 			},
 			BasicAuth: &BasicAuthConfig{},
