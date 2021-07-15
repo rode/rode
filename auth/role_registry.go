@@ -20,9 +20,9 @@ var (
 	RoleAnonymous            Role = "Anonymous"
 	RoleEnforcer             Role = "Enforcer"
 	RoleCollector            Role = "Collector"
-	RoleApplicationDeveloper Role = "Application Developer"
-	RolePolicyDeveloper      Role = "Policy Developer"
-	RolePolicyAdministrator  Role = "Policy Administrator"
+	RoleApplicationDeveloper Role = "ApplicationDeveloper"
+	RolePolicyDeveloper      Role = "PolicyDeveloper"
+	RolePolicyAdministrator  Role = "PolicyAdministrator"
 	RoleAdministrator        Role = "Administrator"
 
 	PermissionCollectorRegister      Permission = "rode.collector.register"
