@@ -33,9 +33,9 @@ var _ = Describe("RoleRegistry", func() {
 			Entry("Anonymous", "Anonymous", RoleAnonymous),
 			Entry("Enforcer", "Enforcer", RoleEnforcer),
 			Entry("Collector", "Collector", RoleCollector),
-			Entry("Application Developer", "Application Developer", RoleApplicationDeveloper),
-			Entry("Policy Developer", "Policy Developer", RolePolicyDeveloper),
-			Entry("Policy Administrator", "Policy Administrator", RolePolicyAdministrator),
+			Entry("Application Developer", "ApplicationDeveloper", RoleApplicationDeveloper),
+			Entry("Policy Developer", "PolicyDeveloper", RolePolicyDeveloper),
+			Entry("Policy Administrator", "PolicyAdministrator", RolePolicyAdministrator),
 			Entry("Administrator", "Administrator", RoleAdministrator),
 		)
 

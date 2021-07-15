@@ -16,6 +16,8 @@ package common
 
 import (
 	"flag"
+	"strings"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -29,6 +31,7 @@ var _ = Describe("client flags", func() {
 		expectedClientId     string
 		expectedClientSecret string
 		expectedTokenUrl     string
+		expectedScopes       string
 
 		expectedUsername string
 		expectedPassword string
@@ -42,6 +45,7 @@ var _ = Describe("client flags", func() {
 		expectedClientId = fake.LetterN(10)
 		expectedClientSecret = fake.UUID()
 		expectedTokenUrl = fake.URL()
+		expectedScopes = strings.Join([]string{fake.LetterN(10), fake.LetterN(10)}, " ")
 
 		expectedUsername = fake.LetterN(10)
 		expectedPassword = fake.LetterN(10)
@@ -79,6 +83,7 @@ var _ = Describe("client flags", func() {
 			"--oidc-client-secret=" + expectedClientSecret,
 			"--oidc-token-url=" + expectedTokenUrl,
 			"--oidc-tls-insecure-skip-verify",
+			"--oidc-scopes=" + expectedScopes,
 		}, &ClientConfig{
 			Rode: &RodeClientConfig{
 				Host: "rode:50051",
@@ -86,6 +91,7 @@ var _ = Describe("client flags", func() {
 			OIDCAuth: &OIDCAuthConfig{
 				ClientID:              expectedClientId,
 				ClientSecret:          expectedClientSecret,
+				Scopes:                expectedScopes,
 				TokenURL:              expectedTokenUrl,
 				TlsInsecureSkipVerify: true,
 			},

@@ -23,6 +23,7 @@ import (
 	"golang.org/x/oauth2/clientcredentials"
 	"google.golang.org/grpc/credentials"
 	"net/http"
+	"strings"
 )
 
 type oidcAuth struct {
@@ -47,6 +48,10 @@ func newOidcAuth(config *OIDCAuthConfig, insecure bool) (credentials.PerRPCCrede
 		ClientID:     config.ClientID,
 		ClientSecret: config.ClientSecret,
 		TokenURL:     config.TokenURL,
+	}
+
+	if config.Scopes != "" {
+		clientCredentialsConfig.Scopes = strings.Split(strings.TrimSpace(config.Scopes), " ")
 	}
 
 	ctx := context.Background()

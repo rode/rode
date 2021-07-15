@@ -18,6 +18,11 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"net"
+	"net/http"
+	"strings"
+	"time"
+
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	"github.com/grpc-ecosystem/go-grpc-middleware/util/metautils"
@@ -27,10 +32,6 @@ import (
 	pb "github.com/rode/rode/proto/v1alpha1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/test/bufconn"
-	"net"
-	"net/http"
-	"strings"
-	"time"
 )
 
 var _ = Describe("client", func() {
@@ -221,6 +222,34 @@ var _ = Describe("client", func() {
 
 				httpmock.GetCallCountInfo()
 				Expect(mockTransport.GetCallCountInfo()).ToNot(HaveLen(0))
+			})
+		})
+
+		When("scopes are specified", func() {
+			var (
+				actualTokenRequest *http.Request
+				expectedScopes     string
+			)
+
+			BeforeEach(func() {
+				httpmock.Reset()
+				httpmock.RegisterResponder(http.MethodPost, expectedTokenUrl, func(r *http.Request) (*http.Response, error) {
+					actualTokenRequest = r
+
+					return httpmock.NewJsonResponse(http.StatusOK, &tokenResponse{
+						AccessToken: expectedAccessToken,
+					})
+				})
+
+				expectedScopes = strings.Join([]string{fake.LetterN(10), fake.LetterN(10)}, " ")
+				// any additional whitespace should be removed
+				expectedConfig.OIDCAuth.Scopes = "  " + expectedScopes + " "
+			})
+
+			It("should include the scopes in the token request", func() {
+				Expect(actualTokenRequest).NotTo(BeNil())
+				Expect(actualTokenRequest.ParseForm()).NotTo(HaveOccurred())
+				Expect(actualTokenRequest.PostForm["scope"]).To(ConsistOf(expectedScopes))
 			})
 		})
 
