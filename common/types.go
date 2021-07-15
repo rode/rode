@@ -30,6 +30,7 @@ type OIDCAuthConfig struct {
 	ClientSecret          string
 	TokenURL              string
 	TlsInsecureSkipVerify bool
+	Scopes                string
 }
 
 type BasicAuthConfig struct {

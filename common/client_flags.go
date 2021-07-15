@@ -30,6 +30,7 @@ func SetupRodeClientFlags(flags *flag.FlagSet) *ClientConfig {
 	flags.StringVar(&conf.OIDCAuth.ClientSecret, "oidc-client-secret", "", "the client secret to use when requesting a JWT via the client_credentials OIDC grant")
 	flags.StringVar(&conf.OIDCAuth.TokenURL, "oidc-token-url", "", "the URL to use to retrieve an access token via the client_credentials OIDC grant")
 	flags.BoolVar(&conf.OIDCAuth.TlsInsecureSkipVerify, "oidc-tls-insecure-skip-verify", false, "when set, TLS connections to the token url won't be verified")
+	flags.StringVar(&conf.OIDCAuth.Scopes, "oidc-scopes", "", "a space delimited set of scopes to request")
 
 	flags.StringVar(&conf.BasicAuth.Username, "basic-auth-username", "", "the username to use for basic authentication")
 	flags.StringVar(&conf.BasicAuth.Password, "basic-auth-password", "", "the password to use for basic authentication")
