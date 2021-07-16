@@ -36,6 +36,7 @@ import (
 
 var _ = Describe("client", func() {
 	var (
+		dialOptions      []grpc.DialOption
 		actualRodeClient pb.RodeClient
 		actualError      error
 
@@ -69,6 +70,7 @@ var _ = Describe("client", func() {
 		pb.RegisterRodeServer(fakeServer, &pb.UnimplementedRodeServer{})
 
 		fakeListener = bufconn.Listen(1024 * 1024)
+
 		dialOptions = []grpc.DialOption{
 			grpc.WithContextDialer(func(ctx context.Context, s string) (net.Conn, error) {
 				return fakeListener.Dial()
@@ -85,7 +87,7 @@ var _ = Describe("client", func() {
 
 	JustBeforeEach(func() {
 		go fakeServer.Serve(fakeListener)
-		actualRodeClient, actualError = NewRodeClient(expectedConfig)
+		actualRodeClient, actualError = NewRodeClient(expectedConfig, dialOptions...)
 	})
 
 	AfterEach(func() {
@@ -348,6 +350,22 @@ var _ = Describe("client", func() {
 		})
 	})
 
+	When("additional dial options are specified", func() {
+		var expectedAuthToken string
+
+		BeforeEach(func() {
+			expectedAuthToken = fake.LetterN(10)
+
+			dialOptions = append(dialOptions, grpc.WithPerRPCCredentials(&fakeRpcCredential{token: expectedAuthToken}))
+		})
+
+		It("should include the options when configuring the client", func() {
+			_, _ = actualRodeClient.GetPolicy(context.Background(), &pb.GetPolicyRequest{})
+
+			Expect(actualAuthorizationHeader).To(Equal(expectedAuthToken))
+		})
+	})
+
 	When("connecting to the server fails", func() {
 		BeforeEach(func() {
 			contextDuration = 1 * time.Millisecond
@@ -368,3 +386,17 @@ var _ = Describe("client", func() {
 		})
 	})
 })
+
+type fakeRpcCredential struct {
+	token string
+}
+
+func (f *fakeRpcCredential) GetRequestMetadata(ctx context.Context, in ...string) (map[string]string, error) {
+	return map[string]string{
+		"authorization": f.token,
+	}, nil
+}
+
+func (f *fakeRpcCredential) RequireTransportSecurity() bool {
+	return false
+}
