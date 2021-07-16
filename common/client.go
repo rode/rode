@@ -24,11 +24,10 @@ import (
 )
 
 var (
-	dialOptions     []grpc.DialOption
 	contextDuration = 10 * time.Second
 )
 
-func NewRodeClient(config *ClientConfig) (pb.RodeClient, error) {
+func NewRodeClient(config *ClientConfig, dialOptions ...grpc.DialOption) (pb.RodeClient, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), contextDuration)
 	defer cancel()
 
