@@ -68,6 +68,7 @@ func NewRoleRegistry() RoleRegistry {
 			RoleEnforcer: {
 				PermissionEvaluationResultRead,
 				PermissionPolicyGroupRead,
+				PermissionPolicyRead,
 				PermissionResourceEvaluate,
 				PermissionResourceRead,
 			},
