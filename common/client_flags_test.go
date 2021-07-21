@@ -28,29 +28,20 @@ var _ = Describe("client flags", func() {
 		flagSet      *flag.FlagSet
 		actualConfig *ClientConfig
 
-		expectedClientId     string
-		expectedClientSecret string
-		expectedTokenUrl     string
-		expectedScopes       string
-
-		expectedUsername string
-		expectedPassword string
-
-		expectedRodeHost string
-	)
-	BeforeEach(func() {
-		flagSet = flag.NewFlagSet("rode-client", flag.ContinueOnError)
-		actualConfig = SetupRodeClientFlags(flagSet)
-
-		expectedClientId = fake.LetterN(10)
+		expectedClientId     = fake.LetterN(10)
 		expectedClientSecret = fake.UUID()
-		expectedTokenUrl = fake.URL()
-		expectedScopes = strings.Join([]string{fake.LetterN(10), fake.LetterN(10)}, " ")
+		expectedTokenUrl     = fake.URL()
+		expectedScopes       = strings.Join([]string{fake.LetterN(10), fake.LetterN(10)}, " ")
 
 		expectedUsername = fake.LetterN(10)
 		expectedPassword = fake.LetterN(10)
 
 		expectedRodeHost = fake.LetterN(10)
+	)
+	BeforeEach(func() {
+		flagSet = flag.NewFlagSet("rode-client", flag.ContinueOnError)
+
+		actualConfig = SetupRodeClientFlags(flagSet)
 	})
 
 	DescribeTable("flag parsing",
@@ -58,7 +49,7 @@ var _ = Describe("client flags", func() {
 			err := flagSet.Parse(flags)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(actualConfig).To(BeEquivalentTo(expectedConfig))
+			Expect(actualConfig).To(Equal(expectedConfig))
 		},
 		Entry("defaults", []string{}, &ClientConfig{
 			Rode: &RodeClientConfig{
@@ -116,11 +107,8 @@ var _ = Describe("client flags", func() {
 			Rode: &RodeClientConfig{
 				Host: "rode:50051",
 			},
-			OIDCAuth: &OIDCAuthConfig{},
-			BasicAuth: &BasicAuthConfig{
-				Username: expectedUsername,
-				Password: expectedPassword,
-			},
+			OIDCAuth:  &OIDCAuthConfig{},
+			BasicAuth: &BasicAuthConfig{},
 			ProxyAuth: true,
 		}),
 	)
