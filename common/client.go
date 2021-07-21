@@ -18,9 +18,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
 	pb "github.com/rode/rode/proto/v1alpha1"
 	"google.golang.org/grpc"
-	"time"
 )
 
 var (
@@ -35,7 +36,10 @@ func NewRodeClient(config *ClientConfig, dialOptions ...grpc.DialOption) (pb.Rod
 		return nil, errors.New("rode host must be specified")
 	}
 
-	if config.oidcAuthIsConfigured() && config.basicAuthIsConfigured() {
+	multipleAuthEnabled := config.oidcAuthIsConfigured() && config.basicAuthIsConfigured() ||
+		config.ProxyAuth && (config.oidcAuthIsConfigured() || config.basicAuthIsConfigured())
+
+	if multipleAuthEnabled {
 		return nil, errors.New("only one authentication method can be used")
 	}
 
@@ -60,6 +64,10 @@ func NewRodeClient(config *ClientConfig, dialOptions ...grpc.DialOption) (pb.Rod
 		}
 
 		dialOptions = append(dialOptions, grpc.WithPerRPCCredentials(newBasicAuth(config.BasicAuth, config.Rode.DisableTransportSecurity)))
+	}
+
+	if config.ProxyAuth {
+		dialOptions = append(dialOptions, grpc.WithPerRPCCredentials(newProxyAuth(config.Rode.DisableTransportSecurity)))
 	}
 
 	conn, err := grpc.DialContext(ctx, config.Rode.Host, dialOptions...)

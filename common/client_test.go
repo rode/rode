@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -31,6 +32,7 @@ import (
 	. "github.com/onsi/gomega"
 	pb "github.com/rode/rode/proto/v1alpha1"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/test/bufconn"
 )
 
@@ -134,18 +136,48 @@ var _ = Describe("client", func() {
 	})
 
 	When("more than one authentication method is specified", func() {
-		BeforeEach(func() {
-			expectedConfig.BasicAuth = &BasicAuthConfig{
-				Username: fake.Username(),
-			}
-			expectedConfig.OIDCAuth = &OIDCAuthConfig{
-				ClientID: fake.UUID(),
-			}
+		Describe("oidc auth and basic auth", func() {
+			BeforeEach(func() {
+				expectedConfig.BasicAuth = &BasicAuthConfig{
+					Username: fake.Username(),
+				}
+				expectedConfig.OIDCAuth = &OIDCAuthConfig{
+					ClientID: fake.UUID(),
+				}
+			})
+
+			It("should return an error", func() {
+				Expect(actualRodeClient).To(BeNil())
+				Expect(actualError).To(MatchError(ContainSubstring("only one authentication method")))
+			})
 		})
 
-		It("should return an error", func() {
-			Expect(actualRodeClient).To(BeNil())
-			Expect(actualError).To(HaveOccurred())
+		Describe("oidc auth and proxy auth", func() {
+			BeforeEach(func() {
+				expectedConfig.ProxyAuth = true
+				expectedConfig.OIDCAuth = &OIDCAuthConfig{
+					ClientID: fake.UUID(),
+				}
+			})
+
+			It("should return an error", func() {
+				Expect(actualRodeClient).To(BeNil())
+				Expect(actualError).To(MatchError(ContainSubstring("only one authentication method")))
+			})
+		})
+
+		Describe("basic auth and proxy auth", func() {
+			BeforeEach(func() {
+				expectedConfig.ProxyAuth = true
+				expectedConfig.BasicAuth = &BasicAuthConfig{
+					Username: fake.Username(),
+				}
+			})
+
+			It("should return an error", func() {
+				Expect(actualRodeClient).To(BeNil())
+				Expect(actualError).To(MatchError(ContainSubstring("only one authentication method")))
+			})
 		})
 	})
 
@@ -346,6 +378,38 @@ var _ = Describe("client", func() {
 			It("should return an error", func() {
 				Expect(actualRodeClient).To(BeNil())
 				Expect(actualError).To(HaveOccurred())
+			})
+		})
+	})
+
+	When("proxy auth is configured", func() {
+		var (
+			ctx                 context.Context
+			expectedAuthzHeader string
+		)
+
+		BeforeEach(func() {
+			expectedConfig.ProxyAuth = true
+
+			expectedAuthzHeader = fmt.Sprintf("Bearer %s", fake.LetterN(10))
+			meta := metadata.New(map[string]string{
+				"authorization": expectedAuthzHeader,
+			})
+
+			ctx = metautils.NiceMD(meta).ToIncoming(context.Background())
+		})
+
+		It("should include the incoming header", func() {
+			_, _ = actualRodeClient.GetPolicy(ctx, &pb.GetPolicyRequest{})
+
+			Expect(actualAuthorizationHeader).To(Equal(expectedAuthzHeader))
+		})
+
+		When("the authorization header isn't present", func() {
+			It("should not add anything to the outgoing context", func() {
+				_, _ = actualRodeClient.GetPolicy(context.Background(), &pb.GetPolicyRequest{})
+
+				Expect(actualAuthorizationHeader).To(BeEmpty())
 			})
 		})
 	})

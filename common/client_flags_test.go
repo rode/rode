@@ -110,5 +110,18 @@ var _ = Describe("client flags", func() {
 				Password: expectedPassword,
 			},
 		}),
+		Entry("proxy auth", []string{
+			"--proxy-auth",
+		}, &ClientConfig{
+			Rode: &RodeClientConfig{
+				Host: "rode:50051",
+			},
+			OIDCAuth: &OIDCAuthConfig{},
+			BasicAuth: &BasicAuthConfig{
+				Username: expectedUsername,
+				Password: expectedPassword,
+			},
+			ProxyAuth: true,
+		}),
 	)
 })
