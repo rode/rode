@@ -35,5 +35,7 @@ func SetupRodeClientFlags(flags *flag.FlagSet) *ClientConfig {
 	flags.StringVar(&conf.BasicAuth.Username, "basic-auth-username", "", "the username to use for basic authentication")
 	flags.StringVar(&conf.BasicAuth.Password, "basic-auth-password", "", "the password to use for basic authentication")
 
+	flags.BoolVar(&conf.ProxyAuth, "proxy-auth", false, "when set, any credentials in the incoming context will be passed along in requests to Rode.")
+
 	return conf
 }

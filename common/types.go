@@ -18,6 +18,7 @@ type ClientConfig struct {
 	Rode      *RodeClientConfig
 	OIDCAuth  *OIDCAuthConfig
 	BasicAuth *BasicAuthConfig
+	ProxyAuth bool
 }
 
 type RodeClientConfig struct {
