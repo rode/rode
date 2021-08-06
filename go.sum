@@ -425,8 +425,6 @@ github.com/rcrowley/go-metrics v0.0.0-20200313005456-10cdbea86bc0/go.mod h1:bCqn
 github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 h1:N/ElC8H3+5XpJzTSTfLsJV/mx9Q9g7kxmchpfZyxgzM=
 github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/rode/es-index-manager v0.1.1/go.mod h1:QsnfBo0VUWWfOkXUHUdiWSiJghajbVwHjCA+OMqO0E8=
-github.com/rode/es-index-manager v0.1.2 h1:cWRRKM5sNO+E/1jiKJXae0h3KsaTXgdbAdkDPq3wrno=
-github.com/rode/es-index-manager v0.1.2/go.mod h1:QsnfBo0VUWWfOkXUHUdiWSiJghajbVwHjCA+OMqO0E8=
 github.com/rode/es-index-manager v0.2.2 h1:rhJBE6//OHnH9HIxmukgrrh4NVNm7T4XkC016umX2qM=
 github.com/rode/es-index-manager v0.2.2/go.mod h1:QsnfBo0VUWWfOkXUHUdiWSiJghajbVwHjCA+OMqO0E8=
 github.com/rode/grafeas-elasticsearch v0.8.7 h1:bddnIFcWL84r2rgrAazeaSFdnYzvjKIyM4pPtCrkveI=
