@@ -25,7 +25,7 @@ require (
 	github.com/peterbourgon/ff/v3 v3.1.0
 	github.com/pquerna/cachecontrol v0.1.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
-	github.com/rode/es-index-manager v0.1.2
+	github.com/rode/es-index-manager v0.2.2
 	github.com/rode/grafeas-elasticsearch v0.8.7
 	github.com/scylladb/go-set v1.0.2
 	github.com/soheilhy/cmux v0.1.4
