@@ -443,13 +443,18 @@ func (m *manager) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePolicy
 		}
 	}
 
-	return &pb.EvaluatePolicyResponse{
+	response := &pb.EvaluatePolicyResponse{
 		Pass: evaluatePolicyResponse.Result.Pass,
 		Result: []*pb.EvaluatePolicyResult{
 			attestation,
 		},
-		Explanation: *evaluatePolicyResponse.Explanation,
-	}, nil
+	}
+
+	if evaluatePolicyResponse.Explanation != nil {
+		response.Explanation = *evaluatePolicyResponse.Explanation
+	}
+
+	return response, nil
 }
 
 func (m *manager) evaluatePolicy(ctx context.Context, policyId, rego string, occurrences []*grafeas_go_proto.Occurrence) (*opa.EvaluatePolicyResponse, error) {
