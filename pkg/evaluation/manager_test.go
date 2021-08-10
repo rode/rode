@@ -1249,6 +1249,16 @@ var _ = Describe("evaluation manager", func() {
 				Expect(actualViolations).To(ConsistOf(expectedViolations))
 			})
 		})
+
+		When("the explanation is not present", func() {
+			BeforeEach(func() {
+				opaEvaluatePolicyResponse.Explanation = nil
+			})
+
+			It("should not try to include an explanation in the result", func() {
+				Expect(actualResponse.Explanation).To(BeEmpty())
+			})
+		})
 	})
 })
 
