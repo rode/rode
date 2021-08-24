@@ -16,12 +16,14 @@ package common
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"time"
 
 	pb "github.com/rode/rode/proto/v1alpha1"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 var (
@@ -47,6 +49,8 @@ func NewRodeClient(config *ClientConfig, dialOptions ...grpc.DialOption) (pb.Rod
 
 	if config.Rode.DisableTransportSecurity {
 		dialOptions = append(dialOptions, grpc.WithInsecure())
+	} else {
+		dialOptions = append(dialOptions, grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{})))
 	}
 
 	if config.oidcAuthIsConfigured() {
