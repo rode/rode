@@ -181,6 +181,18 @@ var _ = Describe("client", func() {
 		})
 	})
 
+	When("a non-temporary dial error occurs", func() {
+		BeforeEach(func() {
+			dialOptions = []grpc.DialOption{}
+			expectedConfig.Rode.Host = fake.Word()
+		})
+
+		It("should fail immediately", func() {
+			Expect(actualRodeClient).To(BeNil())
+			Expect(actualError).To(MatchError(ContainSubstring("missing port in address")))
+		})
+	})
+
 	When("OIDC auth is configured", func() {
 		type tokenResponse struct {
 			AccessToken string `json:"access_token"`
