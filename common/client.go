@@ -45,7 +45,7 @@ func NewRodeClient(config *ClientConfig, dialOptions ...grpc.DialOption) (pb.Rod
 		return nil, errors.New("only one authentication method can be used")
 	}
 
-	dialOptions = append(dialOptions, grpc.WithBlock())
+	dialOptions = append(dialOptions, grpc.WithBlock(), grpc.FailOnNonTempDialError(true))
 
 	if config.Rode.DisableTransportSecurity {
 		dialOptions = append(dialOptions, grpc.WithInsecure())
