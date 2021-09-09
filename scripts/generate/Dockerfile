@@ -1,4 +1,4 @@
-FROM golang:1.16.3-alpine3.13
+FROM golang:1.17.0-alpine3.13
 
 ENV PROTOC_VERSION="3.13.0-r2"
 ENV PROTOC_GEN_GO_VERSION="v1.26.0"
