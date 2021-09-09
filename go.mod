@@ -1,6 +1,6 @@
 module github.com/rode/rode
 
-go 1.16
+go 1.17
 
 require (
 	github.com/Jeffail/gabs/v2 v2.6.1
@@ -41,4 +41,22 @@ require (
 	google.golang.org/protobuf v1.26.0
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+)
+
+require (
+	github.com/OneOfOne/xxhash v1.2.8 // indirect
+	github.com/evanphx/json-patch v0.5.2 // indirect
+	github.com/fsnotify/fsnotify v1.4.9 // indirect
+	github.com/ghodss/yaml v1.0.0 // indirect
+	github.com/nxadm/tail v1.4.8 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
+	github.com/stoewer/go-strcase v1.2.0 // indirect
+	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
+	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
+	go.uber.org/atomic v1.7.0 // indirect
+	golang.org/x/net v0.0.0-20210428140749-89ef3d95e781 // indirect
+	golang.org/x/sys v0.0.0-20210423082822-04245dca01da // indirect
+	golang.org/x/text v0.3.6 // indirect
+	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
