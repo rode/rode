@@ -4,10 +4,10 @@ package grafeas_go_proto
 
 import (
 	context "context"
-	empty "github.com/golang/protobuf/ptypes/empty"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -26,7 +26,7 @@ type GrafeasV1Beta1Client interface {
 	// Deletes the specified occurrence. For example, use this method to delete an
 	// occurrence when the occurrence is no longer applicable for the given
 	// resource.
-	DeleteOccurrence(ctx context.Context, in *DeleteOccurrenceRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	DeleteOccurrence(ctx context.Context, in *DeleteOccurrenceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Creates a new occurrence.
 	CreateOccurrence(ctx context.Context, in *CreateOccurrenceRequest, opts ...grpc.CallOption) (*Occurrence, error)
 	// Creates new occurrences in batch.
@@ -41,7 +41,7 @@ type GrafeasV1Beta1Client interface {
 	// Lists notes for the specified project.
 	ListNotes(ctx context.Context, in *ListNotesRequest, opts ...grpc.CallOption) (*ListNotesResponse, error)
 	// Deletes the specified note.
-	DeleteNote(ctx context.Context, in *DeleteNoteRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	DeleteNote(ctx context.Context, in *DeleteNoteRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// Creates a new note.
 	CreateNote(ctx context.Context, in *CreateNoteRequest, opts ...grpc.CallOption) (*Note, error)
 	// Creates new notes in batch.
@@ -82,8 +82,8 @@ func (c *grafeasV1Beta1Client) ListOccurrences(ctx context.Context, in *ListOccu
 	return out, nil
 }
 
-func (c *grafeasV1Beta1Client) DeleteOccurrence(ctx context.Context, in *DeleteOccurrenceRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
+func (c *grafeasV1Beta1Client) DeleteOccurrence(ctx context.Context, in *DeleteOccurrenceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/grafeas.v1beta1.GrafeasV1Beta1/DeleteOccurrence", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -145,8 +145,8 @@ func (c *grafeasV1Beta1Client) ListNotes(ctx context.Context, in *ListNotesReque
 	return out, nil
 }
 
-func (c *grafeasV1Beta1Client) DeleteNote(ctx context.Context, in *DeleteNoteRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
+func (c *grafeasV1Beta1Client) DeleteNote(ctx context.Context, in *DeleteNoteRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/grafeas.v1beta1.GrafeasV1Beta1/DeleteNote", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -210,7 +210,7 @@ type GrafeasV1Beta1Server interface {
 	// Deletes the specified occurrence. For example, use this method to delete an
 	// occurrence when the occurrence is no longer applicable for the given
 	// resource.
-	DeleteOccurrence(context.Context, *DeleteOccurrenceRequest) (*empty.Empty, error)
+	DeleteOccurrence(context.Context, *DeleteOccurrenceRequest) (*emptypb.Empty, error)
 	// Creates a new occurrence.
 	CreateOccurrence(context.Context, *CreateOccurrenceRequest) (*Occurrence, error)
 	// Creates new occurrences in batch.
@@ -225,7 +225,7 @@ type GrafeasV1Beta1Server interface {
 	// Lists notes for the specified project.
 	ListNotes(context.Context, *ListNotesRequest) (*ListNotesResponse, error)
 	// Deletes the specified note.
-	DeleteNote(context.Context, *DeleteNoteRequest) (*empty.Empty, error)
+	DeleteNote(context.Context, *DeleteNoteRequest) (*emptypb.Empty, error)
 	// Creates a new note.
 	CreateNote(context.Context, *CreateNoteRequest) (*Note, error)
 	// Creates new notes in batch.
@@ -251,7 +251,7 @@ func (UnimplementedGrafeasV1Beta1Server) GetOccurrence(context.Context, *GetOccu
 func (UnimplementedGrafeasV1Beta1Server) ListOccurrences(context.Context, *ListOccurrencesRequest) (*ListOccurrencesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListOccurrences not implemented")
 }
-func (UnimplementedGrafeasV1Beta1Server) DeleteOccurrence(context.Context, *DeleteOccurrenceRequest) (*empty.Empty, error) {
+func (UnimplementedGrafeasV1Beta1Server) DeleteOccurrence(context.Context, *DeleteOccurrenceRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteOccurrence not implemented")
 }
 func (UnimplementedGrafeasV1Beta1Server) CreateOccurrence(context.Context, *CreateOccurrenceRequest) (*Occurrence, error) {
@@ -272,7 +272,7 @@ func (UnimplementedGrafeasV1Beta1Server) GetNote(context.Context, *GetNoteReques
 func (UnimplementedGrafeasV1Beta1Server) ListNotes(context.Context, *ListNotesRequest) (*ListNotesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListNotes not implemented")
 }
-func (UnimplementedGrafeasV1Beta1Server) DeleteNote(context.Context, *DeleteNoteRequest) (*empty.Empty, error) {
+func (UnimplementedGrafeasV1Beta1Server) DeleteNote(context.Context, *DeleteNoteRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteNote not implemented")
 }
 func (UnimplementedGrafeasV1Beta1Server) CreateNote(context.Context, *CreateNoteRequest) (*Note, error) {

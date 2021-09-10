@@ -11,12 +11,12 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    container: golang:1.16
+    container: golang:1.17
     steps:
       - uses: actions/checkout@v2
 
       - name: Download Dependencies
-        run: go mod tidy
+        run: go mod download
 
       - name: Test
         run: |
@@ -27,7 +27,7 @@ jobs:
         run: go build -v .
   license-check:
     runs-on: ubuntu-latest
-    container: golang:1.16
+    container: golang:1.17
     steps:
     - uses: actions/checkout@v2
     - name: Download License Utility

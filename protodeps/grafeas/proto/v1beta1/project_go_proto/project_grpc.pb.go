@@ -4,10 +4,10 @@ package project_go_proto
 
 import (
 	context "context"
-	empty "github.com/golang/protobuf/ptypes/empty"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -26,7 +26,7 @@ type ProjectsClient interface {
 	// Lists projects.
 	ListProjects(ctx context.Context, in *ListProjectsRequest, opts ...grpc.CallOption) (*ListProjectsResponse, error)
 	// Deletes the specified project.
-	DeleteProject(ctx context.Context, in *DeleteProjectRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	DeleteProject(ctx context.Context, in *DeleteProjectRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type projectsClient struct {
@@ -64,8 +64,8 @@ func (c *projectsClient) ListProjects(ctx context.Context, in *ListProjectsReque
 	return out, nil
 }
 
-func (c *projectsClient) DeleteProject(ctx context.Context, in *DeleteProjectRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
+func (c *projectsClient) DeleteProject(ctx context.Context, in *DeleteProjectRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/grafeas.v1beta1.project.Projects/DeleteProject", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -84,7 +84,7 @@ type ProjectsServer interface {
 	// Lists projects.
 	ListProjects(context.Context, *ListProjectsRequest) (*ListProjectsResponse, error)
 	// Deletes the specified project.
-	DeleteProject(context.Context, *DeleteProjectRequest) (*empty.Empty, error)
+	DeleteProject(context.Context, *DeleteProjectRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedProjectsServer()
 }
 
@@ -101,7 +101,7 @@ func (UnimplementedProjectsServer) GetProject(context.Context, *GetProjectReques
 func (UnimplementedProjectsServer) ListProjects(context.Context, *ListProjectsRequest) (*ListProjectsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListProjects not implemented")
 }
-func (UnimplementedProjectsServer) DeleteProject(context.Context, *DeleteProjectRequest) (*empty.Empty, error) {
+func (UnimplementedProjectsServer) DeleteProject(context.Context, *DeleteProjectRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteProject not implemented")
 }
 func (UnimplementedProjectsServer) mustEmbedUnimplementedProjectsServer() {}

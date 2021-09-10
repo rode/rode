@@ -1619,7 +1619,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/BatchCreateOccurrences")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/BatchCreateOccurrences", runtime.WithHTTPPathPattern("/v1alpha1/occurrences:batchCreate"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1642,7 +1642,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/EvaluatePolicy")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/EvaluatePolicy", runtime.WithHTTPPathPattern("/v1alpha1/policies/{policy}:attest"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1665,7 +1665,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListResources")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListResources", runtime.WithHTTPPathPattern("/v1alpha1/resources"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1688,7 +1688,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListResourceVersions")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListResourceVersions", runtime.WithHTTPPathPattern("/v1alpha1/resource-versions"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1711,7 +1711,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListVersionedResourceOccurrences")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListVersionedResourceOccurrences", runtime.WithHTTPPathPattern("/v1alpha1/versioned-resource-occurrences"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1734,7 +1734,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListOccurrences")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListOccurrences", runtime.WithHTTPPathPattern("/v1alpha1/occurrences"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1757,7 +1757,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/UpdateOccurrence")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/UpdateOccurrence", runtime.WithHTTPPathPattern("/v1alpha1/occurrences/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1780,7 +1780,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/CreatePolicy")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/CreatePolicy", runtime.WithHTTPPathPattern("/v1alpha1/policies"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1803,7 +1803,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/GetPolicy")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/GetPolicy", runtime.WithHTTPPathPattern("/v1alpha1/policies/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1826,7 +1826,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/DeletePolicy")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/DeletePolicy", runtime.WithHTTPPathPattern("/v1alpha1/policies/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1849,7 +1849,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListPolicies")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListPolicies", runtime.WithHTTPPathPattern("/v1alpha1/policies"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1872,7 +1872,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListPolicyVersions")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListPolicyVersions", runtime.WithHTTPPathPattern("/v1alpha1/policies/{id}/versions"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1895,7 +1895,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/ValidatePolicy")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/ValidatePolicy", runtime.WithHTTPPathPattern("/v1alpha1/policies:validate"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1918,7 +1918,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/UpdatePolicy")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/UpdatePolicy", runtime.WithHTTPPathPattern("/v1alpha1/policies/{policy.id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1941,7 +1941,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/RegisterCollector")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/RegisterCollector", runtime.WithHTTPPathPattern("/v1alpha1/collectors/{id}:register"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1964,7 +1964,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/CreateNote")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/CreateNote", runtime.WithHTTPPathPattern("/v1alpha1/notes"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1987,7 +1987,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/CreatePolicyGroup")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/CreatePolicyGroup", runtime.WithHTTPPathPattern("/v1alpha1/policy-groups"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2010,7 +2010,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListPolicyGroups")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListPolicyGroups", runtime.WithHTTPPathPattern("/v1alpha1/policy-groups"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2033,7 +2033,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/GetPolicyGroup")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/GetPolicyGroup", runtime.WithHTTPPathPattern("/v1alpha1/policy-groups/{name}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2056,7 +2056,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/UpdatePolicyGroup")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/UpdatePolicyGroup", runtime.WithHTTPPathPattern("/v1alpha1/policy-groups/{name}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2079,7 +2079,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/DeletePolicyGroup")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/DeletePolicyGroup", runtime.WithHTTPPathPattern("/v1alpha1/policy-groups/{name}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2102,7 +2102,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/CreatePolicyAssignment")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/CreatePolicyAssignment", runtime.WithHTTPPathPattern("/v1alpha1/policies/{policy_version_id}/assignments/{policy_group}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2125,7 +2125,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/GetPolicyAssignment")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/GetPolicyAssignment", runtime.WithHTTPPathPattern("/v1alpha1/{id=policies/*/assignments/*}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2148,7 +2148,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/UpdatePolicyAssignment")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/UpdatePolicyAssignment", runtime.WithHTTPPathPattern("/v1alpha1/{id=policies/*/assignments/*}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2171,7 +2171,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/DeletePolicyAssignment")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/DeletePolicyAssignment", runtime.WithHTTPPathPattern("/v1alpha1/{id=policies/*/assignments/*}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2194,7 +2194,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListPolicyAssignments")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListPolicyAssignments", runtime.WithHTTPPathPattern("/v1alpha1/policies/{policy_id}/assignments"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2217,7 +2217,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListPolicyAssignments")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListPolicyAssignments", runtime.WithHTTPPathPattern("/v1alpha1/policy-groups/{policy_group}/assignments"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2240,7 +2240,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/EvaluateResource")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/EvaluateResource", runtime.WithHTTPPathPattern("/v1alpha1/resource-evaluations"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2263,7 +2263,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/GetResourceEvaluation")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/GetResourceEvaluation", runtime.WithHTTPPathPattern("/v1alpha1/resource-evaluations/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2286,7 +2286,7 @@ func RegisterRodeHandlerServer(ctx context.Context, mux *runtime.ServeMux, serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListResourceEvaluations")
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListResourceEvaluations", runtime.WithHTTPPathPattern("/v1alpha1/resource-evaluations"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2348,7 +2348,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/BatchCreateOccurrences")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/BatchCreateOccurrences", runtime.WithHTTPPathPattern("/v1alpha1/occurrences:batchCreate"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2368,7 +2368,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/EvaluatePolicy")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/EvaluatePolicy", runtime.WithHTTPPathPattern("/v1alpha1/policies/{policy}:attest"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2388,7 +2388,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListResources")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListResources", runtime.WithHTTPPathPattern("/v1alpha1/resources"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2408,7 +2408,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListResourceVersions")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListResourceVersions", runtime.WithHTTPPathPattern("/v1alpha1/resource-versions"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2428,7 +2428,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListVersionedResourceOccurrences")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListVersionedResourceOccurrences", runtime.WithHTTPPathPattern("/v1alpha1/versioned-resource-occurrences"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2448,7 +2448,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListOccurrences")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListOccurrences", runtime.WithHTTPPathPattern("/v1alpha1/occurrences"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2468,7 +2468,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/UpdateOccurrence")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/UpdateOccurrence", runtime.WithHTTPPathPattern("/v1alpha1/occurrences/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2488,7 +2488,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/CreatePolicy")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/CreatePolicy", runtime.WithHTTPPathPattern("/v1alpha1/policies"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2508,7 +2508,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/GetPolicy")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/GetPolicy", runtime.WithHTTPPathPattern("/v1alpha1/policies/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2528,7 +2528,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/DeletePolicy")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/DeletePolicy", runtime.WithHTTPPathPattern("/v1alpha1/policies/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2548,7 +2548,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListPolicies")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListPolicies", runtime.WithHTTPPathPattern("/v1alpha1/policies"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2568,7 +2568,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListPolicyVersions")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListPolicyVersions", runtime.WithHTTPPathPattern("/v1alpha1/policies/{id}/versions"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2588,7 +2588,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/ValidatePolicy")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/ValidatePolicy", runtime.WithHTTPPathPattern("/v1alpha1/policies:validate"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2608,7 +2608,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/UpdatePolicy")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/UpdatePolicy", runtime.WithHTTPPathPattern("/v1alpha1/policies/{policy.id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2628,7 +2628,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/RegisterCollector")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/RegisterCollector", runtime.WithHTTPPathPattern("/v1alpha1/collectors/{id}:register"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2648,7 +2648,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/CreateNote")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/CreateNote", runtime.WithHTTPPathPattern("/v1alpha1/notes"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2668,7 +2668,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/CreatePolicyGroup")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/CreatePolicyGroup", runtime.WithHTTPPathPattern("/v1alpha1/policy-groups"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2688,7 +2688,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListPolicyGroups")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListPolicyGroups", runtime.WithHTTPPathPattern("/v1alpha1/policy-groups"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2708,7 +2708,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/GetPolicyGroup")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/GetPolicyGroup", runtime.WithHTTPPathPattern("/v1alpha1/policy-groups/{name}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2728,7 +2728,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/UpdatePolicyGroup")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/UpdatePolicyGroup", runtime.WithHTTPPathPattern("/v1alpha1/policy-groups/{name}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2748,7 +2748,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/DeletePolicyGroup")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/DeletePolicyGroup", runtime.WithHTTPPathPattern("/v1alpha1/policy-groups/{name}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2768,7 +2768,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/CreatePolicyAssignment")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/CreatePolicyAssignment", runtime.WithHTTPPathPattern("/v1alpha1/policies/{policy_version_id}/assignments/{policy_group}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2788,7 +2788,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/GetPolicyAssignment")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/GetPolicyAssignment", runtime.WithHTTPPathPattern("/v1alpha1/{id=policies/*/assignments/*}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2808,7 +2808,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/UpdatePolicyAssignment")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/UpdatePolicyAssignment", runtime.WithHTTPPathPattern("/v1alpha1/{id=policies/*/assignments/*}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2828,7 +2828,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/DeletePolicyAssignment")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/DeletePolicyAssignment", runtime.WithHTTPPathPattern("/v1alpha1/{id=policies/*/assignments/*}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2848,7 +2848,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListPolicyAssignments")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListPolicyAssignments", runtime.WithHTTPPathPattern("/v1alpha1/policies/{policy_id}/assignments"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2868,7 +2868,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListPolicyAssignments")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListPolicyAssignments", runtime.WithHTTPPathPattern("/v1alpha1/policy-groups/{policy_group}/assignments"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2888,7 +2888,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/EvaluateResource")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/EvaluateResource", runtime.WithHTTPPathPattern("/v1alpha1/resource-evaluations"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2908,7 +2908,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/GetResourceEvaluation")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/GetResourceEvaluation", runtime.WithHTTPPathPattern("/v1alpha1/resource-evaluations/{id}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2928,7 +2928,7 @@ func RegisterRodeHandlerClient(ctx context.Context, mux *runtime.ServeMux, clien
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListResourceEvaluations")
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/rode.v1alpha1.Rode/ListResourceEvaluations", runtime.WithHTTPPathPattern("/v1alpha1/resource-evaluations"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return

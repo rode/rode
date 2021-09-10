@@ -4,11 +4,11 @@ package v1alpha1
 
 import (
 	context "context"
-	empty "github.com/golang/protobuf/ptypes/empty"
 	grafeas_go_proto "github.com/rode/rode/protodeps/grafeas/proto/v1beta1/grafeas_go_proto"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -34,7 +34,7 @@ type RodeClient interface {
 	UpdateOccurrence(ctx context.Context, in *UpdateOccurrenceRequest, opts ...grpc.CallOption) (*grafeas_go_proto.Occurrence, error)
 	CreatePolicy(ctx context.Context, in *Policy, opts ...grpc.CallOption) (*Policy, error)
 	GetPolicy(ctx context.Context, in *GetPolicyRequest, opts ...grpc.CallOption) (*Policy, error)
-	DeletePolicy(ctx context.Context, in *DeletePolicyRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	DeletePolicy(ctx context.Context, in *DeletePolicyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	ListPolicies(ctx context.Context, in *ListPoliciesRequest, opts ...grpc.CallOption) (*ListPoliciesResponse, error)
 	ListPolicyVersions(ctx context.Context, in *ListPolicyVersionsRequest, opts ...grpc.CallOption) (*ListPolicyVersionsResponse, error)
 	ValidatePolicy(ctx context.Context, in *ValidatePolicyRequest, opts ...grpc.CallOption) (*ValidatePolicyResponse, error)
@@ -50,11 +50,11 @@ type RodeClient interface {
 	ListPolicyGroups(ctx context.Context, in *ListPolicyGroupsRequest, opts ...grpc.CallOption) (*ListPolicyGroupsResponse, error)
 	GetPolicyGroup(ctx context.Context, in *GetPolicyGroupRequest, opts ...grpc.CallOption) (*PolicyGroup, error)
 	UpdatePolicyGroup(ctx context.Context, in *PolicyGroup, opts ...grpc.CallOption) (*PolicyGroup, error)
-	DeletePolicyGroup(ctx context.Context, in *DeletePolicyGroupRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	DeletePolicyGroup(ctx context.Context, in *DeletePolicyGroupRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	CreatePolicyAssignment(ctx context.Context, in *PolicyAssignment, opts ...grpc.CallOption) (*PolicyAssignment, error)
 	GetPolicyAssignment(ctx context.Context, in *GetPolicyAssignmentRequest, opts ...grpc.CallOption) (*PolicyAssignment, error)
 	UpdatePolicyAssignment(ctx context.Context, in *PolicyAssignment, opts ...grpc.CallOption) (*PolicyAssignment, error)
-	DeletePolicyAssignment(ctx context.Context, in *DeletePolicyAssignmentRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	DeletePolicyAssignment(ctx context.Context, in *DeletePolicyAssignmentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	ListPolicyAssignments(ctx context.Context, in *ListPolicyAssignmentsRequest, opts ...grpc.CallOption) (*ListPolicyAssignmentsResponse, error)
 	EvaluateResource(ctx context.Context, in *ResourceEvaluationRequest, opts ...grpc.CallOption) (*ResourceEvaluationResult, error)
 	GetResourceEvaluation(ctx context.Context, in *GetResourceEvaluationRequest, opts ...grpc.CallOption) (*ResourceEvaluationResult, error)
@@ -150,8 +150,8 @@ func (c *rodeClient) GetPolicy(ctx context.Context, in *GetPolicyRequest, opts .
 	return out, nil
 }
 
-func (c *rodeClient) DeletePolicy(ctx context.Context, in *DeletePolicyRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
+func (c *rodeClient) DeletePolicy(ctx context.Context, in *DeletePolicyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/DeletePolicy", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -249,8 +249,8 @@ func (c *rodeClient) UpdatePolicyGroup(ctx context.Context, in *PolicyGroup, opt
 	return out, nil
 }
 
-func (c *rodeClient) DeletePolicyGroup(ctx context.Context, in *DeletePolicyGroupRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
+func (c *rodeClient) DeletePolicyGroup(ctx context.Context, in *DeletePolicyGroupRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/DeletePolicyGroup", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -285,8 +285,8 @@ func (c *rodeClient) UpdatePolicyAssignment(ctx context.Context, in *PolicyAssig
 	return out, nil
 }
 
-func (c *rodeClient) DeletePolicyAssignment(ctx context.Context, in *DeletePolicyAssignmentRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
+func (c *rodeClient) DeletePolicyAssignment(ctx context.Context, in *DeletePolicyAssignmentRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/rode.v1alpha1.Rode/DeletePolicyAssignment", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -348,7 +348,7 @@ type RodeServer interface {
 	UpdateOccurrence(context.Context, *UpdateOccurrenceRequest) (*grafeas_go_proto.Occurrence, error)
 	CreatePolicy(context.Context, *Policy) (*Policy, error)
 	GetPolicy(context.Context, *GetPolicyRequest) (*Policy, error)
-	DeletePolicy(context.Context, *DeletePolicyRequest) (*empty.Empty, error)
+	DeletePolicy(context.Context, *DeletePolicyRequest) (*emptypb.Empty, error)
 	ListPolicies(context.Context, *ListPoliciesRequest) (*ListPoliciesResponse, error)
 	ListPolicyVersions(context.Context, *ListPolicyVersionsRequest) (*ListPolicyVersionsResponse, error)
 	ValidatePolicy(context.Context, *ValidatePolicyRequest) (*ValidatePolicyResponse, error)
@@ -364,11 +364,11 @@ type RodeServer interface {
 	ListPolicyGroups(context.Context, *ListPolicyGroupsRequest) (*ListPolicyGroupsResponse, error)
 	GetPolicyGroup(context.Context, *GetPolicyGroupRequest) (*PolicyGroup, error)
 	UpdatePolicyGroup(context.Context, *PolicyGroup) (*PolicyGroup, error)
-	DeletePolicyGroup(context.Context, *DeletePolicyGroupRequest) (*empty.Empty, error)
+	DeletePolicyGroup(context.Context, *DeletePolicyGroupRequest) (*emptypb.Empty, error)
 	CreatePolicyAssignment(context.Context, *PolicyAssignment) (*PolicyAssignment, error)
 	GetPolicyAssignment(context.Context, *GetPolicyAssignmentRequest) (*PolicyAssignment, error)
 	UpdatePolicyAssignment(context.Context, *PolicyAssignment) (*PolicyAssignment, error)
-	DeletePolicyAssignment(context.Context, *DeletePolicyAssignmentRequest) (*empty.Empty, error)
+	DeletePolicyAssignment(context.Context, *DeletePolicyAssignmentRequest) (*emptypb.Empty, error)
 	ListPolicyAssignments(context.Context, *ListPolicyAssignmentsRequest) (*ListPolicyAssignmentsResponse, error)
 	EvaluateResource(context.Context, *ResourceEvaluationRequest) (*ResourceEvaluationResult, error)
 	GetResourceEvaluation(context.Context, *GetResourceEvaluationRequest) (*ResourceEvaluationResult, error)
@@ -406,7 +406,7 @@ func (UnimplementedRodeServer) CreatePolicy(context.Context, *Policy) (*Policy, 
 func (UnimplementedRodeServer) GetPolicy(context.Context, *GetPolicyRequest) (*Policy, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPolicy not implemented")
 }
-func (UnimplementedRodeServer) DeletePolicy(context.Context, *DeletePolicyRequest) (*empty.Empty, error) {
+func (UnimplementedRodeServer) DeletePolicy(context.Context, *DeletePolicyRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeletePolicy not implemented")
 }
 func (UnimplementedRodeServer) ListPolicies(context.Context, *ListPoliciesRequest) (*ListPoliciesResponse, error) {
@@ -439,7 +439,7 @@ func (UnimplementedRodeServer) GetPolicyGroup(context.Context, *GetPolicyGroupRe
 func (UnimplementedRodeServer) UpdatePolicyGroup(context.Context, *PolicyGroup) (*PolicyGroup, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdatePolicyGroup not implemented")
 }
-func (UnimplementedRodeServer) DeletePolicyGroup(context.Context, *DeletePolicyGroupRequest) (*empty.Empty, error) {
+func (UnimplementedRodeServer) DeletePolicyGroup(context.Context, *DeletePolicyGroupRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeletePolicyGroup not implemented")
 }
 func (UnimplementedRodeServer) CreatePolicyAssignment(context.Context, *PolicyAssignment) (*PolicyAssignment, error) {
@@ -451,7 +451,7 @@ func (UnimplementedRodeServer) GetPolicyAssignment(context.Context, *GetPolicyAs
 func (UnimplementedRodeServer) UpdatePolicyAssignment(context.Context, *PolicyAssignment) (*PolicyAssignment, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdatePolicyAssignment not implemented")
 }
-func (UnimplementedRodeServer) DeletePolicyAssignment(context.Context, *DeletePolicyAssignmentRequest) (*empty.Empty, error) {
+func (UnimplementedRodeServer) DeletePolicyAssignment(context.Context, *DeletePolicyAssignmentRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeletePolicyAssignment not implemented")
 }
 func (UnimplementedRodeServer) ListPolicyAssignments(context.Context, *ListPolicyAssignmentsRequest) (*ListPolicyAssignmentsResponse, error) {
