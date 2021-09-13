@@ -15,15 +15,17 @@
 package server
 
 import (
-	"github.com/brianvoe/gofakeit/v5"
+	"github.com/brianvoe/gofakeit/v6"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap"
 	"testing"
-	"time"
 )
 
-var logger *zap.Logger
+var (
+	logger *zap.Logger
+	fake = gofakeit.New(0)
+)
 
 func TestServer(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -32,5 +34,4 @@ func TestServer(t *testing.T) {
 
 var _ = BeforeSuite(func() {
 	logger = zap.NewNop()
-	gofakeit.Seed(time.Now().UnixNano())
 })

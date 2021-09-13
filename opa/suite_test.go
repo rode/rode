@@ -18,14 +18,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/brianvoe/gofakeit/v5"
+	"github.com/brianvoe/gofakeit/v6"
 	"github.com/jarcoal/httpmock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap"
 )
 
-var logger *zap.Logger
+var (
+	logger *zap.Logger
+	fake = gofakeit.New(0)
+)
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)

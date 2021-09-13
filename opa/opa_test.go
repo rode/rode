@@ -22,7 +22,6 @@ import (
 
 	"net/http"
 
-	"github.com/brianvoe/gofakeit/v5"
 	"github.com/jarcoal/httpmock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -45,7 +44,7 @@ var _ = Describe("opa client", func() {
 	)
 
 	BeforeEach(func() {
-		opaHost = fmt.Sprintf("http://%s", gofakeit.DomainName())
+		opaHost = fmt.Sprintf("http://%s", fake.DomainName())
 
 		Opa = &client{
 			logger,
@@ -58,14 +57,14 @@ var _ = Describe("opa client", func() {
 
 	When("a new OPA client is created", func() {
 		It("returns OpaClient", func() {
-			host := fmt.Sprintf("http://%s", gofakeit.DomainName())
+			host := fmt.Sprintf("http://%s", fake.DomainName())
 			opa := NewClient(logger, host, false)
 			Expect(opa).To(BeAssignableToTypeOf(&client{}))
-			Expect(opa.(*client).Host).To((Equal(host)))
+			Expect(opa.(*client).Host).To(Equal(host))
 		})
 	})
 
-	Context("an OPA policy is intialized", func() {
+	Context("an OPA policy is initialized", func() {
 		var (
 			initializePolicyError ClientError
 			getPolicyResponse     *http.Response
@@ -84,7 +83,7 @@ var _ = Describe("opa client", func() {
 		})
 
 		JustBeforeEach(func() {
-			initializePolicyError = Opa.InitializePolicy(opaPolicy, gofakeit.LetterN(200))
+			initializePolicyError = Opa.InitializePolicy(opaPolicy, fake.LetterN(200))
 		})
 
 		It("should check if policy exists in OPA", func() {
@@ -205,13 +204,13 @@ var _ = Describe("opa client", func() {
 
 		When("OPA returns a valid response", func() {
 			BeforeEach(func() {
-				input = []byte(fmt.Sprintf(`{"%s":"%s"}`, gofakeit.Word(), gofakeit.Word()))
+				input = []byte(fmt.Sprintf(`{"%s":"%s"}`, fake.Word(), fake.Word()))
 				opaResponse = &EvaluatePolicyResponse{
 					Result: &EvaluatePolicyResult{
-						Pass: gofakeit.Bool(),
+						Pass: fake.Bool(),
 						Violations: []*pb.EvaluatePolicyViolation{
 							{
-								Message: gofakeit.Paragraph(1, 1, 10, "."),
+								Message: fake.Paragraph(1, 1, 10, "."),
 							},
 						},
 					},
@@ -289,7 +288,7 @@ var _ = Describe("opa client", func() {
 
 		When("invalid input data is provided to the client", func() {
 			BeforeEach(func() {
-				input = []byte(gofakeit.Word())
+				input = []byte(fake.Word())
 				httpmock.RegisterResponder("POST", fmt.Sprintf("%s/v1/data/%s", opaHost, opaPolicy), nil)
 			})
 
