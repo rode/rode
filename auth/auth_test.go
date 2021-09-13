@@ -22,13 +22,12 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"testing"
 	"time"
 
-	"github.com/brianvoe/gofakeit/v5"
 	"github.com/coreos/go-oidc"
 	"github.com/golang-jwt/jwt"
 	"github.com/grpc-ecosystem/go-grpc-middleware/util/metautils"
+	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/rode/rode/config"
 	"google.golang.org/grpc/codes"
@@ -36,165 +35,225 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func TestAuth(t *testing.T) {
-	Expect := NewGomegaWithT(t).Expect
-	ctx := context.Background()
-	registry := NewRoleRegistry()
+var _ = Describe("Auth", func() {
+	var (
+		authConfig *config.AuthConfig
+		ctx context.Context
+		authenticator Authenticator
 
-	t.Run("no authentication", func(t *testing.T) {
-		authenticator := NewAuthenticator(&config.AuthConfig{
+		actualCtx context.Context
+		actualError error
+
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		registry := NewRoleRegistry()
+		authConfig = &config.AuthConfig{
 			Basic: &config.BasicAuthConfig{},
 			OIDC:  &config.OIDCAuthConfig{},
-		}, logger, registry)
-
-		_, err := authenticator.Authenticate(ctx)
-		Expect(err).ToNot(HaveOccurred())
-	})
-
-	t.Run("no authentication but authorization header set", func(t *testing.T) {
-		authenticator := NewAuthenticator(&config.AuthConfig{
-			Basic: &config.BasicAuthConfig{},
-			OIDC:  &config.OIDCAuthConfig{},
-		}, logger, registry)
-
-		meta := metautils.NiceMD(metadata.New(map[string]string{
-			"authorization": fake.Word(),
-		}))
-
-		_, err := authenticator.Authenticate(meta.ToIncoming(ctx))
-		Expect(err).ToNot(HaveOccurred())
-	})
-
-	t.Run("basic authentication", func(t *testing.T) {
-		authConfig := &config.AuthConfig{
-			Basic: &config.BasicAuthConfig{
-				Username: gofakeit.LetterN(10),
-				Password: gofakeit.LetterN(10),
-			},
 		}
-		authenticator := NewAuthenticator(authConfig, logger, registry)
 
-		t.Run("should be successful when using the correct credentials", func(t *testing.T) {
-			_, err := authenticator.Authenticate(createCtxWithBasicAuth(ctx, authConfig.Basic.Username, authConfig.Basic.Password))
-			Expect(err).ToNot(HaveOccurred())
+		authenticator = NewAuthenticator(authConfig, logger, registry)
+	})
+
+	JustBeforeEach(func() {
+		actualCtx, actualError = authenticator.Authenticate(ctx)
+	})
+
+	When("no authentication is configured", func() {
+		It("should allow the request", func() {
+			Expect(actualError).ToNot(HaveOccurred())
 		})
+	})
 
-		t.Run("should fail when using incorrect credentials", func(t *testing.T) {
-			_, err := authenticator.Authenticate(createCtxWithBasicAuth(ctx, gofakeit.LetterN(10), gofakeit.LetterN(10)))
-			expectUnauthenticatedErrorToHaveOccurred(t, err)
-		})
-
-		t.Run("should fail when the authorization header is malformed", func(t *testing.T) {
+	When("no authentication is configured but the authorization header is set", func() {
+		BeforeEach(func() {
 			meta := metautils.NiceMD(metadata.New(map[string]string{
-				"authorization": "Basic",
+				"authorization": fake.Word(),
 			}))
 
-			_, err := authenticator.Authenticate(meta.ToIncoming(ctx))
-			expectUnauthenticatedErrorToHaveOccurred(t, err)
+			ctx = meta.ToIncoming(ctx)
 		})
 
-		t.Run("should fail when using incorrect format for basic auth", func(t *testing.T) {
-			_, err := authenticator.Authenticate(createCtxWithBasicAuth(ctx, fmt.Sprintf("%s:%s", gofakeit.LetterN(10), gofakeit.LetterN(10)), gofakeit.LetterN(10)))
-			expectUnauthenticatedErrorToHaveOccurred(t, err)
-		})
-
-		t.Run("should fail when base64 decoding fails", func(t *testing.T) {
-			meta := metautils.NiceMD(metadata.New(map[string]string{
-				"authorization": fmt.Sprintf("Basic %s", gofakeit.LetterN(10)),
-			}))
-
-			_, err := authenticator.Authenticate(meta.ToIncoming(ctx))
-			expectUnauthenticatedErrorToHaveOccurred(t, err)
+		It("should allow the request", func() {
+			Expect(actualError).ToNot(HaveOccurred())
 		})
 	})
 
-	t.Run("oidc authentication", func(t *testing.T) {
-		issuer := gofakeit.LetterN(10)
-		keySet := &fakeKeySet{}
-		clientId := gofakeit.LetterN(10)
-		verifier := oidc.NewVerifier(issuer, keySet, &oidc.Config{
-			ClientID: clientId,
+	Context("basic authentication", func() {
+		BeforeEach(func() {
+			authConfig.Basic.Username = fake.LetterN(10)
+			authConfig.Basic.Password = fake.LetterN(10)
 		})
 
-		authConfig := &config.AuthConfig{
-			Basic: &config.BasicAuthConfig{},
-			OIDC: &config.OIDCAuthConfig{
-				Issuer:        issuer,
-				Verifier:      verifier,
-				RoleClaimPath: "roles",
-			},
-		}
-		authenticator := NewAuthenticator(authConfig, logger, registry)
-
-		t.Run("should be successful when jwt validation is successful", func(t *testing.T) {
-			role := fake.RandomString([]string{
-				string(RoleAdministrator),
-				string(RoleApplicationDeveloper),
-				string(RoleEnforcer),
+		When("the correct credentials are presented", func() {
+			BeforeEach(func() {
+				ctx = createCtxWithBasicAuth(ctx, authConfig.Basic.Username, authConfig.Basic.Password)
 			})
 
-			ctx, payload := createCtxWithJWT(ctx, issuer, clientId, role, time.Now().Add(time.Minute*1).Unix())
-			keySet.jwtPayload = payload
-			keySet.shouldVerify = true
-
-			actualCtx, err := authenticator.Authenticate(ctx)
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(actualCtx.Value(rolesCtxKey)).To(Equal([]Role{Role(role)}))
+			It("should allow the request", func() {
+				Expect(actualError).NotTo(HaveOccurred())
+			})
 		})
 
-		t.Run("should set the anonymous role when the claim does not have roles", func(t *testing.T) {
-			ctx, payload := createCtxWithJWT(ctx, issuer, clientId, fake.Word(), time.Now().Add(time.Minute*1).Unix())
-			keySet.jwtPayload = payload
-			keySet.shouldVerify = true
-
-			actualCtx, err := authenticator.Authenticate(ctx)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(actualCtx.Value(rolesCtxKey)).To(Equal([]Role{RoleAnonymous}))
-		})
-
-		t.Run("should fail when the roles claim is missing", func(t *testing.T) {
-			token := jwt.NewWithClaims(jwt.SigningMethodRS256, &jwt.StandardClaims{
-				Issuer:    issuer,
-				Audience:  clientId,
-				ExpiresAt: time.Now().Add(time.Minute * 1).Unix(),
+		When("the credentials are incorrect", func() {
+			BeforeEach(func() {
+				ctx = createCtxWithBasicAuth(ctx, fake.LetterN(10), fake.LetterN(10))
 			})
 
-			key, _ := rsa.GenerateKey(rand.Reader, 2048)
-			signedToken, _ := token.SignedString(key)
-			meta := metautils.NiceMD(metadata.New(map[string]string{
-				"authorization": fmt.Sprintf("Bearer %s", signedToken),
-			}))
-
-			payload, _ := jwt.DecodeSegment(strings.Split(signedToken, ".")[1])
-			keySet.jwtPayload = payload
-			keySet.shouldVerify = true
-
-			_, err := authenticator.Authenticate(meta.ToIncoming(ctx))
-
-			expectUnauthenticatedErrorToHaveOccurred(t, err)
+			It("should deny the request", func() {
+				expectUnauthenticatedErrorToHaveOccurred(actualError)
+			})
 		})
 
-		t.Run("should fail when jwt validation fails", func(t *testing.T) {
-			ctx, payload := createCtxWithJWT(ctx, issuer, clientId, string(RoleAdministrator), time.Now().Add(time.Minute*1).Unix())
-			keySet.jwtPayload = payload
-			keySet.shouldVerify = false
+		When("the authorization header is malformed", func() {
+			BeforeEach(func() {
+				meta := metautils.NiceMD(metadata.New(map[string]string{
+					"authorization": "Basic",
+				}))
+				ctx = meta.ToIncoming(ctx)
+			})
 
-			_, err := authenticator.Authenticate(ctx)
-			expectUnauthenticatedErrorToHaveOccurred(t, err)
+			It("should deny the request", func() {
+				expectUnauthenticatedErrorToHaveOccurred(actualError)
+			})
 		})
 
-		t.Run("should fail when a bearer token is not specified", func(t *testing.T) {
-			// a basic auth attempt would fail here
-			meta := metautils.NiceMD(metadata.New(map[string]string{
-				"authorization": fmt.Sprintf("Basic %s", gofakeit.LetterN(10)),
-			}))
+		When("the authorization header doesn't have the correct format", func() {
+			BeforeEach(func() {
+				ctx = createCtxWithBasicAuth(ctx, fmt.Sprintf("%s:%s", fake.LetterN(10), fake.LetterN(10)), fake.LetterN(10))
+			})
 
-			_, err := authenticator.Authenticate(meta.ToIncoming(ctx))
-			expectUnauthenticatedErrorToHaveOccurred(t, err)
+			It("should deny the request", func() {
+				expectUnauthenticatedErrorToHaveOccurred(actualError)
+			})
+		})
+
+		When("the base64 decode fails", func() {
+			BeforeEach(func() {
+				meta := metautils.NiceMD(metadata.New(map[string]string{
+					"authorization": fmt.Sprintf("Basic %s", fake.LetterN(10)),
+				}))
+				ctx = meta.ToIncoming(ctx)
+			})
+
+			It("should deny the request", func() {
+				expectUnauthenticatedErrorToHaveOccurred(actualError)
+			})
 		})
 	})
-}
+
+	Context("OIDC authentication", func() {
+		var (
+			issuer string
+			keySet *fakeKeySet
+			clientId string
+			verifier *oidc.IDTokenVerifier
+			payload []byte
+		)
+
+		BeforeEach(func() {
+			issuer = fake.LetterN(10)
+			keySet = &fakeKeySet{}
+			clientId = fake.LetterN(10)
+			verifier = oidc.NewVerifier(issuer, keySet, &oidc.Config{
+				ClientID: clientId,
+			})
+
+			authConfig.OIDC.Issuer = issuer
+			authConfig.OIDC.Verifier = verifier
+			authConfig.OIDC.RoleClaimPath = "roles"
+		})
+
+		When("jwt validation is successful", func() {
+			var (
+				role string
+			)
+
+			BeforeEach(func() {
+				role = fake.RandomString([]string{
+					string(RoleAdministrator),
+					string(RoleApplicationDeveloper),
+					string(RoleEnforcer),
+				})
+
+				ctx, payload = createCtxWithJWT(ctx, issuer, clientId, role, time.Now().Add(time.Minute*1).Unix())
+				keySet.jwtPayload = payload
+				keySet.shouldVerify = true
+			})
+
+			It("should allow the request", func() {
+				Expect(actualError).NotTo(HaveOccurred())
+				Expect(actualCtx.Value(rolesCtxKey)).To(Equal([]Role{Role(role)}))
+			})
+		})
+
+		When("there the role claim does not contain any known roles", func() {
+			BeforeEach(func() {
+				ctx, payload = createCtxWithJWT(ctx, issuer, clientId, fake.Word(), time.Now().Add(time.Minute*1).Unix())
+
+				keySet.jwtPayload = payload
+				keySet.shouldVerify = true
+			})
+
+			It("should set the anonymous role", func() {
+				Expect(actualError).NotTo(HaveOccurred())
+				Expect(actualCtx.Value(rolesCtxKey)).To(Equal([]Role{RoleAnonymous}))
+			})
+		})
+
+		When("the roles claim is missing", func() {
+			BeforeEach(func() {
+				token := jwt.NewWithClaims(jwt.SigningMethodRS256, &jwt.StandardClaims{
+					Issuer:    issuer,
+					Audience:  clientId,
+					ExpiresAt: time.Now().Add(time.Minute * 1).Unix(),
+				})
+
+				key, _ := rsa.GenerateKey(rand.Reader, 2048)
+				signedToken, _ := token.SignedString(key)
+				meta := metautils.NiceMD(metadata.New(map[string]string{
+					"authorization": fmt.Sprintf("Bearer %s", signedToken),
+				}))
+				ctx = meta.ToIncoming(ctx)
+
+				payload, _ = jwt.DecodeSegment(strings.Split(signedToken, ".")[1])
+				keySet.jwtPayload = payload
+				keySet.shouldVerify = true
+			})
+
+			It("should deny the request", func() {
+				expectUnauthenticatedErrorToHaveOccurred(actualError)
+			})
+		})
+
+		When("jwt validation fails", func() {
+			BeforeEach(func() {
+				ctx, payload = createCtxWithJWT(ctx, issuer, clientId, string(RoleAdministrator), time.Now().Add(time.Minute*1).Unix())
+				keySet.jwtPayload = payload
+				keySet.shouldVerify = false
+			})
+
+			It("should deny the request", func() {
+				expectUnauthenticatedErrorToHaveOccurred(actualError)
+			})
+		})
+
+		When("a bearer token is not specified", func() {
+			BeforeEach(func() {
+				meta := metautils.NiceMD(metadata.New(map[string]string{
+					"authorization": fmt.Sprintf("Basic %s", fake.LetterN(10)),
+				}))
+				ctx = meta.ToIncoming(ctx)
+			})
+
+			It("should deny the request", func() {
+				expectUnauthenticatedErrorToHaveOccurred(actualError)
+			})
+		})
+	})
+})
 
 type fakeKeySet struct {
 	shouldVerify bool
@@ -206,7 +265,7 @@ func (f *fakeKeySet) VerifySignature(context.Context, string) ([]byte, error) {
 		return f.jwtPayload, nil
 	}
 
-	return nil, errors.New(gofakeit.LetterN(10))
+	return nil, errors.New(fake.LetterN(10))
 }
 
 type fakeClaims struct {
@@ -214,8 +273,7 @@ type fakeClaims struct {
 	Roles []string `json:"roles"`
 }
 
-func expectUnauthenticatedErrorToHaveOccurred(t *testing.T, err error) {
-	Expect := NewGomegaWithT(t).Expect
+func expectUnauthenticatedErrorToHaveOccurred( err error) {
 	Expect(err).To(HaveOccurred())
 	s, ok := status.FromError(err)
 
