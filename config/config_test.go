@@ -146,13 +146,13 @@ var _ = Describe("Config", func() {
 
 	Describe("OIDC", func() {
 		var (
-			issuer = "http://localhost:8080/auth/realms/test"
-			wellknown = "/.well-known/openid-configuration"
+			issuer        = "http://localhost:8080/auth/realms/test"
+			wellknown     = "/.well-known/openid-configuration"
 			responseBytes []byte
-			flags []string
+			flags         []string
 
 			actualConfig *Config
-			actualError error
+			actualError  error
 		)
 
 		BeforeEach(func() {

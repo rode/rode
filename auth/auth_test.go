@@ -37,13 +37,12 @@ import (
 
 var _ = Describe("Auth", func() {
 	var (
-		authConfig *config.AuthConfig
-		ctx context.Context
+		authConfig    *config.AuthConfig
+		ctx           context.Context
 		authenticator Authenticator
 
-		actualCtx context.Context
+		actualCtx   context.Context
 		actualError error
-
 	)
 
 	BeforeEach(func() {
@@ -146,11 +145,11 @@ var _ = Describe("Auth", func() {
 
 	Context("OIDC authentication", func() {
 		var (
-			issuer string
-			keySet *fakeKeySet
+			issuer   string
+			keySet   *fakeKeySet
 			clientId string
 			verifier *oidc.IDTokenVerifier
-			payload []byte
+			payload  []byte
 		)
 
 		BeforeEach(func() {
@@ -273,7 +272,7 @@ type fakeClaims struct {
 	Roles []string `json:"roles"`
 }
 
-func expectUnauthenticatedErrorToHaveOccurred( err error) {
+func expectUnauthenticatedErrorToHaveOccurred(err error) {
 	Expect(err).To(HaveOccurred())
 	s, ok := status.FromError(err)
 

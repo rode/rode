@@ -27,7 +27,7 @@ import (
 
 var (
 	logger *zap.Logger
-	fake = gofakeit.New(0)
+	fake   = gofakeit.New(0)
 )
 
 func TestAPIs(t *testing.T) {
