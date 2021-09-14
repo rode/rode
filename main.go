@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rode/rode/pkg/evaluation"
 	"log"
 	"net"
@@ -159,6 +160,7 @@ func main() {
 
 	httpMux := http.NewServeMux()
 	httpMux.Handle("/", grpcGateway)
+	httpMux.Handle("/metrics", promhttp.Handler())
 
 	httpServer := &http.Server{
 		Handler: httpMux,
