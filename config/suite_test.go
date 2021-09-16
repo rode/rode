@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package auth
+package config
 
 import (
 	"testing"
@@ -19,15 +19,11 @@ import (
 	"github.com/brianvoe/gofakeit/v6"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"go.uber.org/zap"
 )
 
-var (
-	logger = zap.NewNop()
-	fake   = gofakeit.New(0)
-)
+var fake = gofakeit.New(0)
 
-func TestAuth(t *testing.T) {
+func TestConfig(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Auth Suite")
+	RunSpecs(t, "Config Suite")
 }

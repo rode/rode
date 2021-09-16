@@ -19,26 +19,26 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"testing"
 
-	"github.com/brianvoe/gofakeit/v6"
 	"github.com/coreos/go-oidc"
 	"github.com/jarcoal/httpmock"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 
-func TestConfig(t *testing.T) {
-	Expect := NewGomegaWithT(t).Expect
+var _ = Describe("Config", func() {
+	DescribeTable("Build", func(tc *testCase) {
+		actualConfig, err := Build("rode", tc.flags)
 
-	for _, tc := range []struct {
-		name        string
-		flags       []string
-		expected    *Config
-		expectError bool
-	}{
-		{
-			name:  "defaults",
-			flags: []string{},
+		if tc.expectError {
+			Expect(err).To(HaveOccurred())
+		} else {
+			Expect(actualConfig).To(Equal(tc.expected))
+			Expect(err).NotTo(HaveOccurred())
+		}
+	},
+		Entry("defaults", &testCase{
 			expected: &Config{
 				Auth: &AuthConfig{
 					Basic: &BasicAuthConfig{},
@@ -59,24 +59,16 @@ func TestConfig(t *testing.T) {
 				Port:  50051,
 				Debug: false,
 			},
-		},
-		{
-			name:        "bad gRPC port",
-			flags:       []string{"--grpc-port=foo"},
+		}),
+		Entry("bad port", &testCase{
+			flags:       []string{"--port=foo"},
 			expectError: true,
-		},
-		{
-			name:        "bad http port",
-			flags:       []string{"--http-port=bar"},
-			expectError: true,
-		},
-		{
-			name:        "bad debug",
+		}),
+		Entry("bad debug value", &testCase{
 			flags:       []string{"--debug=bar"},
 			expectError: true,
-		},
-		{
-			name:  "basic auth",
+		}),
+		Entry("basic auth", &testCase{
 			flags: []string{"--basic-auth-username=foo", "--basic-auth-password=bar"},
 			expected: &Config{
 				Auth: &AuthConfig{
@@ -102,24 +94,20 @@ func TestConfig(t *testing.T) {
 				Port:  50051,
 				Debug: false,
 			},
-		},
-		{
-			name:        "basic auth missing username",
+		}),
+		Entry("basic auth missing username", &testCase{
 			flags:       []string{"--basic-auth-password=bar"},
 			expectError: true,
-		},
-		{
-			name:        "basic auth missing password",
+		}),
+		Entry("basic auth missing password", &testCase{
 			flags:       []string{"--basic-auth-username=foo"},
 			expectError: true,
-		},
-		{
-			name:        "OIDC required audience without issuer",
+		}),
+		Entry("OIDC required audience without issuer", &testCase{
 			flags:       []string{"--oidc-required-audience=foo"},
 			expectError: true,
-		},
-		{
-			name:  "OPA host",
+		}),
+		Entry("OPA host", &testCase{
 			flags: []string{"--opa-host=opa.test.na:8181"},
 			expected: &Config{
 				Auth: &AuthConfig{
@@ -141,123 +129,143 @@ func TestConfig(t *testing.T) {
 				Port:  50051,
 				Debug: false,
 			},
-		},
-		{
-			name:        "Elasticsearch config missing username",
+		}),
+		Entry("Elasticsearch config missing username", &testCase{
 			flags:       []string{"--elasticsearch-password=bar"},
 			expectError: true,
-		},
-		{
-			name:        "Elasticsearch missing password",
+		}),
+		Entry("Elasticsearch missing password", &testCase{
 			flags:       []string{"--elasticsearch-username=foo"},
 			expectError: true,
-		},
-		{
-			name:        "Elasticsearch bad refresh option",
+		}),
+		Entry("Elasticsearch bad refresh option", &testCase{
 			flags:       []string{"--elasticsearch-refresh=foo"},
 			expectError: true,
-		},
-	} {
-		tc := tc
+		}),
+	)
 
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+	Describe("OIDC", func() {
+		var (
+			issuer        = "http://localhost:8080/auth/realms/test"
+			wellknown     = "/.well-known/openid-configuration"
+			responseBytes []byte
+			flags         []string
 
-			conf, err := Build("rode", tc.flags)
+			actualConfig *Config
+			actualError  error
+		)
 
-			if tc.expectError {
-				Expect(err).To(HaveOccurred())
-			} else {
-				Expect(err).ToNot(HaveOccurred())
-				Expect(conf).To(BeEquivalentTo(tc.expected))
-			}
-		})
-	}
-
-	t.Run("OIDC", func(t *testing.T) {
-		type providerJSON struct {
-			Issuer      string   `json:"issuer"`
-			AuthURL     string   `json:"authorization_endpoint"`
-			TokenURL    string   `json:"token_endpoint"`
-			JWKSURL     string   `json:"jwks_uri"`
-			UserInfoURL string   `json:"userinfo_endpoint"`
-			Algorithms  []string `json:"id_token_signing_alg_values_supported"`
-		}
-
-		issuer := "http://localhost:8080/auth/realms/test"
-		wellknown := "/.well-known/openid-configuration"
-		responseBytes, err := json.Marshal(&providerJSON{
-			Issuer:      issuer,
-			AuthURL:     "",
-			TokenURL:    "",
-			JWKSURL:     "",
-			UserInfoURL: "",
-			Algorithms:  []string{""},
-		})
-		Expect(err).ToNot(HaveOccurred())
-
-		t.Run("should be successful", func(t *testing.T) {
+		BeforeEach(func() {
+			var err error
+			flags = []string{fmt.Sprintf("--oidc-issuer=%s", issuer)}
+			responseBytes, err = json.Marshal(&providerJSON{
+				Issuer:      issuer,
+				AuthURL:     "",
+				TokenURL:    "",
+				JWKSURL:     "",
+				UserInfoURL: "",
+				Algorithms:  []string{""},
+			})
+			Expect(err).NotTo(HaveOccurred())
 			httpmock.Activate()
-			defer httpmock.Deactivate()
+		})
 
-			httpmock.RegisterResponder("GET", issuer+wellknown, func(request *http.Request) (*http.Response, error) {
-				return httpmock.NewStringResponse(http.StatusOK, string(responseBytes)), nil
+		JustBeforeEach(func() {
+			actualConfig, actualError = Build("rode", flags)
+		})
+
+		AfterEach(func() {
+			httpmock.Deactivate()
+		})
+
+		When("the configuration is correct", func() {
+			BeforeEach(func() {
+				httpmock.RegisterResponder("GET", issuer+wellknown, func(request *http.Request) (*http.Response, error) {
+					return httpmock.NewStringResponse(http.StatusOK, string(responseBytes)), nil
+				})
 			})
 
-			c, err := Build("rode", []string{fmt.Sprintf("--oidc-issuer=%s", issuer)})
-			Expect(err).ToNot(HaveOccurred())
-			Expect(c.Auth.OIDC.Issuer).To(Equal(issuer))
-			Expect(c.Auth.Enabled).To(BeTrue())
-		})
-
-		t.Run("should be successful with required audience", func(t *testing.T) {
-			httpmock.Activate()
-			defer httpmock.Deactivate()
-
-			audience := gofakeit.LetterN(10)
-
-			httpmock.RegisterResponder("GET", issuer+wellknown, func(request *http.Request) (*http.Response, error) {
-				return httpmock.NewStringResponse(http.StatusOK, string(responseBytes)), nil
+			It("should be successful", func() {
+				Expect(actualError).NotTo(HaveOccurred())
+				Expect(actualConfig.Auth.OIDC.Issuer).To(Equal(issuer))
 			})
-
-			c, err := Build("rode", []string{fmt.Sprintf("--oidc-issuer=%s", issuer), fmt.Sprintf("--oidc-required-audience=%s", audience)})
-			Expect(err).ToNot(HaveOccurred())
-			Expect(c.Auth.OIDC.Issuer).To(Equal(issuer))
-			Expect(c.Auth.OIDC.RequiredAudience).To(Equal(audience))
 		})
 
-		t.Run("should fail if fetching the openid discovery document fails", func(t *testing.T) {
-			httpmock.Activate()
-			defer httpmock.Deactivate()
+		When("a required audience is set", func() {
+			var audience string
 
-			httpmock.RegisterResponder("GET", issuer+wellknown, func(request *http.Request) (*http.Response, error) {
-				return httpmock.NewStringResponse(http.StatusInternalServerError, "error"), nil
-			})
-
-			_, err := Build("rode", []string{fmt.Sprintf("--oidc-issuer=%s", issuer)})
-			Expect(err).To(HaveOccurred())
-		})
-
-		t.Run("should provided a custom client when verification is off", func(t *testing.T) {
-			httpmock.Activate()
-			defer httpmock.Deactivate()
-			var actualTransport *http.Transport
-
-			oidcClientContext = func(ctx context.Context, client *http.Client) context.Context {
-				actualTransport = client.Transport.(*http.Transport)
-				httpmock.ActivateNonDefault(client)
-
+			BeforeEach(func() {
+				audience = fake.LetterN(10)
 				httpmock.RegisterResponder("GET", issuer+wellknown, func(request *http.Request) (*http.Response, error) {
 					return httpmock.NewStringResponse(http.StatusOK, string(responseBytes)), nil
 				})
 
-				return oidc.ClientContext(ctx, client)
-			}
+				flags = []string{
+					fmt.Sprintf("--oidc-issuer=%s", issuer),
+					fmt.Sprintf("--oidc-required-audience=%s", audience),
+				}
+			})
 
-			_, err := Build("rode", []string{"--oidc-tls-insecure-skip-verify=true", fmt.Sprintf("--oidc-issuer=%s", issuer)})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(actualTransport).NotTo(BeNil())
-			Expect(actualTransport.TLSClientConfig.InsecureSkipVerify).To(BeTrue())
+			It("should be successful", func() {
+				Expect(actualError).NotTo(HaveOccurred())
+				Expect(actualConfig.Auth.OIDC.Issuer).To(Equal(issuer))
+				Expect(actualConfig.Auth.OIDC.RequiredAudience).To(Equal(audience))
+			})
+		})
+
+		When("fetching the OIDC discovery document fails", func() {
+			BeforeEach(func() {
+				httpmock.RegisterResponder("GET", issuer+wellknown, func(request *http.Request) (*http.Response, error) {
+					return httpmock.NewStringResponse(http.StatusInternalServerError, "error"), nil
+				})
+			})
+
+			It("should fail", func() {
+				Expect(actualError).To(HaveOccurred())
+			})
+		})
+
+		When("TLS verification is off", func() {
+			var actualTransport *http.Transport
+
+			BeforeEach(func() {
+				oidcClientContext = func(ctx context.Context, client *http.Client) context.Context {
+					actualTransport = client.Transport.(*http.Transport)
+					httpmock.ActivateNonDefault(client)
+
+					httpmock.RegisterResponder("GET", issuer+wellknown, func(request *http.Request) (*http.Response, error) {
+						return httpmock.NewStringResponse(http.StatusOK, string(responseBytes)), nil
+					})
+
+					return oidc.ClientContext(ctx, client)
+				}
+
+				flags = []string{
+					"--oidc-tls-insecure-skip-verify=true",
+					fmt.Sprintf("--oidc-issuer=%s", issuer),
+				}
+			})
+
+			It("should provide a custom HTTP client", func() {
+				Expect(actualError).NotTo(HaveOccurred())
+				Expect(actualTransport).NotTo(BeNil())
+				Expect(actualTransport.TLSClientConfig.InsecureSkipVerify).To(BeTrue())
+			})
 		})
 	})
+})
+
+type providerJSON struct {
+	Issuer      string   `json:"issuer"`
+	AuthURL     string   `json:"authorization_endpoint"`
+	TokenURL    string   `json:"token_endpoint"`
+	JWKSURL     string   `json:"jwks_uri"`
+	UserInfoURL string   `json:"userinfo_endpoint"`
+	Algorithms  []string `json:"id_token_signing_alg_values_supported"`
+}
+
+type testCase struct {
+	flags       []string
+	expected    *Config
+	expectError bool
 }

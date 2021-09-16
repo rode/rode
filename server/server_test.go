@@ -18,8 +18,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/rode/rode/pkg/evaluation/evaluationfakes"
 	"strings"
+
+	"github.com/rode/rode/pkg/evaluation/evaluationfakes"
 
 	"github.com/rode/rode/pkg/constants"
 	"github.com/rode/rode/pkg/grafeas/grafeasfakes"
@@ -27,7 +28,6 @@ import (
 	"github.com/rode/rode/pkg/policy/policyfakes"
 	"github.com/rode/rode/pkg/resource/resourcefakes"
 
-	"github.com/brianvoe/gofakeit/v5"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	immocks "github.com/rode/es-index-manager/mocks"
@@ -82,20 +82,20 @@ var _ = Describe("rode server", func() {
 		policyAssignmentManager = &policyfakes.FakeAssignmentManager{}
 		evaluationManager = &evaluationfakes.FakeManager{}
 
-		expectedPoliciesIndex = gofakeit.LetterN(10)
-		expectedPoliciesAlias = gofakeit.LetterN(10)
+		expectedPoliciesIndex = fake.LetterN(10)
+		expectedPoliciesAlias = fake.LetterN(10)
 
-		expectedPolicyGroupsIndex = gofakeit.LetterN(10)
-		expectedPolicyGroupsAlias = gofakeit.LetterN(10)
+		expectedPolicyGroupsIndex = fake.LetterN(10)
+		expectedPolicyGroupsAlias = fake.LetterN(10)
 
-		expectedPolicyAssignmentsIndex = gofakeit.LetterN(10)
-		expectedPolicyAssignmentsAlias = gofakeit.LetterN(10)
+		expectedPolicyAssignmentsIndex = fake.LetterN(10)
+		expectedPolicyAssignmentsAlias = fake.LetterN(10)
 
-		expectedResourceIndex = gofakeit.LetterN(10)
-		expectedResourceAlias = gofakeit.LetterN(10)
+		expectedResourceIndex = fake.LetterN(10)
+		expectedResourceAlias = fake.LetterN(10)
 
-		expectedEvaluationsIndex = gofakeit.LetterN(10)
-		expectedEvaluationsAlias = gofakeit.LetterN(10)
+		expectedEvaluationsIndex = fake.LetterN(10)
+		expectedEvaluationsAlias = fake.LetterN(10)
 
 		indexManager = &immocks.FakeIndexManager{}
 
@@ -149,7 +149,7 @@ var _ = Describe("rode server", func() {
 
 		BeforeEach(func() {
 			expectedProject = &grafeas_project_proto.Project{
-				Name: fmt.Sprintf("projects/%s", gofakeit.LetterN(10)),
+				Name: fmt.Sprintf("projects/%s", fake.LetterN(10)),
 			}
 			expectedGetProjectError = nil
 			expectedCreateProjectError = nil
@@ -278,7 +278,7 @@ var _ = Describe("rode server", func() {
 
 		When("initializing the index manager fails", func() {
 			BeforeEach(func() {
-				indexManager.InitializeReturns(errors.New(gofakeit.Word()))
+				indexManager.InitializeReturns(errors.New(fake.Word()))
 			})
 
 			It("should return an error", func() {
@@ -293,7 +293,7 @@ var _ = Describe("rode server", func() {
 
 		When("creating the first index fails", func() {
 			BeforeEach(func() {
-				indexManager.CreateIndexReturns(errors.New(gofakeit.Word()))
+				indexManager.CreateIndexReturns(errors.New(fake.Word()))
 			})
 
 			It("should return an error", func() {
@@ -308,7 +308,7 @@ var _ = Describe("rode server", func() {
 
 		When("creating the second index fails", func() {
 			BeforeEach(func() {
-				indexManager.CreateIndexReturnsOnCall(1, errors.New(gofakeit.Word()))
+				indexManager.CreateIndexReturnsOnCall(1, errors.New(fake.Word()))
 			})
 
 			It("should return an error", func() {
@@ -338,8 +338,8 @@ var _ = Describe("rode server", func() {
 
 		BeforeEach(func() {
 			expectedOccurrence = createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED)
-			expectedResourceName = gofakeit.URL()
-			expectedOccurrence.Resource.Uri = fmt.Sprintf("%s@sha256:%s", expectedResourceName, gofakeit.LetterN(10))
+			expectedResourceName = fake.URL()
+			expectedOccurrence.Resource.Uri = fmt.Sprintf("%s@sha256:%s", expectedResourceName, fake.LetterN(10))
 
 			expectedGrafeasBatchCreateOccurrencesResponse = &grafeas_proto.BatchCreateOccurrencesResponse{
 				Occurrences: []*grafeas_proto.Occurrence{
@@ -453,14 +453,14 @@ var _ = Describe("rode server", func() {
 
 		BeforeEach(func() {
 			expectedListResourcesRequest = &pb.ListResourcesRequest{
-				Filter: gofakeit.LetterN(10),
+				Filter: fake.LetterN(10),
 			}
 
 			expectedListResourcesResponse = &pb.ListResourcesResponse{
 				Resources: []*pb.Resource{
 					{
-						Name: gofakeit.LetterN(10),
-						Type: pb.ResourceType(gofakeit.Number(0, 6)),
+						Name: fake.LetterN(10),
+						Type: pb.ResourceType(fake.Number(0, 6)),
 					},
 				},
 			}
@@ -511,11 +511,11 @@ var _ = Describe("rode server", func() {
 		)
 
 		BeforeEach(func() {
-			expectedResourceId = gofakeit.LetterN(10)
+			expectedResourceId = fake.LetterN(10)
 			expectedResource = &pb.Resource{
 				Id:   expectedResourceId,
-				Name: gofakeit.LetterN(10),
-				Type: pb.ResourceType(gofakeit.Number(0, 7)),
+				Name: fake.LetterN(10),
+				Type: pb.ResourceType(fake.Number(0, 7)),
 			}
 
 			expectedListResourceVersionsRequest = &pb.ListResourceVersionsRequest{
@@ -524,8 +524,8 @@ var _ = Describe("rode server", func() {
 			expectedListResourceVersionsResponse = &pb.ListResourceVersionsResponse{
 				Versions: []*pb.ResourceVersion{
 					{
-						Version: gofakeit.LetterN(10),
-						Names:   []string{gofakeit.LetterN(10)},
+						Version: fake.LetterN(10),
+						Names:   []string{fake.LetterN(10)},
 						Created: timestamppb.Now(),
 					},
 				},
@@ -642,12 +642,12 @@ var _ = Describe("rode server", func() {
 		)
 
 		BeforeEach(func() {
-			expectedResourceUri = gofakeit.URL()
-			nextPageToken = gofakeit.Word()
-			expectedPageToken = gofakeit.Word()
-			expectedPageSize = gofakeit.Int32()
-			expectedBuildNoteName = gofakeit.LetterN(10)
-			expectedNoteName = gofakeit.LetterN(10)
+			expectedResourceUri = fake.URL()
+			nextPageToken = fake.Word()
+			expectedPageToken = fake.Word()
+			expectedPageSize = fake.Int32()
+			expectedBuildNoteName = fake.LetterN(10)
+			expectedNoteName = fake.LetterN(10)
 
 			request = &pb.ListVersionedResourceOccurrencesRequest{
 				ResourceUri: expectedResourceUri,
@@ -816,8 +816,8 @@ var _ = Describe("rode server", func() {
 		BeforeEach(func() {
 			expectedOccurrence = createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED)
 
-			expectedPageToken = gofakeit.Word()
-			expectedPageSize = gofakeit.Int32()
+			expectedPageToken = fake.Word()
+			expectedPageSize = fake.Int32()
 			expectedFilter = fmt.Sprintf(`"resource.uri" == "%s"`, expectedOccurrence.Resource.Uri)
 
 			expectedListOccurrencesRequest = &pb.ListOccurrencesRequest{
@@ -830,7 +830,7 @@ var _ = Describe("rode server", func() {
 				Occurrences: []*grafeas_proto.Occurrence{
 					expectedOccurrence,
 				},
-				NextPageToken: gofakeit.Word(),
+				NextPageToken: fake.Word(),
 			}
 
 			expectedGrafeasListOccurrencesError = nil
@@ -884,14 +884,14 @@ var _ = Describe("rode server", func() {
 
 		BeforeEach(func() {
 			expectedOccurrence = createRandomOccurrence(grafeas_common_proto.NoteKind_NOTE_KIND_UNSPECIFIED)
-			occurrenceId := gofakeit.UUID()
+			occurrenceId := fake.UUID()
 			occurrenceName := fmt.Sprintf("projects/rode/occurrences/%s", occurrenceId)
 			expectedOccurrence.Name = occurrenceName
 			expectedUpdateOccurrenceRequest = &pb.UpdateOccurrenceRequest{
 				Id:         occurrenceId,
 				Occurrence: expectedOccurrence,
 				UpdateMask: &fieldmaskpb.FieldMask{
-					Paths: []string{gofakeit.Word()},
+					Paths: []string{fake.Word()},
 				},
 			}
 
@@ -932,7 +932,7 @@ var _ = Describe("rode server", func() {
 
 		When("the occurrence name doesn't contain the occurrence id", func() {
 			BeforeEach(func() {
-				expectedUpdateOccurrenceRequest.Id = gofakeit.UUID()
+				expectedUpdateOccurrenceRequest.Id = fake.UUID()
 			})
 
 			It("should return an error", func() {
@@ -983,7 +983,7 @@ var _ = Describe("rode server", func() {
 				expectedDiscoveryNote,
 				expectedAttestationNote,
 			}
-			expectedCollectorId = gofakeit.LetterN(10)
+			expectedCollectorId = fake.LetterN(10)
 			expectedRegisterCollectorRequest = &pb.RegisterCollectorRequest{
 				Id:    expectedCollectorId,
 				Notes: expectedNotes,
@@ -1098,10 +1098,10 @@ var _ = Describe("rode server", func() {
 
 		BeforeEach(func() {
 			expectedNote = &grafeas_proto.Note{
-				ShortDescription: gofakeit.LetterN(10),
+				ShortDescription: fake.LetterN(10),
 				Kind:             grafeas_common_proto.NoteKind_DISCOVERY,
 			}
-			expectedNoteId = gofakeit.LetterN(10)
+			expectedNoteId = fake.LetterN(10)
 
 			expectedCreateNoteRequest = &pb.CreateNoteRequest{
 				NoteId: expectedNoteId,
@@ -1145,15 +1145,15 @@ var _ = Describe("rode server", func() {
 
 func createRandomOccurrence(kind grafeas_common_proto.NoteKind) *grafeas_proto.Occurrence {
 	return &grafeas_proto.Occurrence{
-		Name: gofakeit.LetterN(10),
+		Name: fake.LetterN(10),
 		Resource: &grafeas_proto.Resource{
-			Uri: fmt.Sprintf("%s@sha256:%s", gofakeit.URL(), gofakeit.LetterN(10)),
+			Uri: fmt.Sprintf("%s@sha256:%s", fake.URL(), fake.LetterN(10)),
 		},
-		NoteName:    gofakeit.LetterN(10),
+		NoteName:    fake.LetterN(10),
 		Kind:        kind,
-		Remediation: gofakeit.LetterN(10),
-		CreateTime:  timestamppb.New(gofakeit.Date()),
-		UpdateTime:  timestamppb.New(gofakeit.Date()),
+		Remediation: fake.LetterN(10),
+		CreateTime:  timestamppb.New(fake.Date()),
+		UpdateTime:  timestamppb.New(fake.Date()),
 		Details:     nil,
 	}
 }

@@ -5,7 +5,6 @@ go 1.17
 require (
 	github.com/Jeffail/gabs/v2 v2.6.1
 	github.com/antlr/antlr4 v0.0.0-20210409163025-478e46409e82 // indirect
-	github.com/brianvoe/gofakeit/v5 v5.10.1
 	github.com/brianvoe/gofakeit/v6 v6.4.1
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/elastic/go-elasticsearch/v7 v7.12.0
