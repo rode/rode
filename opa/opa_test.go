@@ -193,7 +193,7 @@ var _ = Describe("opa client", func() {
 		var (
 			input                 []byte
 			opaResponse           *EvaluatePolicyResponse
-			expectedOpaRequest    *EvalutePolicyRequest
+			expectedOpaRequest    *EvaluatePolicyRequest
 			evalutePolicyResponse *EvaluatePolicyResponse
 			expectedErr           error
 		)

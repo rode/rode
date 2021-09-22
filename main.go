@@ -103,7 +103,7 @@ func main() {
 	if err != nil {
 		logger.Fatal("failed to connect to grafeas", zap.String("grafeas host", c.Grafeas.Host), zap.Error(err))
 	}
-	opaClient := opa.NewClient(logger.Named("opa"), c.Opa.Host, c.Debug)
+	opaClient := opa.NewClient(logger.Named("opa"))
 
 	esClient, err := createESClient(logger, c.Elasticsearch.Host, c.Elasticsearch.Username, c.Elasticsearch.Password)
 	if err != nil {

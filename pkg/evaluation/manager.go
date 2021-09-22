@@ -16,6 +16,7 @@ package evaluation
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/rode/es-index-manager/indexmanager"
@@ -32,6 +33,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -170,7 +172,7 @@ func (m *manager) EvaluateResource(ctx context.Context, request *pb.ResourceEval
 			return nil, util.GrpcInternalError(log, fmt.Sprintf("error evaluating policy version %s", policyAssignment.PolicyVersionId), err)
 		}
 
-		if !evaluatePolicyResponse.Result.Pass {
+		if !evaluatePolicyResponse.Pass {
 			resourceEvaluation.Pass = false
 		}
 
@@ -178,8 +180,8 @@ func (m *manager) EvaluateResource(ctx context.Context, request *pb.ResourceEval
 			Id:                   uuid.New().String(),
 			ResourceEvaluationId: resourceEvaluation.Id,
 			PolicyVersionId:      policyAssignment.PolicyVersionId,
-			Pass:                 evaluatePolicyResponse.Result.Pass,
-			Violations:           evaluatePolicyResponse.Result.Violations,
+			Pass:                 evaluatePolicyResponse.Pass,
+			Violations:           evaluatePolicyResponse.Violations,
 		}
 
 		policyEvaluations = append(policyEvaluations, policyEvaluation)
@@ -412,8 +414,6 @@ func (m *manager) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePolicy
 		return nil, util.GrpcInternalError(log, "error listing occurrences", err)
 	}
 
-	log.Debug("Occurrences found", zap.Any("occurrences", occurrences))
-
 	// evaluate OPA policy
 	evaluatePolicyResponse, err := m.evaluatePolicy(ctx, policy.Id, policy.Policy.RegoContent, occurrences)
 	if err != nil {
@@ -424,10 +424,10 @@ func (m *manager) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePolicy
 
 	attestation := &pb.EvaluatePolicyResult{}
 	attestation.Created = timestamppb.Now()
-	if evaluatePolicyResponse.Result != nil {
-		attestation.Pass = evaluatePolicyResponse.Result.Pass
+	if evaluatePolicyResponse != nil {
+		attestation.Pass = evaluatePolicyResponse.Pass
 
-		for _, violation := range evaluatePolicyResponse.Result.Violations {
+		for _, violation := range evaluatePolicyResponse.Violations {
 			attestation.Violations = append(attestation.Violations, &pb.EvaluatePolicyViolation{
 				Id:          violation.Id,
 				Name:        violation.Name,
@@ -438,40 +438,44 @@ func (m *manager) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePolicy
 			})
 		}
 	} else {
-		evaluatePolicyResponse.Result = &opa.EvaluatePolicyResult{
+		evaluatePolicyResponse = &opa.EvaluatePolicyResult{
 			Pass: false,
 		}
 	}
 
 	response := &pb.EvaluatePolicyResponse{
-		Pass: evaluatePolicyResponse.Result.Pass,
+		Pass: evaluatePolicyResponse.Pass,
 		Result: []*pb.EvaluatePolicyResult{
 			attestation,
 		},
 	}
 
-	if evaluatePolicyResponse.Explanation != nil {
-		response.Explanation = *evaluatePolicyResponse.Explanation
-	}
-
 	return response, nil
 }
 
-func (m *manager) evaluatePolicy(ctx context.Context, policyId, rego string, occurrences []*grafeas_go_proto.Occurrence) (*opa.EvaluatePolicyResponse, error) {
-	// check OPA policy has been loaded, using the policy id
-	initializePolicyErr := m.opa.InitializePolicy(policyId, rego)
+func (m *manager) evaluatePolicy(ctx context.Context, policyId, rego string, occurrences []*grafeas_go_proto.Occurrence) (*opa.EvaluatePolicyResult, error) {
+	initializePolicyErr := m.opa.InitializePolicy(ctx, policyId, rego)
 	if initializePolicyErr != nil {
 		return nil, fmt.Errorf("error initializing policy in OPA: %v", initializePolicyErr)
 	}
 
-	input, _ := protojson.Marshal(&pb.EvaluatePolicyInput{
+	input := protoToMap(&pb.EvaluatePolicyInput{
 		Occurrences: occurrences,
 	})
 
-	evaluatePolicyResponse, err := m.opa.EvaluatePolicy(rego, input)
+	evaluatePolicyResult, err := m.opa.EvaluatePolicy(ctx, policyId, input)
 	if err != nil {
 		return nil, fmt.Errorf("error evaluating policy in OPA: %v", err)
 	}
 
-	return evaluatePolicyResponse, nil
+	return evaluatePolicyResult, nil
+}
+
+func protoToMap(m proto.Message) map[string]interface{} {
+	var protoMap map[string]interface{}
+	protoJson, _ := protojson.MarshalOptions{EmitUnpopulated: true}.Marshal(m)
+
+	_ = json.Unmarshal(protoJson, &protoMap)
+
+	return protoMap
 }
