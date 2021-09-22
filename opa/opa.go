@@ -40,9 +40,6 @@ type Client interface {
 type client struct {
 	logger  *zap.Logger
 	queries map[string]rego.PreparedEvalQuery
-	//Host         string
-	//ExplainQuery bool
-	//httpClient   *http.Client
 }
 
 // EvaluatePolicyRequest OPA evaluate policy request
@@ -134,9 +131,6 @@ func (opa *client) EvaluatePolicy(ctx context.Context, policyId string, input in
 	if err != nil {
 		return nil, err
 	}
-
-	//fmt.Println("results???")
-	//fmt.Printf("%s\n", resultJson)
 
 	var policyResult EvaluatePolicyResult
 	if err = json.Unmarshal(resultJson, &policyResult); err != nil {
