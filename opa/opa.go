@@ -19,7 +19,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 
 	"github.com/open-policy-agent/opa/ast"
 	"github.com/open-policy-agent/opa/rego"
@@ -42,44 +41,21 @@ type client struct {
 	queries map[string]rego.PreparedEvalQuery
 }
 
-// EvaluatePolicyRequest OPA evaluate policy request
-type EvaluatePolicyRequest struct {
-	Input json.RawMessage `json:"input"`
-}
-
-// EvaluatePolicyResponse OPA evaluate policy response
-type EvaluatePolicyResponse struct {
-	Result      *EvaluatePolicyResult `json:"result"`
-	Explanation *[]string             `json:"explanation"`
-}
-
 // EvaluatePolicyResult OPA evaluate policy result
 type EvaluatePolicyResult struct {
 	Pass       bool                          `json:"pass"`
 	Violations []*pb.EvaluatePolicyViolation `json:"violations"`
 }
 
-// PolicyViolation Rego rule conditions
-type PolicyViolation struct {
-	Conditions []byte
-}
-
-// Write Rego rule to IO writer
-func (v *PolicyViolation) Write(w io.Writer) {
-	w.Write([]byte("violation[] {\n"))
-	w.Write(v.Conditions)
-	w.Write([]byte("\n}\n\n"))
-}
-
 // NewClient OpaClient constructor
 func NewClient(logger *zap.Logger) Client {
 	return &client{
-		logger:       logger,
+		logger:  logger,
 		queries: map[string]rego.PreparedEvalQuery{},
 	}
 }
 
-// InitializePolicy initializes OPA policy if it does not already exist
+// InitializePolicy prepares the OPA policy for evaluation
 func (opa *client) InitializePolicy(ctx context.Context, policyId, policy string) error {
 	log := opa.logger.Named("InitializePolicy").With(zap.String("policyId", policyId))
 	if _, ok := opa.queries[policyId]; ok {
@@ -109,10 +85,12 @@ func (opa *client) InitializePolicy(ctx context.Context, policyId, policy string
 
 // EvaluatePolicy evaluates OPA policy against provided input
 func (opa *client) EvaluatePolicy(ctx context.Context, policyId string, input interface{}) (*EvaluatePolicyResult, error) {
+	query, ok := opa.queries[policyId]
+	if !ok {
+		return nil, errors.New("query has not been initialized")
+	}
 
-	query := opa.queries[policyId]
 	rs, err := query.Eval(ctx, rego.EvalInput(input))
-
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +104,6 @@ func (opa *client) EvaluatePolicy(ctx context.Context, policyId string, input in
 	}
 
 	result := rs[0].Expressions[0].Value
-
 	resultJson, err := json.Marshal(result)
 	if err != nil {
 		return nil, err

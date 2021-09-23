@@ -15,288 +15,155 @@
 package opa
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
-	pb "github.com/rode/rode/proto/v1alpha1"
+	"context"
+	_ "embed"
 
-	"net/http"
-
-	"github.com/jarcoal/httpmock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("opa client", func() {
+var (
+	//go:embed test/valid.rego
+	validPolicy string
+	//go:embed test/fail.rego
+	failingPolicy string
+	//go:embed test/results.rego
+	invalidResults string
+)
+
+var _ = Describe("OPA client", func() {
 	var (
-		Opa     Client
-		opaHost string
-	)
-	const (
-		compilablePolicyMissingRodeFields = `
-		package play
-		default hello = false
-		hello {
-			m := input.message
-			m == "world"
-		}`
-		opaPolicy = "play"
+		opaClient Client
+		ctx       context.Context
+
+		policyId string
 	)
 
 	BeforeEach(func() {
-		opaHost = fmt.Sprintf("http://%s", fake.DomainName())
+		ctx = context.Background()
+		policyId = fake.UUID()
 
-		Opa = &client{
-			logger,
-			opaHost,
-			false,
-			&http.Client{},
-		}
-
+		opaClient = NewClient(logger)
 	})
 
-	When("a new OPA client is created", func() {
-		It("returns OpaClient", func() {
-			host := fmt.Sprintf("http://%s", fake.DomainName())
-			opa := NewClient(logger, host, false)
-			Expect(opa).To(BeAssignableToTypeOf(&client{}))
-			Expect(opa.(*client).Host).To(Equal(host))
-		})
-	})
-
-	Context("an OPA policy is initialized", func() {
+	Context("InitializePolicy", func() {
 		var (
-			initializePolicyError ClientError
-			getPolicyResponse     *http.Response
-			getPolicyError        error
+			actualError error
+			policy      string
 		)
 
 		BeforeEach(func() {
-			getPolicyResponse = httpmock.NewStringResponse(200, "{}")
-			getPolicyError = nil
-
-			httpmock.RegisterResponder("GET", fmt.Sprintf("%s/v1/policies/%s", opaHost, opaPolicy),
-				func(req *http.Request) (*http.Response, error) {
-					return getPolicyResponse, getPolicyError
-				},
-			)
+			policy = validPolicy
 		})
 
 		JustBeforeEach(func() {
-			initializePolicyError = Opa.InitializePolicy(opaPolicy, fake.LetterN(200))
+			actualError = opaClient.InitializePolicy(ctx, policyId, policy)
 		})
 
-		It("should check if policy exists in OPA", func() {
-			Expect(httpmock.GetTotalCallCount()).To(Equal(1))
+		It("should not return an error", func() {
+			Expect(actualError).NotTo(HaveOccurred())
 		})
 
-		When("fetch policy request returns error", func() {
+		When("the Rego code is invalid", func() {
 			BeforeEach(func() {
-				getPolicyResponse = nil
-				getPolicyError = errors.New("error connecting to host")
+				policy = fake.Word()
 			})
 
-			It("should return an http request error", func() {
-				Expect(initializePolicyError).To(HaveOccurred())
-				Expect(initializePolicyError).To(BeAssignableToTypeOf(clientError{}))
-				Expect(initializePolicyError.Type()).To(Equal(OpaClientErrorTypeGetPolicy))
-				Expect(initializePolicyError.CausedBy()).To(HaveOccurred())
-				Expect(initializePolicyError.CausedBy()).To(BeAssignableToTypeOf(clientError{}))
-				Expect(initializePolicyError.CausedBy().(clientError).Type()).To(Equal(OpaClientErrorTypeHTTP))
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
 			})
 		})
 
-		When("fetch policy response status is not OK", func() {
+		When("the parsed query is already in the cache", func() {
 			BeforeEach(func() {
-				getPolicyResponse = httpmock.NewStringResponse(http.StatusInternalServerError, "OPA Error")
+				Expect(opaClient.InitializePolicy(ctx, policyId, policy)).NotTo(HaveOccurred())
 			})
 
-			It("should return an bad response error", func() {
-				Expect(initializePolicyError).To(HaveOccurred())
-				Expect(initializePolicyError.Type()).To(Equal(OpaClientErrorTypeGetPolicy))
-				Expect(initializePolicyError.CausedBy()).To(HaveOccurred())
-				Expect(initializePolicyError.CausedBy()).To(BeAssignableToTypeOf(clientError{}))
-				Expect(initializePolicyError.CausedBy().(clientError).Type()).To(Equal(OpaClientErrorTypeBadResponse))
-			})
-		})
-
-		When("policy exists", func() {
-			It("should do nothing", func() {
-				Expect(initializePolicyError).NotTo(HaveOccurred())
-			})
-		})
-
-		When("policy does not exist", func() {
-			BeforeEach(func() {
-				getPolicyResponse = httpmock.NewStringResponse(404, "{}")
-			})
-
-			It("should fetch policy violations from Elasticsearch", func() {
-			})
-
-			When("policy violations are returned from elasticsearch", func() {
-				var (
-					createPolicyResponse *http.Response
-					createPolicyError    error
-				)
-
-				BeforeEach(func() {
-					createPolicyResponse = httpmock.NewStringResponse(200, "{}")
-					createPolicyError = nil
-
-					httpmock.RegisterResponder(http.MethodPut, fmt.Sprintf("%s/v1/policies/%s", opaHost, opaPolicy),
-						func(req *http.Request) (*http.Response, error) {
-							// todo assert http put body contains policy package
-							return createPolicyResponse, createPolicyError
-						},
-					)
-				})
-
-				XIt("publishes policy to OPA", func() {
-					Expect(httpmock.GetTotalCallCount()).To(Equal(2))
-				})
-
-				When("publish OPA policy request returns error", func() {
-					BeforeEach(func() {
-						createPolicyResponse = nil
-						createPolicyError = errors.New("error connecting to host")
-					})
-
-					XIt("should return a publish policy http error", func() {
-						Expect(initializePolicyError).To(HaveOccurred())
-						Expect(initializePolicyError.Type()).To(Equal(OpaClientErrorTypePublishPolicy))
-						Expect(initializePolicyError.CausedBy()).To(HaveOccurred())
-						Expect(initializePolicyError.CausedBy()).To(BeAssignableToTypeOf(clientError{}))
-						Expect(initializePolicyError.CausedBy().(clientError).Type()).To(Equal(OpaClientErrorTypeHTTP))
-					})
-				})
-
-				When("publish OPA policy status response is not OK", func() {
-					BeforeEach(func() {
-						createPolicyResponse = httpmock.NewStringResponse(http.StatusInternalServerError, "OPA error")
-					})
-
-					XIt("should return a publish policy bad response error", func() {
-						Expect(initializePolicyError).To(HaveOccurred())
-						Expect(initializePolicyError.Type()).To(Equal(OpaClientErrorTypePublishPolicy))
-						Expect(initializePolicyError.CausedBy()).To(HaveOccurred())
-						Expect(initializePolicyError.CausedBy()).To(BeAssignableToTypeOf(clientError{}))
-						Expect(initializePolicyError.CausedBy().(clientError).Type()).To(Equal(OpaClientErrorTypeBadResponse))
-					})
-				})
-
+			It("should not return an error", func() {
+				Expect(actualError).NotTo(HaveOccurred())
 			})
 		})
 	})
 
-	Context("an OPA policy is evaluated", func() {
+	Context("EvaluatePolicy", func() {
 		var (
-			input                 []byte
-			opaResponse           *EvaluatePolicyResponse
-			expectedOpaRequest    *EvaluatePolicyRequest
-			evalutePolicyResponse *EvaluatePolicyResponse
-			expectedErr           error
+			actualResult *EvaluatePolicyResult
+			actualError  error
+			input        interface{}
 		)
 
+		BeforeEach(func() {
+			input = map[string]interface{}{}
+		})
+
+		var initializePolicy = func(policy string) {
+			Expect(opaClient.InitializePolicy(ctx, policyId, policy)).NotTo(HaveOccurred())
+		}
+
 		JustBeforeEach(func() {
-			evalutePolicyResponse, expectedErr = Opa.EvaluatePolicy(compilablePolicyMissingRodeFields, input)
+			actualResult, actualError = opaClient.EvaluatePolicy(ctx, policyId, input)
 		})
 
-		When("OPA returns a valid response", func() {
+		When("the policy query passes", func() {
 			BeforeEach(func() {
-				input = []byte(fmt.Sprintf(`{"%s":"%s"}`, fake.Word(), fake.Word()))
-				opaResponse = &EvaluatePolicyResponse{
-					Result: &EvaluatePolicyResult{
-						Pass: fake.Bool(),
-						Violations: []*pb.EvaluatePolicyViolation{
-							{
-								Message: fake.Paragraph(1, 1, 10, "."),
-							},
-						},
-					},
-				}
-
-				httpmock.RegisterResponder("POST", fmt.Sprintf("%s/v1/data/%s", opaHost, opaPolicy),
-					func(req *http.Request) (*http.Response, error) {
-						err := json.NewDecoder(req.Body).Decode(&expectedOpaRequest)
-						Expect(err).To(Not(HaveOccurred()))
-						Expect(expectedOpaRequest.Input).To(Equal(json.RawMessage(input)))
-
-						return httpmock.NewJsonResponse(200, &opaResponse)
-					},
-				)
-
+				initializePolicy(validPolicy)
 			})
 
-			It("should call OPA data endpoint", func() {
-				Expect(httpmock.GetTotalCallCount()).To(Equal(1))
-			})
-
-			It("should return OPA evaluation response", func() {
-				Expect(expectedErr).ToNot(HaveOccurred())
-				Expect(evalutePolicyResponse).To(Equal(opaResponse))
+			It("should return the successful evaluation result", func() {
+				Expect(actualError).NotTo(HaveOccurred())
+				Expect(actualResult.Pass).To(BeTrue())
 			})
 		})
 
-		When("OPA returns an invalid status code", func() {
+		When("the policy evaluation fails", func() {
 			BeforeEach(func() {
-				httpmock.RegisterResponder("POST", fmt.Sprintf("%s/v1/data/%s", opaHost, opaPolicy),
-					func(req *http.Request) (*http.Response, error) {
-						return httpmock.NewStringResponse(500, "OPA error"), nil
-					},
-				)
+				initializePolicy(failingPolicy)
 			})
 
-			It("should return a http status error", func() {
-				Expect(expectedErr).To(HaveOccurred())
-				Expect(expectedErr.Error()).To(ContainSubstring("http response status not OK"))
-				Expect(evalutePolicyResponse).To(BeNil())
+			It("should indicate the inputs failed the policy", func() {
+				Expect(actualError).NotTo(HaveOccurred())
+				Expect(actualResult.Pass).To(BeFalse())
 			})
 		})
 
-		When("there is a failure in the http request", func() {
+		When("the input is invalid", func() {
 			BeforeEach(func() {
-				httpmock.RegisterResponder("POST", fmt.Sprintf("%s/v1/data/%s", opaHost, opaPolicy),
-					func(req *http.Request) (*http.Response, error) {
-						return nil, fmt.Errorf("HTTP POST failed")
-					},
-				)
+				input = newInvalidInput()
+				initializePolicy(validPolicy)
 			})
 
 			It("should return an error", func() {
-				Expect(expectedErr).To(HaveOccurred())
-				Expect(expectedErr.Error()).To(ContainSubstring("http request to OPA failed"))
-				Expect(evalutePolicyResponse).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
 			})
 		})
 
-		When("response from OPA fails to decode", func() {
+		When("the policy results don't match the expected format", func() {
 			BeforeEach(func() {
-				httpmock.RegisterResponder("POST", fmt.Sprintf("%s/v1/data/%s", opaHost, opaPolicy),
-					func(req *http.Request) (*http.Response, error) {
-						return httpmock.NewStringResponse(200, `{"result":{"pass":"foo"}}`), nil
-					},
-				)
-			})
-
-			It("should return a response decode error", func() {
-				Expect(expectedErr).To(HaveOccurred())
-				Expect(expectedErr.Error()).To(ContainSubstring("failed to decode OPA result"))
-				Expect(evalutePolicyResponse).To(BeNil())
-			})
-		})
-
-		When("invalid input data is provided to the client", func() {
-			BeforeEach(func() {
-				input = []byte(fake.Word())
-				httpmock.RegisterResponder("POST", fmt.Sprintf("%s/v1/data/%s", opaHost, opaPolicy), nil)
+				initializePolicy(invalidResults)
 			})
 
 			It("should return an error", func() {
-				Expect(httpmock.GetTotalCallCount()).To(Equal(0))
-				Expect(expectedErr.Error()).To(ContainSubstring("failed to encode OPA input"))
-				Expect(expectedErr).To(HaveOccurred())
+				Expect(actualError).To(HaveOccurred())
+			})
+		})
+
+		When("the policy hasn't been initialized", func() {
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
 			})
 		})
 	})
 })
+
+type invalidOpaInput struct {
+	Field *invalidOpaInput
+}
+
+// OPA marshals and unmarshals inputs as JSON, so the only inputs that raise are ones that can't be represented as JSON.
+// Cyclic data structures are an example
+func newInvalidInput() *invalidOpaInput {
+	input := &invalidOpaInput{}
+	input.Field = input
+
+	return input
+}

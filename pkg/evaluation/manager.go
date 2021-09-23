@@ -415,7 +415,7 @@ func (m *manager) EvaluatePolicy(ctx context.Context, request *pb.EvaluatePolicy
 	}
 
 	// evaluate OPA policy
-	evaluatePolicyResponse, err := m.evaluatePolicy(ctx, policy.Id, policy.Policy.RegoContent, occurrences)
+	evaluatePolicyResponse, err := m.evaluatePolicy(ctx, policy.Policy.Id, policy.Policy.RegoContent, occurrences)
 	if err != nil {
 		return nil, util.GrpcInternalError(log, "error evaluating policy", err)
 	}

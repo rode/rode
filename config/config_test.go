@@ -53,9 +53,6 @@ var _ = Describe("Config", func() {
 				Grafeas: &GrafeasConfig{
 					Host: "localhost:8080",
 				},
-				Opa: &OpaConfig{
-					Host: "http://localhost:8181",
-				},
 				Port:  50051,
 				Debug: false,
 			},
@@ -88,9 +85,6 @@ var _ = Describe("Config", func() {
 				Grafeas: &GrafeasConfig{
 					Host: "localhost:8080",
 				},
-				Opa: &OpaConfig{
-					Host: "http://localhost:8181",
-				},
 				Port:  50051,
 				Debug: false,
 			},
@@ -106,29 +100,6 @@ var _ = Describe("Config", func() {
 		Entry("OIDC required audience without issuer", &testCase{
 			flags:       []string{"--oidc-required-audience=foo"},
 			expectError: true,
-		}),
-		Entry("OPA host", &testCase{
-			flags: []string{"--opa-host=opa.test.na:8181"},
-			expected: &Config{
-				Auth: &AuthConfig{
-					Basic: &BasicAuthConfig{},
-					OIDC: &OIDCAuthConfig{
-						RoleClaimPath: "roles",
-					},
-				},
-				Grafeas: &GrafeasConfig{
-					Host: "localhost:8080",
-				},
-				Elasticsearch: &ElasticsearchConfig{
-					Host:    "http://elasticsearch-master:9200",
-					Refresh: "true",
-				},
-				Opa: &OpaConfig{
-					Host: "opa.test.na:8181",
-				},
-				Port:  50051,
-				Debug: false,
-			},
 		}),
 		Entry("Elasticsearch config missing username", &testCase{
 			flags:       []string{"--elasticsearch-password=bar"},
