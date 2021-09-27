@@ -46,9 +46,6 @@ jobs:
         with:
           name: rode
 
-      - name: ls
-        run: ls -l
-
       - name: Start Rode Environment
         uses: rode/rode-dev-env@local
         id: rode
@@ -57,6 +54,7 @@ jobs:
 
       - name: Start Rode
         run: |
+          chmod +x ./rode # file permissions are stripped by artifact upload
           ./rode &
           trap 'echo "Stopping Rode"; pkill rode' EXIT
           echo "Waiting for Rode to start"
