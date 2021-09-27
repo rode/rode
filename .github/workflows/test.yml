@@ -25,6 +25,48 @@ jobs:
 
       - name: Build
         run: go build -v .
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: rode
+          path: ./rode
+  integration:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+
+      - name: Download Rode Binary
+        uses: actions/download-artifact@v2
+        with:
+          name: rode
+
+      - name: ls
+        run: ls -l
+
+      - name: Start Rode Environment
+        uses: rode/rode-dev-env@local
+        id: rode
+        with:
+          rodeVersion: 'local'
+
+      - name: Start Rode
+        run: |
+          ./rode &
+          trap 'echo "Stopping Rode"; pkill rode' EXIT
+          echo "Waiting for Rode to start"
+          sleep 10 # wait for Rode to start
+
+          curl http://localhost:50051/v1alpha1/policy-groups
+        env:
+          GRAFEAS_HOST: ${{ steps.rode.outputs.grafeasHost }}
+          ELASTICSEARCH_HOST: ${{ steps.rode.outputs.elasticsearchUrl }}
+          OPA_HOST: ${{ steps.rode.outputs.opaUrl }}
   license-check:
     runs-on: ubuntu-latest
     container: golang:1.17
