@@ -34,12 +34,12 @@ var _ = Describe("Policy Groups", func() {
 		When("the policy group name is valid", func() {
 			It("should create the policy group", func() {
 				expectedName := strings.ToLower(fake.LetterN(10))
-				_, err := rode.CreatePolicyGroup(ctx, &v1alpha1.PolicyGroup{
+				createdPolicyGroup, err := rode.CreatePolicyGroup(ctx, &v1alpha1.PolicyGroup{
 					Name: expectedName,
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				group, err := rode.GetPolicyGroup(ctx, &v1alpha1.GetPolicyGroupRequest{Name: expectedName})
+				group, err := rode.GetPolicyGroup(ctx, &v1alpha1.GetPolicyGroupRequest{Name: createdPolicyGroup.Name})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(group.Name).To(Equal(expectedName))
 			})
@@ -110,12 +110,12 @@ var _ = Describe("Policy Groups", func() {
 			It("should be updated", func() {
 				expectedName := strings.ToLower(fake.LetterN(10))
 
-				_, err := rode.CreatePolicyGroup(ctx, &v1alpha1.PolicyGroup{Name: expectedName})
+				createdPolicyGroup, err := rode.CreatePolicyGroup(ctx, &v1alpha1.PolicyGroup{Name: expectedName})
 				Expect(err).NotTo(HaveOccurred())
 
 				expectedDescription := fake.Sentence(5)
 				updated := &v1alpha1.PolicyGroup{
-					Name:        expectedName,
+					Name:        createdPolicyGroup.Name,
 					Description: expectedDescription,
 				}
 				actualUpdated, err := rode.UpdatePolicyGroup(ctx, updated)
