@@ -1,4 +1,4 @@
-.PHONY: generate tools test fmtcheck vet fmt mocks coverage
+.PHONY: generate tools test fmtcheck vet fmt mocks coverage integration
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v proto)
 
 GO111MODULE=on
@@ -20,7 +20,7 @@ vet:
 	go vet ./...
 
 test: fmtcheck vet
-	go test ./... -coverprofile=coverage.txt -covermode atomic
+	go test -short ./... -coverprofile=coverage.txt -covermode atomic
 
 coverage: test
 	go tool cover -html=coverage.txt
@@ -28,3 +28,6 @@ coverage: test
 mocks:
 	go install github.com/maxbrunsfeld/counterfeiter/v6@v6.4.1
 	COUNTERFEITER_NO_GENERATE_WARNING="true" go generate ./...
+
+integration:
+	go test -v -count 1 ./test/...

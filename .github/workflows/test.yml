@@ -5,7 +5,7 @@ on:
     branches:
       - "*"
   pull_request:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
   test:
@@ -46,25 +46,18 @@ jobs:
         with:
           name: rode
 
+      - name: Restore File Permissions
+        run: |
+          chmod +x ./rode # permissions are stripped by artifact upload
+
       - name: Start Rode Environment
         uses: rode/rode-dev-env@local
-        id: rode
         with:
           rodeVersion: 'local'
 
-      - name: Start Rode
-        run: |
-          chmod +x ./rode # file permissions are stripped by artifact upload
-          ./rode &
-          trap 'echo "Stopping Rode"; pkill rode' EXIT
-          echo "Waiting for Rode to start"
-          sleep 10 # wait for Rode to start
+      - name: Run Integration Tests
+        run: make integration
 
-          curl http://localhost:50051/v1alpha1/policy-groups
-        env:
-          GRAFEAS_HOST: ${{ steps.rode.outputs.grafeasHost }}
-          ELASTICSEARCH_HOST: ${{ steps.rode.outputs.elasticsearchUrl }}
-          OPA_HOST: ${{ steps.rode.outputs.opaUrl }}
   license-check:
     runs-on: ubuntu-latest
     container: golang:1.17
