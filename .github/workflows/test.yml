@@ -5,7 +5,7 @@ on:
     branches:
       - "*"
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   test:
@@ -49,11 +49,9 @@ jobs:
       - name: Restore File Permissions
         run: |
           chmod +x ./rode # permissions are stripped by artifact upload
-          pwd
-          ls -R
 
       - name: Start Rode Environment
-        uses: rode/rode-dev-env@local
+        uses: rode/rode-dev-env@v0.1.2
         with:
           rodeVersion: 'local'
 
