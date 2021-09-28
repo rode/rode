@@ -49,6 +49,8 @@ jobs:
       - name: Restore File Permissions
         run: |
           chmod +x ./rode # permissions are stripped by artifact upload
+          pwd
+          ls -R
 
       - name: Start Rode Environment
         uses: rode/rode-dev-env@local
