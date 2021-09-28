@@ -25,6 +25,39 @@ jobs:
 
       - name: Build
         run: go build -v .
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: rode
+          path: ./rode
+  integration:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+
+      - name: Download Rode Binary
+        uses: actions/download-artifact@v2
+        with:
+          name: rode
+
+      - name: Restore File Permissions
+        run: |
+          chmod +x ./rode # permissions are stripped by artifact upload
+
+      - name: Start Rode Environment
+        uses: rode/rode-dev-env@v0.1.2
+        with:
+          rodeVersion: 'local'
+
+      - name: Run Integration Tests
+        run: make integration
+
   license-check:
     runs-on: ubuntu-latest
     container: golang:1.17
