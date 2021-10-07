@@ -23,13 +23,12 @@ import (
 	"github.com/brianvoe/gofakeit/v6"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/rode/rode/common"
-	"github.com/rode/rode/proto/v1alpha1"
+	"github.com/rode/rode/test/util"
 )
 
 var (
 	fake = gofakeit.New(0)
-	rode v1alpha1.RodeClient
+	rode *util.RodeClientSet
 )
 
 func TestMain(m *testing.M) {
@@ -41,15 +40,8 @@ func TestMain(m *testing.M) {
 	}
 
 	var err error
-	rode, err = common.NewRodeClient(&common.ClientConfig{
-		Rode: &common.RodeClientConfig{
-			Host:                     "localhost:50051",
-			DisableTransportSecurity: true,
-		},
-	})
-
-	if err != nil {
-		log.Fatal("Error creating Rode client", err)
+	if rode, err = util.NewRodeClientSet(); err != nil {
+		log.Fatal("Error creating Rode clients", err)
 	}
 
 	os.Exit(m.Run())
