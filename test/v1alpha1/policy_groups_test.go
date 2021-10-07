@@ -127,7 +127,7 @@ var _ = Describe("Policy Groups", func() {
 
 		DescribeTable("authorization", func(entry *AuthzTestEntry) {
 			expectedName := randomPolicyGroupName()
-			group, err := rode.Administrator.CreatePolicyGroup(ctx, &v1alpha1.PolicyGroup{
+			group, err := rode.CreatePolicyGroup(ctx, &v1alpha1.PolicyGroup{
 				Name: expectedName,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -191,7 +191,7 @@ var _ = Describe("Policy Groups", func() {
 
 		DescribeTable("authorization", func(entry *AuthzTestEntry) {
 			expectedName := randomPolicyGroupName()
-			group, err := rode.Administrator.CreatePolicyGroup(ctx, &v1alpha1.PolicyGroup{
+			group, err := rode.CreatePolicyGroup(ctx, &v1alpha1.PolicyGroup{
 				Name: expectedName,
 			})
 			Expect(err).NotTo(HaveOccurred())

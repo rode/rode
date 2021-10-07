@@ -25,13 +25,14 @@ import (
 )
 
 type RodeClientSet struct {
-	Anonymous           v1alpha1.RodeClient
-	Collector           v1alpha1.RodeClient
-	Enforcer            v1alpha1.RodeClient
-	PolicyDeveloper     v1alpha1.RodeClient
-	PolicyAdministrator v1alpha1.RodeClient
-	Administrator       v1alpha1.RodeClient
-	v1alpha1.RodeClient // embed a privileged client so that callers don't have specify a role
+	Anonymous            v1alpha1.RodeClient
+	Collector            v1alpha1.RodeClient
+	Enforcer             v1alpha1.RodeClient
+	ApplicationDeveloper v1alpha1.RodeClient
+	PolicyDeveloper      v1alpha1.RodeClient
+	PolicyAdministrator  v1alpha1.RodeClient
+	Administrator        v1alpha1.RodeClient
+	v1alpha1.RodeClient  // embed a privileged client so that callers don't have specify a role
 }
 
 var (
@@ -67,6 +68,9 @@ func NewRodeClientSet() (*RodeClientSet, error) {
 	if clientSet.Enforcer, err = newRodeClient("Enforcer"); err != nil {
 		return nil, err
 	}
+	if clientSet.ApplicationDeveloper, err = newRodeClient("Application Developer"); err != nil {
+		return nil, err
+	}
 	if clientSet.PolicyDeveloper, err = newRodeClient("Policy Developer"); err != nil {
 		return nil, err
 	}
@@ -89,6 +93,8 @@ func (rcs *RodeClientSet) WithRole(roleName string) v1alpha1.RodeClient {
 		return rcs.Collector
 	case "Enforcer":
 		return rcs.Enforcer
+	case "ApplicationDeveloper":
+		return rcs.ApplicationDeveloper
 	case "PolicyDeveloper":
 		return rcs.PolicyDeveloper
 	case "PolicyAdministrator":
