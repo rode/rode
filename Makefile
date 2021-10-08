@@ -1,8 +1,6 @@
 .PHONY: generate tools test fmtcheck vet fmt mocks coverage integration
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v proto)
 
-GO111MODULE=on
-
 tools:
 	go generate ./tools
 
