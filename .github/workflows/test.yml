@@ -51,8 +51,9 @@ jobs:
           chmod +x ./rode # permissions are stripped by artifact upload
 
       - name: Start Rode Environment
-        uses: rode/rode-dev-env@v0.1.2
+        uses: rode/rode-dev-env@auth
         with:
+          authEnabled: true
           rodeVersion: 'local'
 
       - name: Run Integration Tests
