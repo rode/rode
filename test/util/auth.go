@@ -36,8 +36,8 @@ type RodeClientSet struct {
 }
 
 var (
-	tokenUrl  = "https://keycloak.test/auth/realms/rode-demo/protocol/openid-connect/token"
-	rodeHost  = "localhost:50051"
+	tokenUrl  = getEnvOrDefault("TOKEN_URL", "https://keycloak.test/auth/realms/rode-demo/protocol/openid-connect/token")
+	rodeHost  = getEnvOrDefault("RODE_HOST", "localhost:50051")
 	rodeRoles = strset.New(
 		"Anonymous",
 		"Collector",
