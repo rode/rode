@@ -181,10 +181,10 @@ var _ = Describe("Policy Groups", func() {
 				_, err := rode.CreatePolicyGroup(ctx, &v1alpha1.PolicyGroup{Name: expectedName})
 				Expect(err).NotTo(HaveOccurred())
 
-				_, err = rode.PolicyAdministrator.DeletePolicyGroup(ctx, &v1alpha1.DeletePolicyGroupRequest{Name: expectedName})
+				_, err = rode.DeletePolicyGroup(ctx, &v1alpha1.DeletePolicyGroupRequest{Name: expectedName})
 				Expect(err).NotTo(HaveOccurred())
 
-				_, err = rode.PolicyAdministrator.UpdatePolicyGroup(ctx, &v1alpha1.PolicyGroup{Name: expectedName})
+				_, err = rode.UpdatePolicyGroup(ctx, &v1alpha1.PolicyGroup{Name: expectedName})
 				Expect(err).To(HaveGrpcStatus(codes.FailedPrecondition))
 			})
 		})
