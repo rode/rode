@@ -19,12 +19,20 @@ import (
 	"strings"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/rode/rode/proto/v1alpha1"
+	. "github.com/rode/rode/test/util"
+	"google.golang.org/grpc/codes"
 )
 
 var _ = Describe("Policy Groups", func() {
-	var ctx context.Context
+	var (
+		ctx                   context.Context
+		randomPolicyGroupName = func() string {
+			return strings.ToLower(fake.LetterN(10))
+		}
+	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
@@ -33,10 +41,8 @@ var _ = Describe("Policy Groups", func() {
 	Describe("Creating a policy group", func() {
 		When("the policy group name is valid", func() {
 			It("should create the policy group", func() {
-				expectedName := strings.ToLower(fake.LetterN(10))
-				createdPolicyGroup, err := rode.CreatePolicyGroup(ctx, &v1alpha1.PolicyGroup{
-					Name: expectedName,
-				})
+				expectedName := randomPolicyGroupName()
+				createdPolicyGroup, err := rode.CreatePolicyGroup(ctx, &v1alpha1.PolicyGroup{Name: expectedName})
 				Expect(err).NotTo(HaveOccurred())
 
 				group, err := rode.GetPolicyGroup(ctx, &v1alpha1.GetPolicyGroupRequest{Name: createdPolicyGroup.Name})
@@ -48,39 +54,54 @@ var _ = Describe("Policy Groups", func() {
 		When("the name is unset", func() {
 			It("should return an error", func() {
 				_, err := rode.CreatePolicyGroup(ctx, &v1alpha1.PolicyGroup{})
-				Expect(err).To(HaveOccurred())
+				Expect(err).To(HaveGrpcStatus(codes.InvalidArgument))
 			})
 		})
 
 		When("the name is invalid", func() {
 			It("should return an error", func() {
 				_, err := rode.CreatePolicyGroup(ctx, &v1alpha1.PolicyGroup{Name: "Policy Group"})
-				Expect(err).To(HaveOccurred())
+				Expect(err).To(HaveGrpcStatus(codes.InvalidArgument))
 			})
 		})
 
 		When("there is an existing group with the same name", func() {
 			It("should return an error", func() {
-				expectedName := strings.ToLower(fake.LetterN(10))
+				expectedName := randomPolicyGroupName()
 
 				_, err := rode.CreatePolicyGroup(ctx, &v1alpha1.PolicyGroup{Name: expectedName})
 				Expect(err).NotTo(HaveOccurred())
 
 				_, err = rode.CreatePolicyGroup(ctx, &v1alpha1.PolicyGroup{Name: expectedName})
-				Expect(err).To(HaveOccurred())
+				Expect(err).To(HaveGrpcStatus(codes.AlreadyExists))
 			})
 		})
+
+		DescribeTable("authorization", func(entry *AuthzTestEntry) {
+			expectedName := randomPolicyGroupName()
+			_, err := rode.WithRole(entry.Role).CreatePolicyGroup(ctx, &v1alpha1.PolicyGroup{
+				Name: expectedName,
+			})
+
+			if entry.Permitted {
+				Expect(err).NotTo(HaveOccurred())
+			} else {
+				Expect(err).To(HaveGrpcStatus(codes.PermissionDenied))
+			}
+		},
+			NewAuthzTableTest([]string{"Administrator", "PolicyAdministrator"})...,
+		)
 	})
 
 	Describe("Deleting a policy group", func() {
 		When("the policy group is deleted", func() {
 			It("should mark the policy group as deleted", func() {
-				expectedName := strings.ToLower(fake.LetterN(10))
+				expectedName := randomPolicyGroupName()
 
-				_, err := rode.CreatePolicyGroup(ctx, &v1alpha1.PolicyGroup{Name: expectedName})
+				group, err := rode.CreatePolicyGroup(ctx, &v1alpha1.PolicyGroup{Name: expectedName})
 				Expect(err).NotTo(HaveOccurred())
 
-				_, err = rode.DeletePolicyGroup(ctx, &v1alpha1.DeletePolicyGroupRequest{Name: expectedName})
+				_, err = rode.DeletePolicyGroup(ctx, &v1alpha1.DeletePolicyGroupRequest{Name: group.Name})
 				Expect(err).NotTo(HaveOccurred())
 
 				actualGroup, err := rode.GetPolicyGroup(ctx, &v1alpha1.GetPolicyGroupRequest{Name: expectedName})
@@ -91,24 +112,44 @@ var _ = Describe("Policy Groups", func() {
 
 		When("the policy group has been deleted", func() {
 			It("should not allow another group of the same name", func() {
-				expectedName := strings.ToLower(fake.LetterN(10))
+				expectedName := randomPolicyGroupName()
 
-				_, err := rode.CreatePolicyGroup(ctx, &v1alpha1.PolicyGroup{Name: expectedName})
+				group, err := rode.CreatePolicyGroup(ctx, &v1alpha1.PolicyGroup{Name: expectedName})
 				Expect(err).NotTo(HaveOccurred())
 
-				_, err = rode.DeletePolicyGroup(ctx, &v1alpha1.DeletePolicyGroupRequest{Name: expectedName})
+				_, err = rode.DeletePolicyGroup(ctx, &v1alpha1.DeletePolicyGroupRequest{Name: group.Name})
 				Expect(err).NotTo(HaveOccurred())
 
-				_, err = rode.CreatePolicyGroup(ctx, &v1alpha1.PolicyGroup{Name: expectedName})
-				Expect(err).To(HaveOccurred())
+				_, err = rode.CreatePolicyGroup(ctx, &v1alpha1.PolicyGroup{Name: group.Name})
+				Expect(err).To(HaveGrpcStatus(codes.AlreadyExists))
 			})
 		})
+
+		DescribeTable("authorization", func(entry *AuthzTestEntry) {
+			expectedName := randomPolicyGroupName()
+			group, err := rode.CreatePolicyGroup(ctx, &v1alpha1.PolicyGroup{
+				Name: expectedName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = rode.WithRole(entry.Role).DeletePolicyGroup(ctx, &v1alpha1.DeletePolicyGroupRequest{
+				Name: group.Name,
+			})
+
+			if entry.Permitted {
+				Expect(err).NotTo(HaveOccurred())
+			} else {
+				Expect(err).To(HaveGrpcStatus(codes.PermissionDenied))
+			}
+		},
+			NewAuthzTableTest([]string{"Administrator", "PolicyAdministrator"})...,
+		)
 	})
 
 	Describe("Updating a policy group", func() {
 		When("the description has changed", func() {
 			It("should be updated", func() {
-				expectedName := strings.ToLower(fake.LetterN(10))
+				expectedName := randomPolicyGroupName()
 
 				createdPolicyGroup, err := rode.CreatePolicyGroup(ctx, &v1alpha1.PolicyGroup{Name: expectedName})
 				Expect(err).NotTo(HaveOccurred())
@@ -127,15 +168,15 @@ var _ = Describe("Policy Groups", func() {
 
 		When("the group doesn't exist", func() {
 			It("should not allow the update", func() {
-				_, err := rode.UpdatePolicyGroup(ctx, &v1alpha1.PolicyGroup{Name: strings.ToLower(fake.LetterN(10))})
+				_, err := rode.UpdatePolicyGroup(ctx, &v1alpha1.PolicyGroup{Name: randomPolicyGroupName()})
 
-				Expect(err).To(HaveOccurred())
+				Expect(err).To(HaveGrpcStatus(codes.NotFound))
 			})
 		})
 
 		When("the group has been deleted", func() {
 			It("should not allow the update", func() {
-				expectedName := strings.ToLower(fake.LetterN(10))
+				expectedName := randomPolicyGroupName()
 
 				_, err := rode.CreatePolicyGroup(ctx, &v1alpha1.PolicyGroup{Name: expectedName})
 				Expect(err).NotTo(HaveOccurred())
@@ -144,8 +185,26 @@ var _ = Describe("Policy Groups", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				_, err = rode.UpdatePolicyGroup(ctx, &v1alpha1.PolicyGroup{Name: expectedName})
-				Expect(err).To(HaveOccurred())
+				Expect(err).To(HaveGrpcStatus(codes.FailedPrecondition))
 			})
 		})
+
+		DescribeTable("authorization", func(entry *AuthzTestEntry) {
+			expectedName := randomPolicyGroupName()
+			group, err := rode.CreatePolicyGroup(ctx, &v1alpha1.PolicyGroup{
+				Name: expectedName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = rode.WithRole(entry.Role).UpdatePolicyGroup(ctx, group)
+
+			if entry.Permitted {
+				Expect(err).NotTo(HaveOccurred())
+			} else {
+				Expect(err).To(HaveGrpcStatus(codes.PermissionDenied))
+			}
+		},
+			NewAuthzTableTest([]string{"Administrator", "PolicyAdministrator"})...,
+		)
 	})
 })
