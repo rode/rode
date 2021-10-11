@@ -24,33 +24,46 @@ import (
 
 type haveGrpcStatusMatcher struct {
 	expected codes.Code
+	actual   codes.Code
 }
 
 func HaveGrpcStatus(expected codes.Code) types.GomegaMatcher {
-	return &haveGrpcStatusMatcher{expected}
+	return &haveGrpcStatusMatcher{expected: expected}
 }
 
 func (h *haveGrpcStatusMatcher) Match(actual interface{}) (bool, error) {
-	if actual == nil {
-		return false, nil
+	statusError, err := toGrpcStatus(actual)
+	if err != nil {
+		return false, err
 	}
+
+	h.actual = statusError.Code()
+
+	return h.actual == h.expected, nil
+}
+
+func (h *haveGrpcStatusMatcher) FailureMessage(_ interface{}) string {
+	return fmt.Sprintf("Expected gRPC status code to be %s (%[1]d), but was %[2]s (%[2]d)", h.expected, h.actual)
+}
+
+func (h *haveGrpcStatusMatcher) NegatedFailureMessage(_ interface{}) string {
+	return fmt.Sprintf("Expected %[1]s (%[1]d) not to equal %[2]s (%[2]d)", h.actual, h.expected)
+}
+
+func toGrpcStatus(actual interface{}) (*status.Status, error) {
+	if actual == nil {
+		return nil, fmt.Errorf("expected a gRPC status, but was nil")
+	}
+
 	actualError, ok := actual.(error)
 	if !ok {
-		return false, fmt.Errorf("expected %v to be an error, but was %[1]T", actualError)
+		return nil, fmt.Errorf("expected %v to be an error, but was of type %[1]T", actual)
 	}
 
 	statusError, ok := status.FromError(actualError)
 	if !ok {
-		return false, fmt.Errorf("%v was not a gRPC status", actualError)
+		return nil, fmt.Errorf("'%v' was an error, but not a gRPC status", actualError)
 	}
 
-	return statusError.Code() == h.expected, nil
-}
-
-func (h *haveGrpcStatusMatcher) FailureMessage(actual interface{}) string {
-	return fmt.Sprintf("Expected\n\t%v to be a gRPC status with code\n\t%s", actual, h.expected.String())
-}
-
-func (h *haveGrpcStatusMatcher) NegatedFailureMessage(actual interface{}) string {
-	return fmt.Sprintf("Expected\n\t%v not to equal code \n\t%s", actual, h.expected.String())
+	return statusError, nil
 }
