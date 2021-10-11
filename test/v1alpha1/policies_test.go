@@ -68,16 +68,16 @@ var _ = Describe("Policies", func() {
 	Describe("Creating a policy", func() {
 		When("the policy is valid", func() {
 			It("should be created", func() {
-				policy := randomPolicy()
-				newPolicy, err := rode.CreatePolicy(ctx, policy)
+				expectedPolicy := randomPolicy()
+				newPolicy, err := rode.CreatePolicy(ctx, expectedPolicy)
 				Expect(err).NotTo(HaveOccurred())
 
 				createdPolicy, err := rode.GetPolicy(ctx, &v1alpha1.GetPolicyRequest{
 					Id: newPolicy.Id,
 				})
 				Expect(err).NotTo(HaveOccurred())
-				Expect(createdPolicy.Name).To(Equal(newPolicy.Name))
-				Expect(createdPolicy.Description).To(Equal(newPolicy.Description))
+				Expect(createdPolicy.Name).To(Equal(expectedPolicy.Name))
+				Expect(createdPolicy.Description).To(Equal(expectedPolicy.Description))
 				Expect(createdPolicy.CurrentVersion).To(Equal(uint32(1)))
 				Expect(createdPolicy.Policy.Version).To(Equal(uint32(1)))
 			})
