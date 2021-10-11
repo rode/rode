@@ -79,7 +79,7 @@ go run main.go --debug \
   --oidc-role-claim-path=resource_access.rode.roles
 ```
 
-And an example using `docker compose up rode-with-auth` in `rode-dev-env`:
+And an example using `ISSUER_URL=http://localhost:3000 docker compose up oidc-provider grafeas opa` in `rode-dev-env`:
 
 ```shell
 go run main.go --debug \
