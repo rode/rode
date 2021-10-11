@@ -28,7 +28,7 @@ import (
 
 var _ = Describe("Policy Groups", func() {
 	var (
-		ctx                   context.Context
+		ctx context.Context
 	)
 
 	BeforeEach(func() {
@@ -64,7 +64,7 @@ var _ = Describe("Policy Groups", func() {
 
 		When("there is an existing group with the same name", func() {
 			It("should return an error", func() {
-				expectedGroup := randomPolicyGroup();
+				expectedGroup := randomPolicyGroup()
 
 				_, err := rode.CreatePolicyGroup(ctx, expectedGroup)
 				Expect(err).NotTo(HaveOccurred())
@@ -90,7 +90,7 @@ var _ = Describe("Policy Groups", func() {
 	Describe("Deleting a policy group", func() {
 		When("the policy group is deleted", func() {
 			It("should mark the policy group as deleted", func() {
-				expectedGroup := randomPolicyGroup();
+				expectedGroup := randomPolicyGroup()
 
 				group, err := rode.CreatePolicyGroup(ctx, expectedGroup)
 				Expect(err).NotTo(HaveOccurred())
@@ -106,7 +106,7 @@ var _ = Describe("Policy Groups", func() {
 
 		When("the policy group has been deleted", func() {
 			It("should not allow another group of the same name", func() {
-				expectedGroup := randomPolicyGroup();
+				expectedGroup := randomPolicyGroup()
 
 				group, err := rode.CreatePolicyGroup(ctx, expectedGroup)
 				Expect(err).NotTo(HaveOccurred())
@@ -141,7 +141,7 @@ var _ = Describe("Policy Groups", func() {
 	Describe("Updating a policy group", func() {
 		When("the description has changed", func() {
 			It("should be updated", func() {
-				expectedGroup := randomPolicyGroup();
+				expectedGroup := randomPolicyGroup()
 
 				createdPolicyGroup, err := rode.CreatePolicyGroup(ctx, expectedGroup)
 				Expect(err).NotTo(HaveOccurred())
@@ -202,7 +202,7 @@ var _ = Describe("Policy Groups", func() {
 
 func randomPolicyGroup() *v1alpha1.PolicyGroup {
 	return &v1alpha1.PolicyGroup{
-		Name: strings.ToLower(fake.LetterN(10)),
+		Name:        strings.ToLower(fake.LetterN(10)),
 		Description: fake.LetterN(10),
 	}
 }
