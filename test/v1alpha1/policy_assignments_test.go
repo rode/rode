@@ -144,7 +144,7 @@ var _ = Describe("Policy Assignments", func() {
 
 				assignment := &v1alpha1.PolicyAssignment{
 					PolicyVersionId: policyVersionId,
-					PolicyGroup: group.Name,
+					PolicyGroup:     group.Name,
 				}
 				_, err = rode.CreatePolicyAssignment(ctx, assignment)
 				Expect(err).To(HaveGrpcStatus(codes.FailedPrecondition))
@@ -330,7 +330,7 @@ var _ = Describe("Policy Assignments", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				actualAssignment, err = rode.CreatePolicyAssignment(ctx, &v1alpha1.PolicyAssignment{
-					PolicyGroup: group.Name,
+					PolicyGroup:     group.Name,
 					PolicyVersionId: policy.Policy.Id,
 				})
 				Expect(err).NotTo(HaveOccurred())

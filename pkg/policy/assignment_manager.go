@@ -268,12 +268,10 @@ func (m *assignmentManager) validateAssignment(ctx context.Context, log *zap.Log
 		return err
 	}
 
-	fmt.Println("policy id??", policyId)
-
 	response, err := m.esClient.MultiGet(ctx, &esutil.MultiGetRequest{
 		Items: []*esutil.EsMultiGetItem{
 			{
-				Id: policyId,
+				Id:    policyId,
 				Index: m.indexManager.AliasName(constants.PoliciesDocumentKind, ""),
 			},
 			{
@@ -356,7 +354,6 @@ func (m *assignmentManager) validateUpdate(ctx context.Context, log *zap.Logger,
 
 	return nil
 }
-
 
 func policyAssignmentId(policyId, policyGroupName string) string {
 	return fmt.Sprintf("policies/%s/assignments/%s", policyId, policyGroupName)

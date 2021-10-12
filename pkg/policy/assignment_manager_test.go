@@ -350,7 +350,7 @@ var _ = Describe("AssignmentManager", func() {
 		When("the policy group has been deleted", func() {
 			BeforeEach(func() {
 				multiGetResponse.Docs[2].Source, _ = protojson.Marshal(&pb.PolicyGroup{
-					Name: policyGroup,
+					Name:    policyGroup,
 					Deleted: true,
 				})
 			})
@@ -365,7 +365,7 @@ var _ = Describe("AssignmentManager", func() {
 		When("the policy has been deleted", func() {
 			BeforeEach(func() {
 				multiGetResponse.Docs[0].Source, _ = protojson.Marshal(&pb.Policy{
-					Id: policyId,
+					Id:      policyId,
 					Deleted: true,
 				})
 			})
@@ -740,7 +740,7 @@ var _ = Describe("AssignmentManager", func() {
 		When("the policy group has been deleted", func() {
 			BeforeEach(func() {
 				multiGetResponse.Docs[2].Source, _ = protojson.Marshal(&pb.PolicyGroup{
-					Name: currentAssignment.PolicyGroup,
+					Name:    currentAssignment.PolicyGroup,
 					Deleted: true,
 				})
 			})
@@ -755,7 +755,7 @@ var _ = Describe("AssignmentManager", func() {
 		When("the policy has been deleted", func() {
 			BeforeEach(func() {
 				multiGetResponse.Docs[0].Source, _ = protojson.Marshal(&pb.Policy{
-					Id: policyId,
+					Id:      policyId,
 					Deleted: true,
 				})
 			})
