@@ -117,13 +117,37 @@ var _ = Describe("Policy Assignments", func() {
 
 		When("the policy has been deleted", func() {
 			It("should return an error", func() {
-				// TODO: requires Rode changes
+				policyVersionId, policy := createPolicy()
+				expectedAssignment := randomPolicyAssignment(policyVersionId)
+				_, err := rode.DeletePolicy(ctx, &v1alpha1.DeletePolicyRequest{
+					Id: policy.Id,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = rode.CreatePolicyAssignment(ctx, expectedAssignment)
+
+				Expect(err).To(HaveGrpcStatus(codes.FailedPrecondition))
 			})
 		})
 
 		When("the policy group has been deleted", func() {
 			It("should return an error", func() {
-				// TODO: requires Rode changes
+				policyVersionId, _ := createPolicy()
+				group := randomPolicyGroup()
+				_, err := rode.CreatePolicyGroup(ctx, group)
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = rode.DeletePolicyGroup(ctx, &v1alpha1.DeletePolicyGroupRequest{
+					Name: group.Name,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				assignment := &v1alpha1.PolicyAssignment{
+					PolicyVersionId: policyVersionId,
+					PolicyGroup: group.Name,
+				}
+				_, err = rode.CreatePolicyAssignment(ctx, assignment)
+				Expect(err).To(HaveGrpcStatus(codes.FailedPrecondition))
 			})
 		})
 
@@ -261,7 +285,7 @@ var _ = Describe("Policy Assignments", func() {
 
 				_, err := rode.UpdatePolicyAssignment(ctx, expectedAssignment)
 
-				Expect(err).To(HaveGrpcStatus(codes.Internal))
+				Expect(err).To(HaveGrpcStatus(codes.InvalidArgument))
 			})
 		})
 
@@ -287,13 +311,38 @@ var _ = Describe("Policy Assignments", func() {
 
 		When("the policy has been deleted", func() {
 			It("should return an error", func() {
-				// TODO: requires Rode changes
+				_, err := rode.DeletePolicy(ctx, &v1alpha1.DeletePolicyRequest{
+					Id: policy.Id,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = rode.UpdatePolicyAssignment(ctx, actualAssignment)
+
+				Expect(err).To(HaveGrpcStatus(codes.FailedPrecondition))
 			})
 		})
 
 		When("the policy group has been deleted", func() {
 			It("should return an error", func() {
-				// TODO: requires Rode changes
+				// create a new group so that this test doesn't interfere with the others
+				group := randomPolicyGroup()
+				_, err := rode.CreatePolicyGroup(ctx, group)
+				Expect(err).NotTo(HaveOccurred())
+
+				actualAssignment, err = rode.CreatePolicyAssignment(ctx, &v1alpha1.PolicyAssignment{
+					PolicyGroup: group.Name,
+					PolicyVersionId: policy.Policy.Id,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = rode.DeletePolicyGroup(ctx, &v1alpha1.DeletePolicyGroupRequest{
+					Name: group.Name,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = rode.UpdatePolicyAssignment(ctx, actualAssignment)
+
+				Expect(err).To(HaveGrpcStatus(codes.FailedPrecondition))
 			})
 		})
 
