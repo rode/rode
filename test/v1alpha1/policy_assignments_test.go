@@ -28,9 +28,9 @@ import (
 
 var _ = Describe("Policy Assignments", func() {
 	var (
-		ctx                    = context.Background()
-		policyGroup            string
-		randomPolicyAssignment = func(policyVersionId string) *v1alpha1.PolicyAssignment {
+		ctx                 = context.Background()
+		policyGroup         string
+		newPolicyAssignment = func(policyVersionId string) *v1alpha1.PolicyAssignment {
 			return &v1alpha1.PolicyAssignment{
 				PolicyGroup:     policyGroup,
 				PolicyVersionId: policyVersionId,
@@ -58,7 +58,7 @@ var _ = Describe("Policy Assignments", func() {
 		When("the policy and group both exist", func() {
 			It("should create the assignment", func() {
 				policyVersionId, _ := createPolicy()
-				expectedAssignment := randomPolicyAssignment(policyVersionId)
+				expectedAssignment := newPolicyAssignment(policyVersionId)
 
 				createdAssignment, err := rode.CreatePolicyAssignment(ctx, expectedAssignment)
 				Expect(err).NotTo(HaveOccurred())
@@ -75,7 +75,7 @@ var _ = Describe("Policy Assignments", func() {
 
 		When("the policy group is not set", func() {
 			It("should return an error", func() {
-				expectedAssignment := randomPolicyAssignment(randomAssignmentId())
+				expectedAssignment := newPolicyAssignment(randomAssignmentId())
 				expectedAssignment.PolicyGroup = ""
 
 				_, err := rode.CreatePolicyAssignment(ctx, expectedAssignment)
@@ -86,7 +86,7 @@ var _ = Describe("Policy Assignments", func() {
 
 		When("the policy version is not set", func() {
 			It("should return an error", func() {
-				expectedAssignment := randomPolicyAssignment("")
+				expectedAssignment := newPolicyAssignment("")
 
 				_, err := rode.CreatePolicyAssignment(ctx, expectedAssignment)
 
@@ -96,7 +96,7 @@ var _ = Describe("Policy Assignments", func() {
 
 		When("the policy version id format is invalid", func() {
 			It("should return an error", func() {
-				expectedAssignment := randomPolicyAssignment(fmt.Sprintf("%s.%[1]s", fake.UUID()))
+				expectedAssignment := newPolicyAssignment(fmt.Sprintf("%s.%[1]s", fake.UUID()))
 
 				_, err := rode.CreatePolicyAssignment(ctx, expectedAssignment)
 
@@ -107,7 +107,7 @@ var _ = Describe("Policy Assignments", func() {
 		When("the version is invalid", func() {
 			It("should return an error", func() {
 				invalidVersionId := fmt.Sprintf("%s.0", fake.UUID())
-				expectedAssignment := randomPolicyAssignment(invalidVersionId)
+				expectedAssignment := newPolicyAssignment(invalidVersionId)
 
 				_, err := rode.CreatePolicyAssignment(ctx, expectedAssignment)
 
@@ -118,7 +118,7 @@ var _ = Describe("Policy Assignments", func() {
 		When("the policy has been deleted", func() {
 			It("should return an error", func() {
 				policyVersionId, policy := createPolicy()
-				expectedAssignment := randomPolicyAssignment(policyVersionId)
+				expectedAssignment := newPolicyAssignment(policyVersionId)
 				_, err := rode.DeletePolicy(ctx, &v1alpha1.DeletePolicyRequest{
 					Id: policy.Id,
 				})
@@ -154,7 +154,7 @@ var _ = Describe("Policy Assignments", func() {
 		When("the assignment already exists", func() {
 			It("should return an error", func() {
 				policyVersionId, _ := createPolicy()
-				expectedAssignment := randomPolicyAssignment(policyVersionId)
+				expectedAssignment := newPolicyAssignment(policyVersionId)
 
 				_, err := rode.CreatePolicyAssignment(ctx, expectedAssignment)
 				Expect(err).NotTo(HaveOccurred())
@@ -167,7 +167,7 @@ var _ = Describe("Policy Assignments", func() {
 
 		DescribeTable("authorization", func(entry *AuthzTestEntry) {
 			policyVersionId, _ := createPolicy()
-			expectedAssignment := randomPolicyAssignment(policyVersionId)
+			expectedAssignment := newPolicyAssignment(policyVersionId)
 
 			_, err := rode.WithRole(entry.Role).CreatePolicyAssignment(ctx, expectedAssignment)
 
@@ -185,7 +185,7 @@ var _ = Describe("Policy Assignments", func() {
 		When("the policy assignment exists", func() {
 			It("should be deleted successfully", func() {
 				policyVersionId, _ := createPolicy()
-				expectedAssignment := randomPolicyAssignment(policyVersionId)
+				expectedAssignment := newPolicyAssignment(policyVersionId)
 
 				assignment, err := rode.CreatePolicyAssignment(ctx, expectedAssignment)
 				Expect(err).NotTo(HaveOccurred())
@@ -210,7 +210,7 @@ var _ = Describe("Policy Assignments", func() {
 
 		DescribeTable("authorization", func(entry *AuthzTestEntry) {
 			policyVersionId, _ := createPolicy()
-			expectedAssignment := randomPolicyAssignment(policyVersionId)
+			expectedAssignment := newPolicyAssignment(policyVersionId)
 
 			assignment, err := rode.CreatePolicyAssignment(ctx, expectedAssignment)
 			Expect(err).NotTo(HaveOccurred())
@@ -239,7 +239,7 @@ var _ = Describe("Policy Assignments", func() {
 
 		BeforeEach(func() {
 			policyVersionId, policy = createPolicy()
-			expectedAssignment = randomPolicyAssignment(policyVersionId)
+			expectedAssignment = newPolicyAssignment(policyVersionId)
 
 			var err error
 			actualAssignment, err = rode.CreatePolicyAssignment(ctx, expectedAssignment)

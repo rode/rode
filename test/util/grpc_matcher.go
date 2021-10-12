@@ -43,7 +43,7 @@ func (h *haveGrpcStatusMatcher) Match(actual interface{}) (bool, error) {
 }
 
 func (h *haveGrpcStatusMatcher) FailureMessage(_ interface{}) string {
-	return fmt.Sprintf("Expected gRPC status code to be %s (%[1]d), but was %[2]s (%[2]d)", h.expected, h.actual)
+	return fmt.Sprintf("Expected gRPC status code to be %[1]s (%[1]d), but was %[2]s (%[2]d)", h.expected, h.actual)
 }
 
 func (h *haveGrpcStatusMatcher) NegatedFailureMessage(_ interface{}) string {
