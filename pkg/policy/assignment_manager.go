@@ -311,7 +311,7 @@ func (m *assignmentManager) validateAssignment(ctx context.Context, log *zap.Log
 
 	var group pb.PolicyGroup
 	if err = protojson.Unmarshal(response.Docs[2].Source, &group); err != nil {
-		return createError(log, "error parsing policy", err)
+		return createError(log, "error parsing policy group", err)
 	}
 
 	if group.Deleted {

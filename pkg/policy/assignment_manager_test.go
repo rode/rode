@@ -362,6 +362,17 @@ var _ = Describe("AssignmentManager", func() {
 			})
 		})
 
+		When("the policy group JSON is invalid", func() {
+			BeforeEach(func() {
+				multiGetResponse.Docs[2].Source = invalidJson
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+		})
+
 		When("the policy has been deleted", func() {
 			BeforeEach(func() {
 				multiGetResponse.Docs[0].Source, _ = protojson.Marshal(&pb.Policy{
@@ -374,6 +385,17 @@ var _ = Describe("AssignmentManager", func() {
 				Expect(actualAssignment).To(BeNil())
 				Expect(actualError).To(HaveOccurred())
 				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.FailedPrecondition))
+			})
+		})
+
+		When("the policy JSON is invalid", func() {
+			BeforeEach(func() {
+				multiGetResponse.Docs[0].Source = invalidJson
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
 			})
 		})
 	})
@@ -752,6 +774,17 @@ var _ = Describe("AssignmentManager", func() {
 			})
 		})
 
+		When("the policy group JSON is invalid", func() {
+			BeforeEach(func() {
+				multiGetResponse.Docs[2].Source = invalidJson
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+		})
+
 		When("the policy has been deleted", func() {
 			BeforeEach(func() {
 				multiGetResponse.Docs[0].Source, _ = protojson.Marshal(&pb.Policy{
@@ -764,6 +797,17 @@ var _ = Describe("AssignmentManager", func() {
 				Expect(actualAssignment).To(BeNil())
 				Expect(actualError).To(HaveOccurred())
 				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.FailedPrecondition))
+			})
+		})
+
+		When("the policy JSON is invalid", func() {
+			BeforeEach(func() {
+				multiGetResponse.Docs[0].Source = invalidJson
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
 			})
 		})
 	})
