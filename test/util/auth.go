@@ -15,6 +15,7 @@
 package util
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -44,6 +45,7 @@ var (
 		"Enforcer",
 		"PolicyDeveloper",
 		"PolicyAdministrator",
+		"ApplicationDeveloper",
 		"Administrator",
 	)
 )
@@ -123,7 +125,7 @@ func NewAuthzTableTest(roles ...string) []table.TableEntry {
 			Role:      role,
 		}
 
-		entries = append(entries, table.Entry(role, entry))
+		entries = append(entries, table.Entry(authzDescription, entry))
 		return true
 	})
 
@@ -132,11 +134,20 @@ func NewAuthzTableTest(roles ...string) []table.TableEntry {
 			Permitted: false,
 			Role:      role,
 		}
-		entries = append(entries, table.Entry(role, entry))
+		entries = append(entries, table.Entry(authzDescription, entry))
 		return true
 	})
 
 	return entries
+}
+
+func authzDescription(entry *AuthzTestEntry) string {
+	status := "deny"
+	if entry.Permitted {
+		status = "allow"
+	}
+
+	return fmt.Sprintf("should %s a caller with the role '%s'", status, entry.Role)
 }
 
 func newRodeClient(role string) (v1alpha1.RodeClient, error) {
