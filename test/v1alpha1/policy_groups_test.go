@@ -83,7 +83,7 @@ var _ = Describe("Policy Groups", func() {
 				Expect(err).To(HaveGrpcStatus(codes.PermissionDenied))
 			}
 		},
-			NewAuthzTableTest([]string{"Administrator", "PolicyAdministrator"})...,
+			NewAuthzTableTest("Administrator", "PolicyAdministrator")...,
 		)
 	})
 
@@ -134,7 +134,7 @@ var _ = Describe("Policy Groups", func() {
 				Expect(err).To(HaveGrpcStatus(codes.PermissionDenied))
 			}
 		},
-			NewAuthzTableTest([]string{"Administrator", "PolicyAdministrator"})...,
+			NewAuthzTableTest("Administrator", "PolicyAdministrator")...,
 		)
 	})
 
@@ -195,7 +195,7 @@ var _ = Describe("Policy Groups", func() {
 				Expect(err).To(HaveGrpcStatus(codes.PermissionDenied))
 			}
 		},
-			NewAuthzTableTest([]string{"Administrator", "PolicyAdministrator"})...,
+			NewAuthzTableTest("Administrator", "PolicyAdministrator")...,
 		)
 	})
 })

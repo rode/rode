@@ -111,7 +111,7 @@ type AuthzTestEntry struct {
 	Permitted bool
 }
 
-func NewAuthzTableTest(roles []string) []table.TableEntry {
+func NewAuthzTableTest(roles ...string) []table.TableEntry {
 	permittedRoles := strset.New(roles...)
 	forbiddenRoles := strset.Difference(rodeRoles, permittedRoles)
 
