@@ -17,10 +17,12 @@ package evaluation
 import (
 	"context"
 	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/rode/es-index-manager/indexmanager"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
+	"github.com/rode/rode/config"
 	"github.com/rode/rode/opa"
 	"github.com/rode/rode/pkg/constants"
 	"github.com/rode/rode/pkg/grafeas"
@@ -55,6 +57,7 @@ type EvaluationManager Manager
 
 type manager struct {
 	logger                  *zap.Logger
+	esConfig                *config.ElasticsearchConfig
 	esClient                esutil.Client
 	policyManager           policy.Manager
 	policyGroupManager      policy.PolicyGroupManager
@@ -69,6 +72,7 @@ type manager struct {
 func NewManager(
 	logger *zap.Logger,
 	esClient esutil.Client,
+	esConfig *config.ElasticsearchConfig,
 	policyManager policy.Manager,
 	policyGroupManager policy.PolicyGroupManager,
 	policyAssignmentManager policy.AssignmentManager,
@@ -81,6 +85,7 @@ func NewManager(
 	return &manager{
 		logger:                  logger,
 		esClient:                esClient,
+		esConfig:                esConfig,
 		policyManager:           policyManager,
 		policyGroupManager:      policyGroupManager,
 		policyAssignmentManager: policyAssignmentManager,
@@ -196,8 +201,9 @@ func (m *manager) EvaluateResource(ctx context.Context, request *pb.ResourceEval
 	}
 
 	response, err := m.esClient.Bulk(ctx, &esutil.BulkRequest{
-		Index: m.indexManager.AliasName(constants.EvaluationsDocumentKind, ""),
-		Items: bulkRequestItems,
+		Index:   m.indexManager.AliasName(constants.EvaluationsDocumentKind, ""),
+		Items:   bulkRequestItems,
+		Refresh: m.esConfig.Refresh.String(),
 	})
 	if err != nil {
 		return nil, util.GrpcInternalError(log, "error storing resource evaluation results", err)

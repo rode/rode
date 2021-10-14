@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/rode/es-index-manager/mocks"
@@ -25,6 +26,7 @@ import (
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/esutil/esutilfakes"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering"
 	"github.com/rode/grafeas-elasticsearch/go/v1beta1/storage/filtering/filteringfakes"
+	"github.com/rode/rode/config"
 	"github.com/rode/rode/opa"
 	"github.com/rode/rode/opa/opafakes"
 	"github.com/rode/rode/pkg/constants"
@@ -46,6 +48,7 @@ var _ = Describe("evaluation manager", func() {
 		expectedEvaluationsAlias string
 
 		esClient                *esutilfakes.FakeClient
+		esConfig                *config.ElasticsearchConfig
 		policyManager           *policyfakes.FakeManager
 		policyGroupManager      *policyfakes.FakePolicyGroupManager
 		policyAssignmentManager *policyfakes.FakeAssignmentManager
@@ -62,6 +65,9 @@ var _ = Describe("evaluation manager", func() {
 		ctx = context.Background()
 
 		esClient = &esutilfakes.FakeClient{}
+		esConfig = &config.ElasticsearchConfig{
+			Refresh: config.RefreshTrue,
+		}
 		policyManager = &policyfakes.FakeManager{}
 		policyGroupManager = &policyfakes.FakePolicyGroupManager{}
 		policyAssignmentManager = &policyfakes.FakeAssignmentManager{}
@@ -74,7 +80,7 @@ var _ = Describe("evaluation manager", func() {
 		expectedEvaluationsAlias = fake.LetterN(10)
 		indexManager.AliasNameReturns(expectedEvaluationsAlias)
 
-		manager = NewManager(logger, esClient, policyManager, policyGroupManager, policyAssignmentManager, grafeasExtensions, opaClient, resourceManager, indexManager, filterer)
+		manager = NewManager(logger, esClient, esConfig, policyManager, policyGroupManager, policyAssignmentManager, grafeasExtensions, opaClient, resourceManager, indexManager, filterer)
 	})
 
 	Context("EvaluateResource", func() {
@@ -264,6 +270,7 @@ var _ = Describe("evaluation manager", func() {
 
 			Expect(bulkRequest.Items).To(HaveLen(2)) // one for resource evaluation, one for single policy evaluation
 			Expect(bulkRequest.Index).To(Equal(expectedEvaluationsAlias))
+			Expect(bulkRequest.Refresh).To(Equal(esConfig.Refresh.String()))
 
 			resourceEvaluationItem := bulkRequest.Items[0]
 			resourceEvaluation := resourceEvaluationItem.Message.(*pb.ResourceEvaluation)
