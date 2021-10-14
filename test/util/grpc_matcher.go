@@ -47,7 +47,7 @@ func (h *haveGrpcStatusMatcher) FailureMessage(_ interface{}) string {
 }
 
 func (h *haveGrpcStatusMatcher) NegatedFailureMessage(_ interface{}) string {
-	return fmt.Sprintf("Expected %[1]s (%[1]d) not to equal %[2]s (%[2]d)", h.actual, h.expected)
+	return fmt.Sprintf("Expected gRPC status code not to equal %[1]s (%[1]d)", h.actual)
 }
 
 func toGrpcStatus(actual interface{}) (*status.Status, error) {

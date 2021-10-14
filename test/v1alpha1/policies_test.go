@@ -21,54 +21,18 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/rode/rode/proto/v1alpha1"
+	"github.com/rode/rode/test/data"
 	. "github.com/rode/rode/test/util"
 	"google.golang.org/grpc/codes"
 )
 
-const (
-	minimalValidPolicy = `
-package minimal
-
-pass {
-    true
-}
-
-violations[result] {
-	result = {
-		"pass": true,
-		"id": "valid",
-		"name": "name",
-		"description": "description",
-		"message": "message",
-	}
-}
-`
-	policyUpdates = `
-violations[result] {
-	result = {
-		"pass": true,
-		"id": "valid",
-		"name": "name",
-		"description": "description",
-		"message": "message",
-	}
-}
-`
-)
-
 var _ = Describe("Policies", func() {
-	var (
-		ctx context.Context
-	)
-
-	BeforeEach(func() {
-		ctx = context.Background()
-	})
+	var ctx = context.Background()
 
 	Describe("Creating a policy", func() {
 		When("the policy is valid", func() {
 			It("should be created", func() {
-				expectedPolicy := randomPolicy()
+				expectedPolicy := randomPolicy(data.MinimalPolicy)
 				newPolicy, err := rode.CreatePolicy(ctx, expectedPolicy)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -85,7 +49,7 @@ var _ = Describe("Policies", func() {
 
 		When("the policy name is not present", func() {
 			It("should return an error", func() {
-				policy := randomPolicy()
+				policy := randomPolicy(data.MinimalPolicy)
 				policy.Name = ""
 
 				_, err := rode.CreatePolicy(ctx, policy)
@@ -95,7 +59,7 @@ var _ = Describe("Policies", func() {
 
 		When("the policy is not provided", func() {
 			It("should return an error", func() {
-				policy := randomPolicy()
+				policy := randomPolicy(data.MinimalPolicy)
 				policy.Policy = nil
 
 				_, err := rode.CreatePolicy(ctx, policy)
@@ -105,7 +69,7 @@ var _ = Describe("Policies", func() {
 
 		When("the policy is invalid", func() {
 			It("should return an error", func() {
-				policy := randomPolicy()
+				policy := randomPolicy(data.MinimalPolicy)
 				policy.Policy.RegoContent = ""
 
 				_, err := rode.CreatePolicy(ctx, policy)
@@ -114,7 +78,7 @@ var _ = Describe("Policies", func() {
 		})
 
 		DescribeTable("authorization", func(entry *AuthzTestEntry) {
-			_, err := rode.WithRole(entry.Role).CreatePolicy(ctx, randomPolicy())
+			_, err := rode.WithRole(entry.Role).CreatePolicy(ctx, randomPolicy(data.MinimalPolicy))
 
 			if entry.Permitted {
 				Expect(err).NotTo(HaveOccurred())
@@ -122,14 +86,14 @@ var _ = Describe("Policies", func() {
 				Expect(err).To(HaveGrpcStatus(codes.PermissionDenied))
 			}
 		},
-			NewAuthzTableTest([]string{"PolicyDeveloper", "PolicyAdministrator", "Administrator"})...,
+			NewAuthzTableTest("PolicyDeveloper", "PolicyAdministrator", "Administrator")...,
 		)
 	})
 
 	Describe("Deleting a policy", func() {
 		When("the policy exists", func() {
 			It("should be deleted successfully", func() {
-				policy, err := rode.CreatePolicy(ctx, randomPolicy())
+				policy, err := rode.CreatePolicy(ctx, randomPolicy(data.MinimalPolicy))
 				Expect(err).NotTo(HaveOccurred())
 
 				_, err = rode.DeletePolicy(ctx, &v1alpha1.DeletePolicyRequest{
@@ -156,7 +120,7 @@ var _ = Describe("Policies", func() {
 		})
 
 		DescribeTable("authorization", func(entry *AuthzTestEntry) {
-			policy, err := rode.CreatePolicy(ctx, randomPolicy())
+			policy, err := rode.CreatePolicy(ctx, randomPolicy(data.MinimalPolicy))
 			Expect(err).NotTo(HaveOccurred())
 
 			_, err = rode.WithRole(entry.Role).DeletePolicy(ctx, &v1alpha1.DeletePolicyRequest{
@@ -169,14 +133,14 @@ var _ = Describe("Policies", func() {
 				Expect(err).To(HaveGrpcStatus(codes.PermissionDenied))
 			}
 		},
-			NewAuthzTableTest([]string{"PolicyAdministrator", "Administrator"})...,
+			NewAuthzTableTest("PolicyAdministrator", "Administrator")...,
 		)
 	})
 
 	Describe("Updating a policy", func() {
 		When("the changes are valid", func() {
 			It("should be successful", func() {
-				policy, err := rode.CreatePolicy(ctx, randomPolicy())
+				policy, err := rode.CreatePolicy(ctx, randomPolicy(data.MinimalPolicy))
 				Expect(err).NotTo(HaveOccurred())
 				expectedDescription := fake.LetterN(20)
 				policy.Description = expectedDescription
@@ -193,9 +157,9 @@ var _ = Describe("Policies", func() {
 
 		When("the policy content changes", func() {
 			It("should update the version", func() {
-				policy, err := rode.CreatePolicy(ctx, randomPolicy())
+				policy, err := rode.CreatePolicy(ctx, randomPolicy(data.MinimalPolicy))
 				Expect(err).NotTo(HaveOccurred())
-				policy.Policy.RegoContent += policyUpdates
+				policy.Policy.RegoContent = data.UpdatedPolicy
 
 				updatedPolicy, err := rode.UpdatePolicy(ctx, &v1alpha1.UpdatePolicyRequest{
 					Policy: policy,
@@ -209,7 +173,7 @@ var _ = Describe("Policies", func() {
 
 		When("the policy content updates are invalid", func() {
 			It("should return an error", func() {
-				policy, err := rode.CreatePolicy(ctx, randomPolicy())
+				policy, err := rode.CreatePolicy(ctx, randomPolicy(data.MinimalPolicy))
 				Expect(err).NotTo(HaveOccurred())
 				policy.Policy.RegoContent = "package invalid"
 
@@ -235,7 +199,7 @@ var _ = Describe("Policies", func() {
 
 		When("the policy has been deleted", func() {
 			It("should return an error", func() {
-				policy, err := rode.CreatePolicy(ctx, randomPolicy())
+				policy, err := rode.CreatePolicy(ctx, randomPolicy(data.MinimalPolicy))
 				Expect(err).NotTo(HaveOccurred())
 
 				_, err = rode.DeletePolicy(ctx, &v1alpha1.DeletePolicyRequest{
@@ -252,7 +216,7 @@ var _ = Describe("Policies", func() {
 		})
 
 		DescribeTable("authorization", func(entry *AuthzTestEntry) {
-			policy, err := rode.CreatePolicy(ctx, randomPolicy())
+			policy, err := rode.CreatePolicy(ctx, randomPolicy(data.MinimalPolicy))
 			Expect(err).NotTo(HaveOccurred())
 
 			policy.Name = fake.LetterN(10)
@@ -266,7 +230,7 @@ var _ = Describe("Policies", func() {
 				Expect(err).To(HaveGrpcStatus(codes.PermissionDenied))
 			}
 		},
-			NewAuthzTableTest([]string{"PolicyDeveloper", "PolicyAdministrator", "Administrator"})...,
+			NewAuthzTableTest("PolicyDeveloper", "PolicyAdministrator", "Administrator")...,
 		)
 	})
 
@@ -274,7 +238,7 @@ var _ = Describe("Policies", func() {
 		When("the policy is valid", func() {
 			It("should be successful", func() {
 				validation, err := rode.ValidatePolicy(ctx, &v1alpha1.ValidatePolicyRequest{
-					Policy: minimalValidPolicy,
+					Policy: data.MinimalPolicy,
 				})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -303,7 +267,7 @@ var _ = Describe("Policies", func() {
 
 		DescribeTable("authorization", func(entry *AuthzTestEntry) {
 			_, err := rode.WithRole(entry.Role).ValidatePolicy(ctx, &v1alpha1.ValidatePolicyRequest{
-				Policy: minimalValidPolicy,
+				Policy: data.MinimalPolicy,
 			})
 
 			if entry.Permitted {
@@ -312,22 +276,22 @@ var _ = Describe("Policies", func() {
 				Expect(err).To(HaveGrpcStatus(codes.PermissionDenied))
 			}
 		},
-			NewAuthzTableTest([]string{
+			NewAuthzTableTest(
 				"ApplicationDeveloper",
 				"PolicyDeveloper",
 				"PolicyAdministrator",
 				"Administrator",
-			})...,
+			)...,
 		)
 	})
 })
 
-func randomPolicy() *v1alpha1.Policy {
+func randomPolicy(rego string) *v1alpha1.Policy {
 	return &v1alpha1.Policy{
 		Name:        fake.LetterN(10),
 		Description: fake.LetterN(20),
 		Policy: &v1alpha1.PolicyEntity{
-			RegoContent: minimalValidPolicy,
+			RegoContent: rego,
 		},
 	}
 }

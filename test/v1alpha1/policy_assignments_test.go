@@ -22,6 +22,7 @@ import (
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/rode/rode/proto/v1alpha1"
+	"github.com/rode/rode/test/data"
 	. "github.com/rode/rode/test/util"
 	"google.golang.org/grpc/codes"
 )
@@ -37,7 +38,7 @@ var _ = Describe("Policy Assignments", func() {
 			}
 		}
 		createPolicy = func() (string, *v1alpha1.Policy) {
-			policy := randomPolicy()
+			policy := randomPolicy(data.MinimalPolicy)
 
 			createdPolicy, err := rode.CreatePolicy(ctx, policy)
 			Expect(err).NotTo(HaveOccurred())
@@ -177,7 +178,7 @@ var _ = Describe("Policy Assignments", func() {
 				Expect(err).To(HaveGrpcStatus(codes.PermissionDenied))
 			}
 		},
-			NewAuthzTableTest([]string{"Administrator", "PolicyAdministrator"})...,
+			NewAuthzTableTest("Administrator", "PolicyAdministrator")...,
 		)
 	})
 
@@ -225,7 +226,7 @@ var _ = Describe("Policy Assignments", func() {
 				Expect(err).To(HaveGrpcStatus(codes.PermissionDenied))
 			}
 		},
-			NewAuthzTableTest([]string{"Administrator", "PolicyAdministrator"})...,
+			NewAuthzTableTest("Administrator", "PolicyAdministrator")...,
 		)
 	})
 
@@ -248,7 +249,7 @@ var _ = Describe("Policy Assignments", func() {
 
 		When("the policy version has changed", func() {
 			It("should update the assignment", func() {
-				policy.Policy.RegoContent += policyUpdates
+				policy.Policy.RegoContent = data.UpdatedPolicy
 				updatedPolicy, err := rode.UpdatePolicy(ctx, &v1alpha1.UpdatePolicyRequest{Policy: policy})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -355,7 +356,7 @@ var _ = Describe("Policy Assignments", func() {
 				Expect(err).To(HaveGrpcStatus(codes.PermissionDenied))
 			}
 		},
-			NewAuthzTableTest([]string{"Administrator", "PolicyAdministrator"})...,
+			NewAuthzTableTest("Administrator", "PolicyAdministrator")...,
 		)
 	})
 })
