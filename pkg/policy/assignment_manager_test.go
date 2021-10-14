@@ -105,15 +105,27 @@ var _ = Describe("AssignmentManager", func() {
 				Found: false,
 			}
 			getAssignmentError = nil
+
+			policyJson, _ := protojson.Marshal(&pb.Policy{Id: policyId})
+			policyGroupJson, _ := protojson.Marshal(&pb.PolicyGroup{
+				Name: policyGroup,
+			})
+
 			multiGetResponse = &esutil.EsMultiGetResponse{
 				Docs: []*esutil.EsGetResponse{
+					{
+						Id:     policyId,
+						Found:  true,
+						Source: policyJson,
+					},
 					{
 						Id:    assignment.PolicyVersionId,
 						Found: true,
 					},
 					{
-						Id:    policyGroup,
-						Found: true,
+						Id:     policyGroup,
+						Found:  true,
+						Source: policyGroupJson,
 					},
 				},
 			}
@@ -143,14 +155,17 @@ var _ = Describe("AssignmentManager", func() {
 			_, actualRequest := esClient.MultiGetArgsForCall(0)
 
 			Expect(actualRequest.Index).To(BeEmpty())
-			Expect(actualRequest.Items).To(HaveLen(2))
+			Expect(actualRequest.Items).To(HaveLen(3))
 
 			Expect(actualRequest.Items[0].Index).To(Equal(expectedPoliciesAlias))
-			Expect(actualRequest.Items[0].Id).To(Equal(assignment.PolicyVersionId))
-			Expect(actualRequest.Items[0].Routing).To(Equal(policyId))
+			Expect(actualRequest.Items[0].Id).To(Equal(policyId))
 
-			Expect(actualRequest.Items[1].Index).To(Equal(expectedPolicyGroupsAlias))
-			Expect(actualRequest.Items[1].Id).To(Equal(assignment.PolicyGroup))
+			Expect(actualRequest.Items[1].Index).To(Equal(expectedPoliciesAlias))
+			Expect(actualRequest.Items[1].Id).To(Equal(assignment.PolicyVersionId))
+			Expect(actualRequest.Items[1].Routing).To(Equal(policyId))
+
+			Expect(actualRequest.Items[2].Index).To(Equal(expectedPolicyGroupsAlias))
+			Expect(actualRequest.Items[2].Id).To(Equal(assignment.PolicyGroup))
 		})
 
 		It("should insert the assignment into Elasticsearch", func() {
@@ -331,6 +346,58 @@ var _ = Describe("AssignmentManager", func() {
 				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
 			})
 		})
+
+		When("the policy group has been deleted", func() {
+			BeforeEach(func() {
+				multiGetResponse.Docs[2].Source, _ = protojson.Marshal(&pb.PolicyGroup{
+					Name:    policyGroup,
+					Deleted: true,
+				})
+			})
+
+			It("should return an error", func() {
+				Expect(actualAssignment).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.FailedPrecondition))
+			})
+		})
+
+		When("the policy group JSON is invalid", func() {
+			BeforeEach(func() {
+				multiGetResponse.Docs[2].Source = invalidJson
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+		})
+
+		When("the policy has been deleted", func() {
+			BeforeEach(func() {
+				multiGetResponse.Docs[0].Source, _ = protojson.Marshal(&pb.Policy{
+					Id:      policyId,
+					Deleted: true,
+				})
+			})
+
+			It("should return an error", func() {
+				Expect(actualAssignment).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.FailedPrecondition))
+			})
+		})
+
+		When("the policy JSON is invalid", func() {
+			BeforeEach(func() {
+				multiGetResponse.Docs[0].Source = invalidJson
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+		})
 	})
 
 	Context("GetPolicyAssignment", func() {
@@ -428,6 +495,18 @@ var _ = Describe("AssignmentManager", func() {
 				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
 			})
 		})
+
+		When("the assignment is is not set", func() {
+			BeforeEach(func() {
+				expectedId = ""
+			})
+
+			It("should return an error", func() {
+				Expect(actualAssignment).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.InvalidArgument))
+			})
+		})
 	})
 
 	Context("UpdatePolicyAssignment", func() {
@@ -438,10 +517,10 @@ var _ = Describe("AssignmentManager", func() {
 			updatedAssignment  *pb.PolicyAssignment
 			newPolicyVersionId string
 
-			getAssignmentResponse    *esutil.EsGetResponse
-			getAssignmentError       error
-			getPolicyVersionResponse *esutil.EsGetResponse
-			getPolicyVersionError    error
+			getAssignmentResponse *esutil.EsGetResponse
+			getAssignmentError    error
+			multiGetResponse      *esutil.EsMultiGetResponse
+			multiGetError         error
 
 			updateAssignmentError error
 
@@ -466,25 +545,44 @@ var _ = Describe("AssignmentManager", func() {
 				Source: assignmentJson,
 			}
 			getAssignmentError = nil
-			getPolicyVersionResponse = &esutil.EsGetResponse{
-				Id:    newPolicyVersionId,
-				Found: true,
+
+			policyJson, _ := protojson.Marshal(&pb.Policy{Id: policyId})
+			policyGroupJson, _ := protojson.Marshal(&pb.PolicyGroup{
+				Name: currentAssignment.PolicyGroup,
+			})
+			multiGetResponse = &esutil.EsMultiGetResponse{
+				Docs: []*esutil.EsGetResponse{
+					{
+						Id:     policyId,
+						Found:  true,
+						Source: policyJson,
+					},
+					{
+						Id:    newPolicyVersionId,
+						Found: true,
+					},
+					{
+						Id:     currentAssignment.PolicyGroup,
+						Found:  true,
+						Source: policyGroupJson,
+					},
+				},
 			}
-			getPolicyVersionError = nil
+			multiGetError = nil
 
 			updateAssignmentError = nil
 		})
 
 		JustBeforeEach(func() {
-			esClient.GetReturnsOnCall(0, getAssignmentResponse, getAssignmentError)
-			esClient.GetReturnsOnCall(1, getPolicyVersionResponse, getPolicyVersionError)
+			esClient.GetReturns(getAssignmentResponse, getAssignmentError)
+			esClient.MultiGetReturns(multiGetResponse, multiGetError)
 			esClient.UpdateReturns(nil, updateAssignmentError)
 
 			actualAssignment, actualError = manager.UpdatePolicyAssignment(ctx, updatedAssignment)
 		})
 
 		It("should fetch the existing policy assignment", func() {
-			Expect(esClient.GetCallCount()).To(Equal(2))
+			Expect(esClient.GetCallCount()).To(Equal(1))
 
 			_, actualRequest := esClient.GetArgsForCall(0)
 
@@ -492,14 +590,20 @@ var _ = Describe("AssignmentManager", func() {
 			Expect(actualRequest.DocumentId).To(Equal(assignmentId))
 		})
 
-		It("should check that the new policy version exists", func() {
-			Expect(esClient.GetCallCount()).To(Equal(2))
+		It("should fetch the policy group and versioned policy", func() {
+			Expect(esClient.MultiGetCallCount()).To(Equal(1))
 
-			_, actualRequest := esClient.GetArgsForCall(1)
+			_, actualRequest := esClient.MultiGetArgsForCall(0)
 
-			Expect(actualRequest.Index).To(Equal(expectedPoliciesAlias))
-			Expect(actualRequest.Routing).To(Equal(policyId))
-			Expect(actualRequest.DocumentId).To(Equal(newPolicyVersionId))
+			Expect(actualRequest.Items[0].Id).To(Equal(policyId))
+			Expect(actualRequest.Items[0].Index).To(Equal(expectedPoliciesAlias))
+
+			Expect(actualRequest.Items[1].Id).To(Equal(newPolicyVersionId))
+			Expect(actualRequest.Items[1].Index).To(Equal(expectedPoliciesAlias))
+			Expect(actualRequest.Items[1].Routing).To(Equal(policyId))
+
+			Expect(actualRequest.Items[2].Id).To(Equal(currentAssignment.PolicyGroup))
+			Expect(actualRequest.Items[2].Index).To(Equal(expectedPolicyGroupsAlias))
 		})
 
 		It("should update the policy version id in Elasticsearch", func() {
@@ -565,7 +669,7 @@ var _ = Describe("AssignmentManager", func() {
 
 		When("the policy version does not exist", func() {
 			BeforeEach(func() {
-				getPolicyVersionResponse.Found = false
+				multiGetResponse.Docs[1].Found = false
 			})
 
 			It("should return an error", func() {
@@ -611,9 +715,9 @@ var _ = Describe("AssignmentManager", func() {
 			})
 		})
 
-		When("an error occurs fetching the new policy version", func() {
+		When("an error occurs fetching the versioned policy and policy group", func() {
 			BeforeEach(func() {
-				getPolicyVersionError = errors.New("get error")
+				multiGetError = errors.New("multi-get error")
 			})
 
 			It("should return an error", func() {
@@ -650,6 +754,58 @@ var _ = Describe("AssignmentManager", func() {
 
 			It("should return an error", func() {
 				Expect(actualAssignment).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+		})
+
+		When("the policy group has been deleted", func() {
+			BeforeEach(func() {
+				multiGetResponse.Docs[2].Source, _ = protojson.Marshal(&pb.PolicyGroup{
+					Name:    currentAssignment.PolicyGroup,
+					Deleted: true,
+				})
+			})
+
+			It("should return an error", func() {
+				Expect(actualAssignment).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.FailedPrecondition))
+			})
+		})
+
+		When("the policy group JSON is invalid", func() {
+			BeforeEach(func() {
+				multiGetResponse.Docs[2].Source = invalidJson
+			})
+
+			It("should return an error", func() {
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
+			})
+		})
+
+		When("the policy has been deleted", func() {
+			BeforeEach(func() {
+				multiGetResponse.Docs[0].Source, _ = protojson.Marshal(&pb.Policy{
+					Id:      policyId,
+					Deleted: true,
+				})
+			})
+
+			It("should return an error", func() {
+				Expect(actualAssignment).To(BeNil())
+				Expect(actualError).To(HaveOccurred())
+				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.FailedPrecondition))
+			})
+		})
+
+		When("the policy JSON is invalid", func() {
+			BeforeEach(func() {
+				multiGetResponse.Docs[0].Source = invalidJson
+			})
+
+			It("should return an error", func() {
 				Expect(actualError).To(HaveOccurred())
 				Expect(getGRPCStatusFromError(actualError).Code()).To(Equal(codes.Internal))
 			})
