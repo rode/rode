@@ -7,5 +7,4 @@ nav:
   - API: api.md
   - Collectors: collectors.md
   - Development: development.md
-  - Protocol: grpc.md
-  - Introduction: ../README.md
+  - Introduction: grpc.md
