@@ -7,4 +7,6 @@ nav:
   - API: api.md
   - Collectors: collectors.md
   - Development: development.md
-  - Introduction: grpc.md
+  - Protocol: grpc.md
+  - Introduction: index.md
+
