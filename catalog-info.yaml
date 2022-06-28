@@ -16,6 +16,8 @@ metadata:
   annotations:
     github.com/project-slug: rode/rode
     backstage.io/techdocs-ref: dir:.
+  tags:
+    - go
 spec:
   type: website
   owner: "user:ChrisSchreiber"
