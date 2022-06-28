@@ -1,0 +1,22 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: rode
+  description: |
+    Enterprises require a secure and reliable software delivery lifecycle to 
+    meet the needs of audit and compliance. This has traditionaly been 
+    implemented by applying governance and additional process. rode aims to 
+    meet this need by enabling Automated Governance. Automated Governance 
+    allows us to move the existing change approval process left by automating 
+    stages in software delivery that may currently exist as manual activities. 
+    This is possible by building a codified system of trust and authority for 
+    the entire software lifecycle. rode facilitates the collection and 
+    organization of important software supply chain metadata and provides a 
+    method of Automated Governance via Policy as Code.
+  annotations:
+    github.com/project-slug: rode/rode
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: website
+  owner: "user:ChrisSchreiber"
+  lifecycle: production
