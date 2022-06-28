@@ -8,5 +8,4 @@ nav:
   - Collectors: collectors.md
   - Development: development.md
   - Protocol: grpc.md
-  - Introduction: index.md
-
+  - Introduction: README.md
