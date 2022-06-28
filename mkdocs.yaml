@@ -4,8 +4,8 @@ plugins:
   - techdocs-core
 
 nav:
+  - Introduction: README.md
   - API: api.md
   - Collectors: collectors.md
   - Development: development.md
   - Protocol: grpc.md
-  - Introduction: README.md
