@@ -20,5 +20,5 @@ metadata:
     - go
 spec:
   type: website
-  owner: "user:ChrisSchreiber"
   lifecycle: production
+  owner: flywheel-core
