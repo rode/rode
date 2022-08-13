@@ -2,60 +2,59 @@
 package opafakes
 
 import (
+	"context"
 	"sync"
 
 	"github.com/rode/rode/opa"
 )
 
 type FakeClient struct {
-	EvaluatePolicyStub        func(string, []byte) (*opa.EvaluatePolicyResponse, error)
+	EvaluatePolicyStub        func(context.Context, string, interface{}) (*opa.EvaluatePolicyResult, error)
 	evaluatePolicyMutex       sync.RWMutex
 	evaluatePolicyArgsForCall []struct {
-		arg1 string
-		arg2 []byte
+		arg1 context.Context
+		arg2 string
+		arg3 interface{}
 	}
 	evaluatePolicyReturns struct {
-		result1 *opa.EvaluatePolicyResponse
+		result1 *opa.EvaluatePolicyResult
 		result2 error
 	}
 	evaluatePolicyReturnsOnCall map[int]struct {
-		result1 *opa.EvaluatePolicyResponse
+		result1 *opa.EvaluatePolicyResult
 		result2 error
 	}
-	InitializePolicyStub        func(string, string) opa.ClientError
+	InitializePolicyStub        func(context.Context, string, string) error
 	initializePolicyMutex       sync.RWMutex
 	initializePolicyArgsForCall []struct {
-		arg1 string
+		arg1 context.Context
 		arg2 string
+		arg3 string
 	}
 	initializePolicyReturns struct {
-		result1 opa.ClientError
+		result1 error
 	}
 	initializePolicyReturnsOnCall map[int]struct {
-		result1 opa.ClientError
+		result1 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeClient) EvaluatePolicy(arg1 string, arg2 []byte) (*opa.EvaluatePolicyResponse, error) {
-	var arg2Copy []byte
-	if arg2 != nil {
-		arg2Copy = make([]byte, len(arg2))
-		copy(arg2Copy, arg2)
-	}
+func (fake *FakeClient) EvaluatePolicy(arg1 context.Context, arg2 string, arg3 interface{}) (*opa.EvaluatePolicyResult, error) {
 	fake.evaluatePolicyMutex.Lock()
 	ret, specificReturn := fake.evaluatePolicyReturnsOnCall[len(fake.evaluatePolicyArgsForCall)]
 	fake.evaluatePolicyArgsForCall = append(fake.evaluatePolicyArgsForCall, struct {
-		arg1 string
-		arg2 []byte
-	}{arg1, arg2Copy})
+		arg1 context.Context
+		arg2 string
+		arg3 interface{}
+	}{arg1, arg2, arg3})
 	stub := fake.EvaluatePolicyStub
 	fakeReturns := fake.evaluatePolicyReturns
-	fake.recordInvocation("EvaluatePolicy", []interface{}{arg1, arg2Copy})
+	fake.recordInvocation("EvaluatePolicy", []interface{}{arg1, arg2, arg3})
 	fake.evaluatePolicyMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -69,58 +68,59 @@ func (fake *FakeClient) EvaluatePolicyCallCount() int {
 	return len(fake.evaluatePolicyArgsForCall)
 }
 
-func (fake *FakeClient) EvaluatePolicyCalls(stub func(string, []byte) (*opa.EvaluatePolicyResponse, error)) {
+func (fake *FakeClient) EvaluatePolicyCalls(stub func(context.Context, string, interface{}) (*opa.EvaluatePolicyResult, error)) {
 	fake.evaluatePolicyMutex.Lock()
 	defer fake.evaluatePolicyMutex.Unlock()
 	fake.EvaluatePolicyStub = stub
 }
 
-func (fake *FakeClient) EvaluatePolicyArgsForCall(i int) (string, []byte) {
+func (fake *FakeClient) EvaluatePolicyArgsForCall(i int) (context.Context, string, interface{}) {
 	fake.evaluatePolicyMutex.RLock()
 	defer fake.evaluatePolicyMutex.RUnlock()
 	argsForCall := fake.evaluatePolicyArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *FakeClient) EvaluatePolicyReturns(result1 *opa.EvaluatePolicyResponse, result2 error) {
+func (fake *FakeClient) EvaluatePolicyReturns(result1 *opa.EvaluatePolicyResult, result2 error) {
 	fake.evaluatePolicyMutex.Lock()
 	defer fake.evaluatePolicyMutex.Unlock()
 	fake.EvaluatePolicyStub = nil
 	fake.evaluatePolicyReturns = struct {
-		result1 *opa.EvaluatePolicyResponse
+		result1 *opa.EvaluatePolicyResult
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeClient) EvaluatePolicyReturnsOnCall(i int, result1 *opa.EvaluatePolicyResponse, result2 error) {
+func (fake *FakeClient) EvaluatePolicyReturnsOnCall(i int, result1 *opa.EvaluatePolicyResult, result2 error) {
 	fake.evaluatePolicyMutex.Lock()
 	defer fake.evaluatePolicyMutex.Unlock()
 	fake.EvaluatePolicyStub = nil
 	if fake.evaluatePolicyReturnsOnCall == nil {
 		fake.evaluatePolicyReturnsOnCall = make(map[int]struct {
-			result1 *opa.EvaluatePolicyResponse
+			result1 *opa.EvaluatePolicyResult
 			result2 error
 		})
 	}
 	fake.evaluatePolicyReturnsOnCall[i] = struct {
-		result1 *opa.EvaluatePolicyResponse
+		result1 *opa.EvaluatePolicyResult
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeClient) InitializePolicy(arg1 string, arg2 string) opa.ClientError {
+func (fake *FakeClient) InitializePolicy(arg1 context.Context, arg2 string, arg3 string) error {
 	fake.initializePolicyMutex.Lock()
 	ret, specificReturn := fake.initializePolicyReturnsOnCall[len(fake.initializePolicyArgsForCall)]
 	fake.initializePolicyArgsForCall = append(fake.initializePolicyArgsForCall, struct {
-		arg1 string
+		arg1 context.Context
 		arg2 string
-	}{arg1, arg2})
+		arg3 string
+	}{arg1, arg2, arg3})
 	stub := fake.InitializePolicyStub
 	fakeReturns := fake.initializePolicyReturns
-	fake.recordInvocation("InitializePolicy", []interface{}{arg1, arg2})
+	fake.recordInvocation("InitializePolicy", []interface{}{arg1, arg2, arg3})
 	fake.initializePolicyMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1
@@ -134,39 +134,39 @@ func (fake *FakeClient) InitializePolicyCallCount() int {
 	return len(fake.initializePolicyArgsForCall)
 }
 
-func (fake *FakeClient) InitializePolicyCalls(stub func(string, string) opa.ClientError) {
+func (fake *FakeClient) InitializePolicyCalls(stub func(context.Context, string, string) error) {
 	fake.initializePolicyMutex.Lock()
 	defer fake.initializePolicyMutex.Unlock()
 	fake.InitializePolicyStub = stub
 }
 
-func (fake *FakeClient) InitializePolicyArgsForCall(i int) (string, string) {
+func (fake *FakeClient) InitializePolicyArgsForCall(i int) (context.Context, string, string) {
 	fake.initializePolicyMutex.RLock()
 	defer fake.initializePolicyMutex.RUnlock()
 	argsForCall := fake.initializePolicyArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *FakeClient) InitializePolicyReturns(result1 opa.ClientError) {
+func (fake *FakeClient) InitializePolicyReturns(result1 error) {
 	fake.initializePolicyMutex.Lock()
 	defer fake.initializePolicyMutex.Unlock()
 	fake.InitializePolicyStub = nil
 	fake.initializePolicyReturns = struct {
-		result1 opa.ClientError
+		result1 error
 	}{result1}
 }
 
-func (fake *FakeClient) InitializePolicyReturnsOnCall(i int, result1 opa.ClientError) {
+func (fake *FakeClient) InitializePolicyReturnsOnCall(i int, result1 error) {
 	fake.initializePolicyMutex.Lock()
 	defer fake.initializePolicyMutex.Unlock()
 	fake.InitializePolicyStub = nil
 	if fake.initializePolicyReturnsOnCall == nil {
 		fake.initializePolicyReturnsOnCall = make(map[int]struct {
-			result1 opa.ClientError
+			result1 error
 		})
 	}
 	fake.initializePolicyReturnsOnCall[i] = struct {
-		result1 opa.ClientError
+		result1 error
 	}{result1}
 }
 

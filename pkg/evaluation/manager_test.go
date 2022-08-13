@@ -16,6 +16,7 @@ package evaluation
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -112,7 +113,7 @@ var _ = Describe("evaluation manager", func() {
 
 			expectedInitializePolicyError opa.ClientError
 
-			expectedEvaluatePolicyResponse *opa.EvaluatePolicyResponse
+			expectedEvaluatePolicyResponse *opa.EvaluatePolicyResult
 			expectedEvaluatePolicyError    error
 
 			expectedBulkResponse *esutil.EsBulkResponse
@@ -163,18 +164,16 @@ var _ = Describe("evaluation manager", func() {
 
 			expectedInitializePolicyError = nil
 
-			expectedEvaluatePolicyResponse = &opa.EvaluatePolicyResponse{
-				Result: &opa.EvaluatePolicyResult{
-					Pass: true,
-					Violations: []*pb.EvaluatePolicyViolation{
-						{
-							Id:          fake.LetterN(10),
-							Name:        fake.LetterN(10),
-							Description: fake.LetterN(10),
-							Message:     fake.LetterN(10),
-							Link:        fake.LetterN(10),
-							Pass:        true,
-						},
+			expectedEvaluatePolicyResponse = &opa.EvaluatePolicyResult{
+				Pass: true,
+				Violations: []*pb.EvaluatePolicyViolation{
+					{
+						Id:          fake.LetterN(10),
+						Name:        fake.LetterN(10),
+						Description: fake.LetterN(10),
+						Message:     fake.LetterN(10),
+						Link:        fake.LetterN(10),
+						Pass:        true,
 					},
 				},
 			}
@@ -245,7 +244,7 @@ var _ = Describe("evaluation manager", func() {
 		It("should initialize the policy in OPA", func() {
 			Expect(opaClient.InitializePolicyCallCount()).To(Equal(1))
 
-			policyId, rego := opaClient.InitializePolicyArgsForCall(0)
+			_, policyId, rego := opaClient.InitializePolicyArgsForCall(0)
 
 			Expect(policyId).To(Equal(expectedPolicyVersionId))
 			Expect(rego).To(Equal(expectedPolicyRego))
@@ -254,13 +253,14 @@ var _ = Describe("evaluation manager", func() {
 		It("should evaluate the policy in OPA", func() {
 			Expect(opaClient.EvaluatePolicyCallCount()).To(Equal(1))
 
-			rego, input := opaClient.EvaluatePolicyArgsForCall(0)
+			_, rego, input := opaClient.EvaluatePolicyArgsForCall(0)
 
-			Expect(rego).To(Equal(expectedPolicyRego))
-			expectedInput, _ := protojson.Marshal(&pb.EvaluatePolicyInput{
+			Expect(rego).To(Equal(expectedPolicyVersionId))
+			actualInputJson, _ := json.Marshal(input)
+			expectedInputJson, _ := protojson.MarshalOptions{EmitUnpopulated: true}.Marshal(&pb.EvaluatePolicyInput{
 				Occurrences: expectedOccurrences,
 			})
-			Expect(input).To(MatchJSON(expectedInput))
+			Expect(actualInputJson).To(MatchJSON(expectedInputJson))
 		})
 
 		It("should store the evaluation results in elasticsearch", func() {
@@ -298,7 +298,7 @@ var _ = Describe("evaluation manager", func() {
 			Expect(policyEvaluation.ResourceEvaluationId).To(Equal(resourceEvaluation.Id))
 			Expect(policyEvaluation.PolicyVersionId).To(Equal(expectedPolicyVersionId))
 			Expect(policyEvaluation.Pass).To(BeTrue())
-			Expect(policyEvaluation.Violations).To(Equal(expectedEvaluatePolicyResponse.Result.Violations))
+			Expect(policyEvaluation.Violations).To(Equal(expectedEvaluatePolicyResponse.Violations))
 		})
 
 		It("should return the resource evaluation result and policy evaluation results", func() {
@@ -522,7 +522,7 @@ var _ = Describe("evaluation manager", func() {
 
 		When("the policy does not pass", func() {
 			BeforeEach(func() {
-				expectedEvaluatePolicyResponse.Result.Pass = false
+				expectedEvaluatePolicyResponse.Pass = false
 			})
 
 			It("should mark the resource evaluation as failed", func() {
@@ -588,10 +588,8 @@ var _ = Describe("evaluation manager", func() {
 
 			When("one of the policies fails", func() {
 				BeforeEach(func() {
-					opaClient.EvaluatePolicyReturnsOnCall(1, &opa.EvaluatePolicyResponse{
-						Result: &opa.EvaluatePolicyResult{
-							Pass: false,
-						},
+					opaClient.EvaluatePolicyReturnsOnCall(1, &opa.EvaluatePolicyResult{
+						Pass: false,
 					}, expectedEvaluatePolicyError)
 				})
 
@@ -1033,17 +1031,18 @@ var _ = Describe("evaluation manager", func() {
 
 	Context("EvaluatePolicy", func() {
 		var (
-			policyId       string
-			version        uint32
-			policy         *pb.Policy
-			getPolicyError error
+			policyId        string
+			policyVersionId string
+			version         uint32
+			policy          *pb.Policy
+			getPolicyError  error
 
 			resourceUri string
 			request     *pb.EvaluatePolicyRequest
 
 			opaInitializePolicyError opa.ClientError
 
-			opaEvaluatePolicyResponse *opa.EvaluatePolicyResponse
+			opaEvaluatePolicyResponse *opa.EvaluatePolicyResult
 			opaEvaluatePolicyError    error
 
 			listVersionedResourceOccurrencesResponse []*grafeas_proto.Occurrence
@@ -1064,6 +1063,7 @@ var _ = Describe("evaluation manager", func() {
 			policy = createRandomPolicy(policyId, version)
 			policy.Policy = createRandomPolicyEntity(expectedPolicyRego, version)
 			getPolicyError = nil
+			policyVersionId = policy.Policy.Id
 
 			opaInitializePolicyError = nil
 
@@ -1073,12 +1073,9 @@ var _ = Describe("evaluation manager", func() {
 			}
 			listVersionedResourceOccurrencesError = nil
 
-			opaEvaluatePolicyResponse = &opa.EvaluatePolicyResponse{
-				Result: &opa.EvaluatePolicyResult{
-					Pass:       true,
-					Violations: []*pb.EvaluatePolicyViolation{},
-				},
-				Explanation: &[]string{fake.Word()},
+			opaEvaluatePolicyResponse = &opa.EvaluatePolicyResult{
+				Pass:       true,
+				Violations: []*pb.EvaluatePolicyViolation{},
 			}
 			opaEvaluatePolicyError = nil
 
@@ -1107,12 +1104,12 @@ var _ = Describe("evaluation manager", func() {
 				Expect(actualRequest.Id).To(Equal(policyId))
 			})
 
-			It("should initialize the policy in Open Policy Agent", func() {
+			It("should initialize the versioned policy in Open Policy Agent", func() {
 				Expect(opaClient.InitializePolicyCallCount()).To(Equal(1))
 
-				actualPolicyId, policyContent := opaClient.InitializePolicyArgsForCall(0)
+				_, actualPolicyVersionId, policyContent := opaClient.InitializePolicyArgsForCall(0)
 
-				Expect(actualPolicyId).To(Equal(policyId))
+				Expect(actualPolicyVersionId).To(Equal(policyVersionId))
 				Expect(policyContent).To(Equal(expectedPolicyRego))
 			})
 
@@ -1128,21 +1125,22 @@ var _ = Describe("evaluation manager", func() {
 
 			It("should evaluate the policy in Open Policy Agent", func() {
 				Expect(opaClient.EvaluatePolicyCallCount()).To(Equal(1))
-				actualPolicy, actualInput := opaClient.EvaluatePolicyArgsForCall(0)
+				_, actualPolicyVersionId, actualInput := opaClient.EvaluatePolicyArgsForCall(0)
 
-				expectedInput, err := protojson.Marshal(&pb.EvaluatePolicyInput{
+				expectedInputJson, err := protojson.MarshalOptions{EmitUnpopulated: true}.Marshal(&pb.EvaluatePolicyInput{
 					Occurrences: listVersionedResourceOccurrencesResponse,
 				})
 				Expect(err).NotTo(HaveOccurred())
+				actualInputJson, err := json.Marshal(actualInput)
+				Expect(err).NotTo(HaveOccurred())
 
-				Expect(actualPolicy).To(Equal(expectedPolicyRego))
-				Expect(actualInput).To(MatchJSON(expectedInput))
+				Expect(actualPolicyVersionId).To(Equal(policyVersionId))
+				Expect(actualInputJson).To(MatchJSON(expectedInputJson))
 			})
 
 			It("should return the evaluation results", func() {
 				Expect(actualResponse).NotTo(BeNil())
 				Expect(actualResponse.Pass).To(BeTrue())
-				Expect(actualResponse.Explanation[0]).To(Equal((*opaEvaluatePolicyResponse.Explanation)[0]))
 				Expect(actualError).NotTo(HaveOccurred())
 			})
 		})
@@ -1226,7 +1224,7 @@ var _ = Describe("evaluation manager", func() {
 
 		When("the policy result is absent", func() {
 			BeforeEach(func() {
-				opaEvaluatePolicyResponse.Result = nil
+				opaEvaluatePolicyResponse = nil
 			})
 
 			It("should not pass", func() {
@@ -1247,23 +1245,13 @@ var _ = Describe("evaluation manager", func() {
 				for i := 0; i < expectedViolationsCount; i++ {
 					expectedViolations = append(expectedViolations, randomViolation())
 				}
-				opaEvaluatePolicyResponse.Result.Violations = expectedViolations
+				opaEvaluatePolicyResponse.Violations = expectedViolations
 			})
 
 			It("should include them in the evaluation result", func() {
 				Expect(actualResponse.Result).To(HaveLen(1))
 				actualViolations := actualResponse.Result[0].Violations
 				Expect(actualViolations).To(ConsistOf(expectedViolations))
-			})
-		})
-
-		When("the explanation is not present", func() {
-			BeforeEach(func() {
-				opaEvaluatePolicyResponse.Explanation = nil
-			})
-
-			It("should not try to include an explanation in the result", func() {
-				Expect(actualResponse.Explanation).To(BeEmpty())
 			})
 		})
 	})
@@ -1305,6 +1293,7 @@ func createRandomPolicy(id string, version uint32) *pb.Policy {
 
 func createRandomPolicyEntity(policy string, version uint32) *pb.PolicyEntity {
 	return &pb.PolicyEntity{
+		Id:          fmt.Sprintf("%s.%d", fake.UUID(), fake.Number(1, 10)),
 		Version:     version,
 		RegoContent: policy,
 		SourcePath:  fake.URL(),
